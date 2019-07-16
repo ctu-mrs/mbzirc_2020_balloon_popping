@@ -65,6 +65,12 @@ private:
 
   /* ros parameters */
   bool _simulation_;
+  // | ---------------- loading circle params -- ---------------- |
+  int            radius;
+  int            arena_width;
+  int            arena_length;
+
+
 
   // | ---------------------- msg callbacks --------------------- |
 
@@ -116,12 +122,12 @@ private:
   // | ---------------- service server callbacks ---------------- |
   // | ------------------- dynamic reconfigure ------------------ |
 
-  typedef waypoint_flier::dynparamConfig                              Config;
-  typedef dynamic_reconfigure::Server<waypoint_flier::dynparamConfig> ReconfigureServer;
+  typedef balloon_circle_destroy::dynparamConfig                              Config;
+  typedef dynamic_reconfigure::Server<balloon_circle_destroy::dynparamConfig> ReconfigureServer;
   boost::recursive_mutex                                              mutex_dynamic_reconfigure_;
   boost::shared_ptr<ReconfigureServer>                                reconfigure_server_;
   void                                                                callbackDynamicReconfigure(Config& config, uint32_t level);
-  waypoint_flier::dynparamConfig                                      last_drs_config_;
+  balloon_circle_destroy::dynparamConfig                             last_drs_config_;
 
   // | --------------------- waypoint idling -------------------- |
 

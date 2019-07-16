@@ -12,6 +12,14 @@ namespace balloon_circle_destroy {
 
     is_tracking_      = false;
 
+    ros::NodeHandle nh("~");
+
+    ros::Time::waitForValid();
+
+    
+  // | ------------------- load ros parameters ------------------ |
+    mrs_lib::ParamLoader param_loader(nh, "BalloonCircleDestroy");
+
 
   
   }
