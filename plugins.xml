@@ -1,0 +1,5 @@
+<library path="lib/libCircleDestroyer">
+  <class name="balloon_circle_destroy/BalloonCircleDestroy" type="balloon_circle_destroy::BalloonCircleDestroy" base_class_type="nodelet::Nodelet">
+    <description>Balloon Circle Destroyer nodelet</description>
+  </class>
+</library>
