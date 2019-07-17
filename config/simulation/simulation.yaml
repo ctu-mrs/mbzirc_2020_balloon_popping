@@ -23,3 +23,13 @@ waypoints: [-10, -10, 3, 0,
 # offset will be added to all waypoints
 # x [m], y [m], z [m], yaw [rad]
 offset: [0, 0, 0, 0]
+
+#arena width
+arena_width: 10
+#arena length
+arena_length: 10
+#height where drone will operate ( up to this height )
+height: 3
+#idle_time
+idle_time: 1
+

@@ -43,7 +43,8 @@
 
 /* for calling simple ros services */
 #include <std_srvs/Trigger.h>
-
+#include <mrs_msgs/TrackerTrajectorySrvRequest.h>
+#include <mrs_msgs/TrackerTrajectorySrv.h>
 /* for operations with matrices */
 #include <Eigen/Dense>
 
@@ -63,12 +64,16 @@ private:
   /* flags */
   bool is_initialized_ = false;
 
+  bool is_idling_ = false;
+  ros::Timer timer_idling_;
+  double _idle_time_;
+  void       callbackTimerIdling(const ros::TimerEvent& te);
   /* ros parameters */
   bool _simulation_;
   // | ---------------- loading circle params -- ---------------- |
-  int            radius;
-  int            arena_width;
-  int            arena_length;
+  int            _arena_width_;
+  int            _arena_length_;
+  float          _height_;
 
 
 
@@ -95,22 +100,18 @@ private:
   std::mutex      mutex_is_tracking_;
   ros::Time       time_last_tracker_diagnostics_;
 
-  void            callbackBalloonPoint(const geometry_msgs::PoseWithCovarianceStamped& msg);
+  void            callbackBalloonPoint(const geometry_msgs::PoseWithCovarianceStampedConstPtr& msg);
   ros::Subscriber sub_balloon_point;
-  bool            got_balloon_point = false;
-  bool            is_ballon_incoming      = false;
-  std::mutex      mutex_is_balloon_incoming;
-  ros::Time       time_last_balloon_point;
+  geometry_msgs::PoseWithCovarianceStamped balloon_point_;
+  bool            got_balloon_point_ = false;
+  bool            is_ballon_incoming_= false;
+  std::mutex      mutex_is_balloon_incoming_;
+  ros::Time       time_last_balloon_point_;
 
 
   // | --------------------- timer callbacks -------------------- |
 
-  void           callbackTimerPublishDistToWaypoint(const ros::TimerEvent& te);
-  ros::Publisher pub_dist_to_waypoint_;
-  ros::Timer     timer_publish_dist_to_waypoint_;
-  int            _rate_timer_publish_dist_to_waypoint_;
-
-  void           callbackTimerPublishGoTo(const ros::TimerEvent& te);
+ void           callbackTimerPublishGoTo(const ros::TimerEvent& te);
   ros::Publisher pub_goto_;
   ros::Timer     timer_publish_goto_;
   int            _rate_timer_publish_goto_;
@@ -119,15 +120,28 @@ private:
   ros::Timer timer_check_subscribers_;
   int        _rate_timer_check_subscribers_;
 
+
+  void       callbackTimerCheckBalloonPoints(const ros::TimerEvent& te);
+  ros::Timer timer_check_balloons_;
+  int        _rate_timer_check_balloons_;
+  // | --------------------- service clients -------------------- |
+
+  ros::ServiceClient srv_client_trajectory_;
+  bool               _trajectory_published_;
+
+
   // | ---------------- service server callbacks ---------------- |
+  bool       callbackCircleAround(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res);
+  ros::ServiceServer srv_server_circle_around_;
+
   // | ------------------- dynamic reconfigure ------------------ |
 
-  typedef balloon_circle_destroy::dynparamConfig                              Config;
-  typedef dynamic_reconfigure::Server<balloon_circle_destroy::dynparamConfig> ReconfigureServer;
-  boost::recursive_mutex                                              mutex_dynamic_reconfigure_;
-  boost::shared_ptr<ReconfigureServer>                                reconfigure_server_;
-  void                                                                callbackDynamicReconfigure(Config& config, uint32_t level);
-  balloon_circle_destroy::dynparamConfig                             last_drs_config_;
+/*   typedef balloon_circle_destroy::dynparamConfig                              Config; */
+/*   typedef dynamic_reconfigure::Server<balloon_circle_destroy::dynparamConfig> ReconfigureServer; */
+/*   boost::recursive_mutex                                              mutex_dynamic_reconfigure_; */
+/*   boost::shared_ptr<ReconfigureServer>                                reconfigure_server_; */
+/*   void                                                                callbackDynamicReconfigure(Config& config, uint32_t level); */
+/*   balloon_circle_destroy::dynparamConfig                             last_drs_config_; */
 
   // | --------------------- waypoint idling -------------------- |
 
