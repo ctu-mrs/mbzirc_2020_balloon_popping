@@ -18,6 +18,8 @@ namespace balloon_circle_destroy {
 
     
   // | ------------------- load ros parameters ------------------ |
+/* params //{ */
+
     mrs_lib::ParamLoader param_loader(nh, "BalloonCircleDestroy");
     param_loader.load_param("arena_width", _arena_width_);
     param_loader.load_param("arena_length", _arena_length_);
@@ -37,7 +39,14 @@ namespace balloon_circle_destroy {
 
     ROS_INFO_STREAM_ONCE("[BalloonCircleDestroy]: params loaded");
 
+//}
+
     /* subscribe ground truth only in simulation, where it is available */
+    // --------------------------------------------------------------
+    // |                         subscribers                        |
+    // --------------------------------------------------------------
+    /* subscribers //{ */
+    
     if (_simulation_) {
       sub_odom_gt_ = nh.subscribe("odom_gt_in", 1, &BalloonCircleDestroy::callbackOdomGt, this, ros::TransportHints().tcpNoDelay());
     }
@@ -46,7 +55,15 @@ namespace balloon_circle_destroy {
 
 
     sub_balloon_point = nh.subscribe("balloon_point_in",1,&BalloonCircleDestroy::callbackBalloonPoint,this, ros::TransportHints().tcpNoDelay());
-  // | --------------- initialize service servers --------------- |
+
+
+    
+    //}
+
+    // | --------------- initialize service servers --------------- |
+    //
+/*  server services //{ */
+
   srv_server_circle_around_     = nh.advertiseService("circle_around", &BalloonCircleDestroy::callbackCircleAround, this);
   srv_server_go_closer     = nh.advertiseService("go_closer", &BalloonCircleDestroy::callbackGoCloser, this);
 
@@ -54,18 +71,31 @@ namespace balloon_circle_destroy {
     // init service client for publishing trajectories for the drone
     srv_client_trajectory_ = nh.serviceClient<mrs_msgs::TrackerTrajectorySrv>("trajectory_srv");
 
-  // | ---------- initialize dynamic reconfigure server --------- |
+
+
+//}
+    // | ---------- initialize dynamic reconfigure server --------- |
+/* dynamic server //{ */
+
   /* reconfigure_server_.reset(new ReconfigureServer(mutex_dynamic_reconfigure_, nh)); */
   /* ReconfigureServer::CallbackType f = boost::bind(&BalloonCircleDestroy::callbackDynamicReconfigure, this, _1, _2); */
   /* reconfigure_server_->setCallback(f); */
 
-  // | -------------------- initialize timers ------------------- |
+
+
+//} 
+     // | -------------------- initialize timers ------------------- |
+/* timers //{ */
+
   timer_check_subscribers_        = nh.createTimer(ros::Rate(_rate_timer_check_subscribers_), &BalloonCircleDestroy::callbackTimerCheckSubscribers, this);
   // you can disable autostarting of the timer by the last argument
   /* timer_publish_goto_ = nh.createTimer(ros::Rate(_rate_timer_publish_goto_), &BalloonCircleDestroy::callbackTimerPublishGoTo, this, false, false); */
 
   timer_check_balloons_ = nh.createTimer(ros::Rate(_rate_timer_check_balloons_), &BalloonCircleDestroy::callbackTimerCheckBalloonPoints, this, false, true);
 
+
+
+//}  
   ROS_INFO_ONCE("[BalloonCircleDestroy]: initialized");
   is_initialized_ = true;
   
