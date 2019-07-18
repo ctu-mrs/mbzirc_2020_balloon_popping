@@ -4,25 +4,9 @@ rate:
   check_subscribers: 1 # [Hz]
   publish_goto: 10 # [Hz]
 
-# number of times the waypoint sequence should be repeated
-n_loops: 1 # [-]
 
 # should the UAV land after flying through all the waypoints?
 land_at_the_end: false
-
-# how long should the UAV idle at a waypoint?
-waypoint_idle_time: 0.0
-
-# matrix of waypoints which will be flown through by the UAV
-# x [m], y [m], z [m], yaw [rad]
-waypoints: [-10, -10, 3, 0,
-            10, -10, 3, 1.57,
-            10, 10, 3, 3.14,
-            -10, 10, 3, 4.61]
-
-# offset will be added to all waypoints
-# x [m], y [m], z [m], yaw [rad]
-offset: [0, 0, 0, 0]
 
 #arena width
 arena_width: 10
@@ -32,4 +16,16 @@ arena_length: 10
 height: 3
 #idle_time
 idle_time: 1
+#circling radius - define width from the balloon to circle around
+circling_radius: 3
+#circle accuracy - how many points should be in circle trajectory
+circle_accuracy: 100
+#velocity for goTo's
+vel: 1
+#distance to the balloon
+dist_to_balloon: 3
+#trajectory length
+traj_len: 40
+#traj time
+traj_time: 8
 

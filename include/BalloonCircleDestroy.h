@@ -34,6 +34,8 @@
 #include <nav_msgs/Odometry.h>
 
 /* custom msgs of MRS group */
+#include <mrs_msgs/TrackerTrajectory.h>
+#include <mrs_msgs/TrackerPoint.h>
 #include <mrs_msgs/TrackerPointStamped.h>
 #include <mrs_msgs/TrackerDiagnostics.h>
 #include <mrs_msgs/Float64Stamped.h>
@@ -47,6 +49,9 @@
 #include <mrs_msgs/TrackerTrajectorySrv.h>
 /* for operations with matrices */
 #include <Eigen/Dense>
+/* math  */
+#include <math.h>
+
 
 //}
 
@@ -62,18 +67,23 @@ public:
 
 private:
   /* flags */
-  bool is_initialized_ = false;
+  bool           is_initialized_ = false;
 
-  bool is_idling_ = false;
-  ros::Timer timer_idling_;
-  double _idle_time_;
-  void       callbackTimerIdling(const ros::TimerEvent& te);
+  bool           is_idling_ = false;
+  ros::Timer     timer_idling_;
   /* ros parameters */
-  bool _simulation_;
-  // | ---------------- loading circle params -- ---------------- |
+  double         _idle_time_;
+  void           callbackTimerIdling(const ros::TimerEvent& te);
+  bool           _simulation_;
   int            _arena_width_;
   int            _arena_length_;
   float          _height_;
+  double         _circle_radius_;
+  int            _circle_accuracy_;
+  double         _vel_;
+  double         _dist_to_balloon_;
+  int            _traj_len_;
+  int            _traj_time_;
 
 
 
@@ -82,6 +92,7 @@ private:
   void               callbackOdomUav(const nav_msgs::OdometryConstPtr& msg);
   ros::Subscriber    sub_odom_uav_;
   nav_msgs::Odometry odom_uav_;
+  Eigen::Vector3d    odom_vector_;
   bool               got_odom_uav_ = false;
   std::mutex         mutex_odom_uav_;
   ros::Time          time_last_odom_uav_;
@@ -93,16 +104,19 @@ private:
   std::mutex         mutex_odom_gt_;
   ros::Time          time_last_odom_gt_;
 
+  
   void            callbackTrackerDiag(const mrs_msgs::TrackerDiagnosticsConstPtr& msg);
   ros::Subscriber sub_tracker_diag_;
   bool            got_tracker_diag_ = false;
   bool            is_tracking_      = false;
   std::mutex      mutex_is_tracking_;
   ros::Time       time_last_tracker_diagnostics_;
+  
 
   void            callbackBalloonPoint(const geometry_msgs::PoseWithCovarianceStampedConstPtr& msg);
   ros::Subscriber sub_balloon_point;
   geometry_msgs::PoseWithCovarianceStamped balloon_point_;
+  Eigen::Vector3d balloon_vector_;
   bool            got_balloon_point_ = false;
   bool            is_ballon_incoming_= false;
   std::mutex      mutex_is_balloon_incoming_;
@@ -134,7 +148,12 @@ private:
   bool       callbackCircleAround(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res);
   ros::ServiceServer srv_server_circle_around_;
 
+  bool       callbackGoCloser(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res);
+  ros::ServiceServer srv_server_go_closer;
+
   // | ------------------- dynamic reconfigure ------------------ |
+/* dynamic server //{ */
+
 
 /*   typedef balloon_circle_destroy::dynparamConfig                              Config; */
 /*   typedef dynamic_reconfigure::Server<balloon_circle_destroy::dynparamConfig> ReconfigureServer; */
@@ -143,11 +162,21 @@ private:
 /*   void                                                                callbackDynamicReconfigure(Config& config, uint32_t level); */
 /*   balloon_circle_destroy::dynparamConfig                             last_drs_config_; */
 
-  // | --------------------- waypoint idling -------------------- |
+
+
+//}
 
 
   // | -------------------- support functions ------------------- |
 
+/* Support Functions //{ */
+
+  void getCloseToBalloon();
+  void getAngleToBalloon();
+  void generateTrajectory();
+  double getBalloonHeading();
+
+//}
 };
 //}
 
