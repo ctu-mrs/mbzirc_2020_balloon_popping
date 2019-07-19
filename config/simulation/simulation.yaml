@@ -9,11 +9,16 @@ rate:
 land_at_the_end: false
 
 #arena width
-arena_width: 10
+arena_width: 30
 #arena length
-arena_length: 10
+arena_length: 30
+arena_accuracy: 500
+#arena_center_x
+arena_center_x: 15
+arena_center_y: 15
+
 #height where drone will operate ( up to this height )
-height: 3
+height: 5
 #idle_time
 idle_time: 1
 #circling radius - define width from the balloon to circle around
@@ -28,4 +33,5 @@ dist_to_balloon: 3
 traj_len: 40
 #traj time
 traj_time: 8
+
 

@@ -14,6 +14,8 @@
 
 /* this header file is created during compilation from python script dynparam.cfg */
 #include <balloon_circle_destroy/dynparamConfig.h>
+/*Better enums  */
+#include "enum.h"
 
 /* for smart pointers (do not use raw pointers) */
 #include <memory>
@@ -26,9 +28,11 @@
 #include <iostream>
 
 /* for storing information about the state of the uav (position) */
+#include <geometry_msgs/Point.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include <sensor_msgs/PointCloud.h>
 
 /* for storing information about the state of the uav (position, twist) + covariances */
 #include <nav_msgs/Odometry.h>
@@ -77,6 +81,9 @@ private:
   bool           _simulation_;
   int            _arena_width_;
   int            _arena_length_;
+  int            _arena_accuracy_;
+  double         _arena_center_x_;
+  double         _arena_center_y_;
   float          _height_;
   double         _circle_radius_;
   int            _circle_accuracy_;
@@ -84,6 +91,13 @@ private:
   double         _dist_to_balloon_;
   int            _traj_len_;
   int            _traj_time_;
+  // | ------------------------- state machine params ------------------------- |
+  enum State     {IDLE,GOING_AROUND, GOING_TO_BALLOON,AT_BALLOON,CIRCLE_AROUND, DESTROYING };
+  State          _state_ = IDLE;
+
+  bool           _is_state_machine_active_ = false;
+  // | --------------------- class variables -------------------- |
+  double         _closest_on_arena_ = 999.9;
 
 
 
@@ -114,13 +128,22 @@ private:
   
 
   void            callbackBalloonPoint(const geometry_msgs::PoseWithCovarianceStampedConstPtr& msg);
-  ros::Subscriber sub_balloon_point;
+  ros::Subscriber sub_balloon_point_;
   geometry_msgs::PoseWithCovarianceStamped balloon_point_;
   Eigen::Vector3d balloon_vector_;
   bool            got_balloon_point_ = false;
   bool            is_ballon_incoming_= false;
   std::mutex      mutex_is_balloon_incoming_;
   ros::Time       time_last_balloon_point_;
+
+  void            callbackBalloonPointCloud(const sensor_msgs::PointCloudConstPtr& msg);
+  ros::Subscriber           sub_balloon_point_cloud_;
+  sensor_msgs::PointCloud   balloon_point_cloud_;
+  bool                      got_balloon_point_cloud_ = false;
+  bool                      is_ballon_cloud_incoming_= false;
+  std::mutex                mutex_is_balloon_cloud_incoming_;
+  ros::Time                 time_last_balloon_cloud_point_;
+
 
 
   // | --------------------- timer callbacks -------------------- |
@@ -138,6 +161,12 @@ private:
   void       callbackTimerCheckBalloonPoints(const ros::TimerEvent& te);
   ros::Timer timer_check_balloons_;
   int        _rate_timer_check_balloons_;
+
+  void       callbackTimerStateMachine(const ros::TimerEvent& te);
+  ros::Timer timer_state_machine_;
+  int        _rate_timer_state_machine_;
+
+
   // | --------------------- service clients -------------------- |
 
   ros::ServiceClient srv_client_trajectory_;
@@ -149,7 +178,10 @@ private:
   ros::ServiceServer srv_server_circle_around_;
 
   bool       callbackGoCloser(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res);
-  ros::ServiceServer srv_server_go_closer;
+  ros::ServiceServer srv_server_go_closer_;
+  bool       callbackStartStateMachine(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res);
+  ros::ServiceServer srv_server_start_state_machine_;
+  ros::ServiceServer srv_server_stop_state_machine_;
 
   // | ------------------- dynamic reconfigure ------------------ |
 /* dynamic server //{ */
@@ -174,7 +206,9 @@ private:
   void getCloseToBalloon();
   void getAngleToBalloon();
   void generateTrajectory();
+  void goAroundArena();
   double getBalloonHeading();
+  std::string getStateName();
 
 //}
 };
