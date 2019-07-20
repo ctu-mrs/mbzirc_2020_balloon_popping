@@ -46,6 +46,7 @@ namespace balloon_circle_destroy {
 
 //}
 
+
     /* subscribe ground truth only in simulation, where it is available */
     // --------------------------------------------------------------
     // |                         subscribers                        |
@@ -553,6 +554,23 @@ void BalloonCircleDestroy::goAroundArena() {
     }
   
   }
+// | --------------------- transformations -------------------- |
+//
+bool BalloonCircleDestroy::get_transform_object(std_msgs::Header& msg_header, geometry_msgs::TransformStamped& transform){  //transformation norm camera
+ const ros::Time msg_stamp = msg_header.stamp;
+ const std::string sensor_frame = msg_header.frame_id;
+ ROS_INFO_THROTTLE("Transform from <%s> to world coor",sensor_frame.c_str());  try{
+   const ros::Duration timeout(1.0 / 100.0);
+   // Obtain transform from snesor into world frame
+   transform = transform_buffer.lookupTransform(world_frame_name_, sensor_frame, msg_stamp, timeout);  }catch (tf2::TransformException& ex){
+   ROS_INFO_THROTTLE("Error during transform from \"%s\" frame to \"%s\" frame.\n\tMSG: %s",  sensor_frame.c_str(),
+                world_frame_name.c_str(), ex.what());
+   return false;
+ }
+ return true;
+}
+
+
 } // namespace balloon_circle_destroy
 
 PLUGINLIB_EXPORT_CLASS(balloon_circle_destroy::BalloonCircleDestroy, nodelet::Nodelet);
