@@ -56,12 +56,11 @@
 /* math  */
 #include <math.h>
 // | ------------------- transfroms include ------------------- |
-/* #include <tf2_ros/transform_listener.h> */
-/* #include <tf2_ros/buffer.h> */
-/* #include <tf2_eigen/tf2_eigen.h> */
-#include "tf2_ros/buffer.h"
-#include "tf2_ros/transform_listener.h"
-#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
+#include <tf2_ros/transform_listener.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+
+
+
 //}
 
 namespace balloon_circle_destroy
@@ -97,7 +96,7 @@ private:
   int            _traj_len_;
   int            _traj_time_;
   // | ------------------------- state machine params ------------------------- |
-  enum State     {IDLE,GOING_AROUND, GOING_TO_BALLOON,AT_BALLOON,CIRCLE_AROUND, DESTROYING };
+  enum State     {IDLE,GOING_AROUND, GOING_TO_ANGLE,GOING_TO_BALLOON,AT_BALLOON,CIRCLE_AROUND, DESTROYING };
   State          _state_ = IDLE;
 
   bool           _is_state_machine_active_ = false;
@@ -106,11 +105,17 @@ private:
 
   // | ----------------------- transforms ----------------------- |
 
-  tf2_ros::Buffer transform_buffer;
-  std::string world_frame_name_;
-  std::unique_ptr<tf2_ros::TransformListener> transform_listener_ptr;
-  bool get_transform_object(std_msgs::Header& msg_header, geometry_msgs::TransformStamped& transform);
 
+  std::string                                 world_frame_id_;
+  double                                      world_point_x_;
+  double                                      world_point_y_;
+  double                                      world_point_z_;
+  tf2_ros::Buffer                             tf_buffer_;
+  std::unique_ptr<tf2_ros::TransformListener> tf_listener_ptr_;
+
+
+  bool transformPointFromWorld(geometry_msgs::Point& point, const std::string& to_frame, const ros::Time& stamp, geometry_msgs::Point& point_out);
+  bool getTransform(const std::string& from_frame, const std::string& to_frame, const ros::Time& stamp, geometry_msgs::TransformStamped& transform_out);
 
   // | ---------------------- msg callbacks --------------------- |
 
@@ -183,6 +188,8 @@ private:
   ros::ServiceClient srv_client_trajectory_;
   bool               _trajectory_published_;
 
+  ros::ServiceClient srv_planner_reset;
+  bool               _planner_reset_;
 
   // | ---------------- service server callbacks ---------------- |
   bool       callbackCircleAround(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res);

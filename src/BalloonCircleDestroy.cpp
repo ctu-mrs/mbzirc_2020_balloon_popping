@@ -42,6 +42,11 @@ namespace balloon_circle_destroy {
     param_loader.load_param("rate/check_subscribers", _rate_timer_check_subscribers_);
     param_loader.load_param("rate/publish_goto", _rate_timer_publish_goto_);
 
+    param_loader.load_param("world_frame_id", world_frame_id_);
+    param_loader.load_param("world_point/x", world_point_x_);
+    param_loader.load_param("world_point/y", world_point_y_);
+    param_loader.load_param("world_point/z", world_point_z_);
+
     ROS_INFO_STREAM_ONCE("[BalloonCircleDestroy]: params loaded");
 
 //}
@@ -113,6 +118,8 @@ namespace balloon_circle_destroy {
 
 
 //}
+/* msg callbacks //{ */
+
 
  void BalloonCircleDestroy::callbackOdomUav(const nav_msgs::OdometryConstPtr& msg) {
   if (!is_initialized_) {
@@ -173,6 +180,8 @@ void BalloonCircleDestroy::callbackBalloonPointCloud(const sensor_msgs::PointClo
  }
 
 
+//}
+
  void BalloonCircleDestroy::callbackTrackerDiag(const mrs_msgs::TrackerDiagnosticsConstPtr& msg) {
   if(!is_initialized_) {
     return;
@@ -190,9 +199,11 @@ void BalloonCircleDestroy::callbackBalloonPointCloud(const sensor_msgs::PointClo
     
     for (unsigned long i = 0; i < balloon_point_cloud_.points.size() ; i++) {
       
+
+        bool ts_res = transformPointFromWorld(balloon_point_cloud_.points.at(i), world_frame_id_,ros::Time::now(), p_);
         p_ = balloon_point_cloud_.points.at(i);
-        dist_vect_  = Eigen::Vector3d(p_.x,p_.y,p_.z) - odom_vector_;
-        cur_dist_ =  dist_vect_.norm();
+
+        cur_dist_ =  (Eigen::Vector3d(p_.x,p_.y,p_.z) - odom_vector_).norm();
         if (cur_dist_ < _closest_on_arena_) {
           ROS_INFO_THROTTLE(0.3, "[StateMachine]: cur close %f ",cur_dist_);
           _closest_on_arena_ = cur_dist_;
@@ -267,9 +278,9 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
     return;
   }
 
-
-
 }
+
+/* callbackTimerCheckSubcribers //{ */
 
 
 void BalloonCircleDestroy::callbackTimerCheckSubscribers([[maybe_unused]] const ros::TimerEvent& te) {
@@ -323,6 +334,11 @@ void BalloonCircleDestroy::callbackTimerCheckSubscribers([[maybe_unused]] const 
  }
 }
 
+//}
+
+
+/* callbackTimerCheckBalloonPoints //{ */
+
 void BalloonCircleDestroy::callbackTimerCheckBalloonPoints([[maybe_unused]] const ros::TimerEvent& te) {
   
   if(!is_initialized_) {
@@ -330,6 +346,12 @@ void BalloonCircleDestroy::callbackTimerCheckBalloonPoints([[maybe_unused]] cons
   }
  /* ROS_INFO_THROTTLE(1.0, "[%s]: Got balloon point at x %f ", ros::this_node::getName().c_str(), balloon_point_.pose.pose.position.x); */ 
 }
+
+//}
+
+
+
+/* callbackCircleAround //{ */
 
 bool BalloonCircleDestroy::callbackCircleAround([[maybe_unused]] std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res) {
     if (!is_initialized_) {
@@ -341,7 +363,7 @@ bool BalloonCircleDestroy::callbackCircleAround([[maybe_unused]] std_srvs::Trigg
       return true;
     
     }
-    ROS_INFO_THROTTLE(1.0, "[BalloonCircleDestroy]: Start circling, circle radius %d",_circle_radius_ );
+    ROS_INFO_THROTTLE(1.0, "[BalloonCircleDestroy]: Start circling, circle radius %f",_circle_radius_ );
     getCloseToBalloon();
     mrs_msgs::TrackerTrajectory new_trj_;
     new_trj_.header.frame_id = "local_origin";
@@ -380,6 +402,13 @@ bool BalloonCircleDestroy::callbackCircleAround([[maybe_unused]] std_srvs::Trigg
 
 }
 
+//}
+
+
+
+
+/* callbackCircleAround //{ */
+
 bool BalloonCircleDestroy::callbackGoCloser([[maybe_unused]] std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res) {
   if (!is_initialized_) {
   
@@ -399,7 +428,13 @@ bool BalloonCircleDestroy::callbackGoCloser([[maybe_unused]] std_srvs::Trigger::
 
 }
 
+//}
+
+/* callbackStartStateMachine //{ */
+
+
 bool BalloonCircleDestroy::callbackStartStateMachine([[maybe_unused]] std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res) {
+
     if(!is_initialized_) {
       res.success = false;
       res.message = "Can't trigger service, not initialized";
@@ -422,6 +457,10 @@ bool BalloonCircleDestroy::callbackStartStateMachine([[maybe_unused]] std_srvs::
 
 }
 
+//}
+
+/* getCloseToBalloon //{ */
+
 void BalloonCircleDestroy::getCloseToBalloon() {
    
   double sample_dist_ = _vel_* (_traj_len_/_traj_time_);
@@ -439,7 +478,7 @@ void BalloonCircleDestroy::getCloseToBalloon() {
   Eigen::Vector3d cur_pos_ = odom_vector_;
   mrs_msgs::TrackerTrajectory new_traj_;
   Eigen::Vector3d diff_vector_;
-  double angle_ = getBalloonHeading();
+  double angle_ = getBalloonHeading() + M_PI;
 
   while (cur_pos_(0,0) != goal_(0,0) && cur_pos_(1,0)!=goal_(1,0) && cur_pos_(2,0) != goal_(2,0)) {
   
@@ -477,17 +516,24 @@ void BalloonCircleDestroy::getCloseToBalloon() {
   
   }
 
-  
-
  }
 
-  double BalloonCircleDestroy::getBalloonHeading() {
+//}
+
+/* getBalloonHeading //{ */
+
+double BalloonCircleDestroy::getBalloonHeading() {
   
     Eigen::Vector3d angle_vector_ = balloon_vector_  - odom_vector_;
     
     return atan2(angle_vector_(1),angle_vector_(0));
-  }
+}
 
+
+
+//}
+
+/* goAroundArena //{ */
 
 void BalloonCircleDestroy::goAroundArena() {
   
@@ -516,14 +562,15 @@ void BalloonCircleDestroy::goAroundArena() {
     new_trj_.use_yaw = true;
     new_trj_.start_index = 0;
     double iterat = M_PI/(_arena_accuracy_/2);
-    /* Eigen::Vector3d angle_vector_ = Eigen::Vector3d(_arena_center_x_,_arena_center_y_,_height_) - odom_vector_; */ 
-    /* double angle = atan2(angle_vector_(1), angle_vector_(0)); */
-    double angle = 0;
+    Eigen::Vector3d angle_vector_ = Eigen::Vector3d(_arena_center_x_,_arena_center_y_,_height_) - odom_vector_; 
+    double angle = atan2(angle_vector_(1), angle_vector_(0)) + M_PI;
+    ROS_INFO("[]: angle %f",angle );
+    /* double angle = 0; */
 
     for (int i = 0; i <_arena_accuracy_; i++) {
       mrs_msgs::TrackerPoint point;
-      point.x = _arena_center_x_ + cos(angle)*_arena_width_;
-      point.y = _arena_center_y_ + sin(angle)*_arena_length_;
+      point.x = _arena_center_x_ + cos(angle)*_arena_width_/2;
+      point.y = _arena_center_y_ + sin(angle)*_arena_length_/2;
       point.z = _height_;
       point.yaw = angle + M_PI;
       angle +=iterat;
@@ -542,34 +589,53 @@ void BalloonCircleDestroy::goAroundArena() {
 
 }
 
+//}
 
-  std::string BalloonCircleDestroy::getStateName() {
+
+/* getStateName //{ */
+
+std::string BalloonCircleDestroy::getStateName() {
     switch(_state_) {
       case IDLE: return "IDLE";
       case GOING_AROUND: return "GOING_AROUND";
+      case GOING_TO_ANGLE: return "GOING_TO_ANGLE";
       case GOING_TO_BALLOON: return "GOING_TO_BALLOON";
       case AT_BALLOON: return "AT_BALLOON";
       case CIRCLE_AROUND: return "CIRCLE_AROUND";
       case DESTROYING: return "DESTROYING";
     }
   
-  }
-// | --------------------- transformations -------------------- |
-//
-bool BalloonCircleDestroy::get_transform_object(std_msgs::Header& msg_header, geometry_msgs::TransformStamped& transform){  //transformation norm camera
- const ros::Time msg_stamp = msg_header.stamp;
- const std::string sensor_frame = msg_header.frame_id;
- ROS_INFO_THROTTLE("Transform from <%s> to world coor",sensor_frame.c_str());  try{
-   const ros::Duration timeout(1.0 / 100.0);
-   // Obtain transform from snesor into world frame
-   transform = transform_buffer.lookupTransform(world_frame_name_, sensor_frame, msg_stamp, timeout);  }catch (tf2::TransformException& ex){
-   ROS_INFO_THROTTLE("Error during transform from \"%s\" frame to \"%s\" frame.\n\tMSG: %s",  sensor_frame.c_str(),
-                world_frame_name.c_str(), ex.what());
-   return false;
- }
- return true;
 }
+//}
 
+
+// | --------------------- transformations -------------------- |
+/* getTransform() method //{ */
+bool BalloonCircleDestroy::getTransform(const std::string& from_frame, const std::string& to_frame, const ros::Time& stamp, geometry_msgs::TransformStamped& transform_out)
+{
+  try
+  {
+    transform_out = tf_buffer_.lookupTransform(to_frame, from_frame, stamp, ros::Duration(0.01));
+    return true;
+  }
+  catch (tf2::TransformException& ex)
+  {
+    ROS_WARN_THROTTLE(1.0, "[BalloonCircleDestroy]: Error during transform from \"%s\" frame to \"%s\" frame.\n\tMSG: %s", from_frame.c_str(), to_frame.c_str(), ex.what());
+    return false;
+  }
+}
+//}
+
+/* transformPointFromWorld() method //{ */
+bool BalloonCircleDestroy::transformPointFromWorld(geometry_msgs::Point& point, const std::string& to_frame, const ros::Time& stamp, geometry_msgs::Point& point_out)
+{
+  geometry_msgs::TransformStamped transform;
+  if (!getTransform(world_frame_id_, to_frame, stamp, transform))
+    return false;
+  tf2::doTransform(point, point_out, transform);
+  return true;
+}
+//}
 
 } // namespace balloon_circle_destroy
 
