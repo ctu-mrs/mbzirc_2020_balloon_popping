@@ -627,11 +627,13 @@ bool BalloonCircleDestroy::getTransform(const std::string& from_frame, const std
 //}
 
 /* transformPointFromWorld() method //{ */
-bool BalloonCircleDestroy::transformPointFromWorld(geometry_msgs::Point& point, const std::string& to_frame, const ros::Time& stamp, geometry_msgs::Point& point_out)
+bool BalloonCircleDestroy::transformPointFromWorld(geometry_msgs::Point32& point, const std::string& to_frame, const ros::Time& stamp, geometry_msgs::Point32& point_out)
 {
   geometry_msgs::TransformStamped transform;
   if (!getTransform(world_frame_id_, to_frame, stamp, transform))
     return false;
+  
+
   tf2::doTransform(point, point_out, transform);
   return true;
 }

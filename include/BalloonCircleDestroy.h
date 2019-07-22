@@ -114,7 +114,7 @@ private:
   std::unique_ptr<tf2_ros::TransformListener> tf_listener_ptr_;
 
 
-  bool transformPointFromWorld(geometry_msgs::Point& point, const std::string& to_frame, const ros::Time& stamp, geometry_msgs::Point& point_out);
+  bool transformPointFromWorld(geometry_msgs::Point32& point, const std::string& to_frame, const ros::Time& stamp, geometry_msgs::Point32& point_out);
   bool getTransform(const std::string& from_frame, const std::string& to_frame, const ros::Time& stamp, geometry_msgs::TransformStamped& transform_out);
 
   // | ---------------------- msg callbacks --------------------- |
