@@ -19,6 +19,9 @@
   <depend>mrs_msgs</depend>
   <depend>mrs_lib</depend>
   <depend>dynamic_reconfigure</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_geometry_msgs</depend>
+  <depend>tf2_sensor_msgs</depend>
 
   <export>
 
