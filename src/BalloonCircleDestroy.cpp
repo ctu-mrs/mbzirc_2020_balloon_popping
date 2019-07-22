@@ -200,8 +200,8 @@ void BalloonCircleDestroy::callbackBalloonPointCloud(const sensor_msgs::PointClo
     for (unsigned long i = 0; i < balloon_point_cloud_.points.size() ; i++) {
       
 
-        bool ts_res = transformPointFromWorld(balloon_point_cloud_.points.at(i), world_frame_id_,ros::Time::now(), p_);
         p_ = balloon_point_cloud_.points.at(i);
+        bool ts_res = transformPointFromWorld(p_, world_frame_id_,ros::Time::now(), p_);
 
         cur_dist_ =  (Eigen::Vector3d(p_.x,p_.y,p_.z) - odom_vector_).norm();
         if (cur_dist_ < _closest_on_arena_) {
