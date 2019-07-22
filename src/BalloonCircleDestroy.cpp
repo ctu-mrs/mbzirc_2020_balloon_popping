@@ -40,6 +40,8 @@ namespace balloon_circle_destroy {
     param_loader.load_param("simulation", _simulation_);
     
     param_loader.load_param("rate/check_subscribers", _rate_timer_check_subscribers_);
+    param_loader.load_param("rate/check_balloons", _rate_timer_check_balloons_);
+    param_loader.load_param("rate/state_machine", _rate_timer_state_machine_);
     param_loader.load_param("rate/publish_goto", _rate_timer_publish_goto_);
 
     param_loader.load_param("world_frame_id", world_frame_id_);
@@ -84,7 +86,7 @@ namespace balloon_circle_destroy {
 
     // init service client for publishing trajectories for the drone
     srv_client_trajectory_ = nh.serviceClient<mrs_msgs::TrackerTrajectorySrv>("trajectory_srv");
-
+    srv_planner_reset_ = nh.serviceClient<std_srvs::Empty>("balloon_reset");
 
 
 //}
@@ -103,9 +105,9 @@ namespace balloon_circle_destroy {
 
   timer_check_subscribers_        = nh.createTimer(ros::Rate(_rate_timer_check_subscribers_), &BalloonCircleDestroy::callbackTimerCheckSubscribers, this);
   // you can disable autostarting of the timer by the last argument
+  timer_state_machine_ = nh.createTimer(ros::Rate(_rate_timer_state_machine_), &BalloonCircleDestroy::callbackTimerStateMachine, this, false, true);
   timer_check_balloons_ = nh.createTimer(ros::Rate(_rate_timer_check_balloons_), &BalloonCircleDestroy::callbackTimerCheckBalloonPoints, this, false, true);
 
-  timer_state_machine_ = nh.createTimer(ros::Rate(_rate_timer_state_machine_), &BalloonCircleDestroy::callbackTimerStateMachine, this, false, true);
 
 
 
@@ -613,7 +615,7 @@ bool BalloonCircleDestroy::getTransform(const std::string& from_frame, const std
 {
   try
   {
-    transform_out = tf_buffer_.lookupTransform(to_frame, from_frame, stamp, ros::Duration(0.01));
+    transform_out = tf_buffer_.lookupTransform(to_frame, from_frame, stamp);
     return true;
   }
   catch (tf2::TransformException& ex)
@@ -625,7 +627,7 @@ bool BalloonCircleDestroy::getTransform(const std::string& from_frame, const std
 //}
 
 /* transformPointFromWorld() method //{ */
-bool BalloonCircleDestroy::transformPointFromWorld(geometry_msgs::Point32& point, const std::string& to_frame, const ros::Time& stamp, geometry_msgs::Point32& point_out)
+bool BalloonCircleDestroy::transformPointFromWorld(const geometry_msgs::Point32& point, const std::string& to_frame, const ros::Time& stamp, geometry_msgs::Point32& point_out)
 {
   geometry_msgs::TransformStamped transform;
   if (!getTransform(world_frame_id_, to_frame, stamp, transform))

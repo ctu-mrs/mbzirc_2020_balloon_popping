@@ -49,6 +49,7 @@
 
 /* for calling simple ros services */
 #include <std_srvs/Trigger.h>
+#include <std_srvs/Empty.h>
 #include <mrs_msgs/TrackerTrajectorySrvRequest.h>
 #include <mrs_msgs/TrackerTrajectorySrv.h>
 /* for operations with matrices */
@@ -114,7 +115,7 @@ private:
   std::unique_ptr<tf2_ros::TransformListener> tf_listener_ptr_;
 
 
-  bool transformPointFromWorld(geometry_msgs::Point32& point, const std::string& to_frame, const ros::Time& stamp, geometry_msgs::Point32& point_out);
+  bool transformPointFromWorld(const geometry_msgs::Point32& point, const std::string& to_frame, const ros::Time& stamp, geometry_msgs::Point32& point_out);
   bool getTransform(const std::string& from_frame, const std::string& to_frame, const ros::Time& stamp, geometry_msgs::TransformStamped& transform_out);
 
   // | ---------------------- msg callbacks --------------------- |
@@ -188,7 +189,7 @@ private:
   ros::ServiceClient srv_client_trajectory_;
   bool               _trajectory_published_;
 
-  ros::ServiceClient srv_planner_reset;
+  ros::ServiceClient srv_planner_reset_;
   bool               _planner_reset_;
 
   // | ---------------- service server callbacks ---------------- |

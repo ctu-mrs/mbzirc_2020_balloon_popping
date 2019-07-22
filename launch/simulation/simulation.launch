@@ -41,6 +41,7 @@
 
       <!-- Service servers -->
       <remap from="~trajectory_srv" to="~circle_around" />
+      <remap from="~balloon_reset" to="~balloon_planner/reset_chosen" />
       <!-- Service clients -->
       <remap from="~trajectory_srv" to="control_manager/mpc_tracker/set_trajectory" />
 
