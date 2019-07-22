@@ -112,7 +112,10 @@ namespace balloon_circle_destroy {
 
 
 //}  
+//
+  tf_listener_ptr_ = std::make_unique<tf2_ros::TransformListener>(tf_buffer_);
   ROS_INFO_ONCE("[BalloonCircleDestroy]: initialized");
+
   is_initialized_ = true;
   
   }
@@ -201,7 +204,7 @@ void BalloonCircleDestroy::callbackBalloonPointCloud(const sensor_msgs::PointClo
     for (unsigned long i = 0; i < balloon_point_cloud_.points.size() ; i++) {
       
         geometry_msgs::Point p_ ;
-        bool ts_res = transformPointFromWorld(balloon_point_cloud_.points.at(i), balloon_point_cloud_.header.frame_id,ros::Time::now(), p_);
+        bool ts_res = transformPointFromWorld(balloon_point_cloud_.points.at(i), balloon_point_cloud_.header.frame_id,balloon_point_cloud_.header.stamp,p_);
         if (!ts_res) {
           ROS_WARN_THROTTLE(1,"[BalloonCircleDestroy]: No transform,skipping");
           continue;
