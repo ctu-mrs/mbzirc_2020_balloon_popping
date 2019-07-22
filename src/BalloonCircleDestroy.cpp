@@ -196,12 +196,16 @@ void BalloonCircleDestroy::callbackBalloonPointCloud(const sensor_msgs::PointClo
   if(is_tracking_ && msg->tracking_trajectory && _state_ == GOING_AROUND) {
 
     Eigen::Vector3d dist_vect_;
-    geometry_msgs::Point32 p_ ;
     double cur_dist_;
     
     for (unsigned long i = 0; i < balloon_point_cloud_.points.size() ; i++) {
       
-        bool ts_res = transformPointFromWorld(balloon_point_cloud_.points.at(i), world_frame_id_,ros::Time::now(), p_);
+        geometry_msgs::Point p_ ;
+        bool ts_res = transformPointFromWorld(balloon_point_cloud_.points.at(i), balloon_point_cloud_.header.frame_id,ros::Time::now(), p_);
+        if (!ts_res) {
+          ROS_WARN_THROTTLE(1,"[BalloonCircleDestroy]: No transform,skipping");
+          continue;
+        }
 
         cur_dist_ =  (Eigen::Vector3d(p_.x,p_.y,p_.z) - odom_vector_).norm();
         if (cur_dist_ < _closest_on_arena_) {
@@ -627,14 +631,18 @@ bool BalloonCircleDestroy::getTransform(const std::string& from_frame, const std
 //}
 
 /* transformPointFromWorld() method //{ */
-bool BalloonCircleDestroy::transformPointFromWorld(const geometry_msgs::Point32& point, const std::string& to_frame, const ros::Time& stamp, geometry_msgs::Point32& point_out)
+bool BalloonCircleDestroy::transformPointFromWorld(const geometry_msgs::Point32& point, const std::string& to_frame, const ros::Time& stamp, geometry_msgs::Point& point_out)
 {
+  geometry_msgs::Point p_;
+  p_.x = point.x;
+  p_.y = point.y;
+  p_.z = point.z;
   geometry_msgs::TransformStamped transform;
-  if (!getTransform(world_frame_id_, to_frame, stamp, transform))
+  if (!getTransform(to_frame,world_frame_id_, stamp, transform))
     return false;
   
 
-  tf2::doTransform(point, point_out, transform);
+  tf2::doTransform(p_, point_out, transform);
   return true;
 }
 //}
