@@ -96,13 +96,17 @@ private:
   double         _dist_to_balloon_;
   int            _traj_len_;
   int            _traj_time_;
+  double         _dist_error_;
+  double         _wait_for_ball_;
+
+
   // | ------------------------- state machine params ------------------------- |
-  enum State     {IDLE,GOING_AROUND, GOING_TO_ANGLE,GOING_TO_BALLOON,AT_BALLOON,CIRCLE_AROUND, DESTROYING };
+  enum State     {IDLE,GOING_AROUND, GOING_TO_ANGLE,CHOOSING_BALLOON,GOING_TO_BALLOON,AT_BALLOON,CIRCLE_AROUND, DESTROYING };
   State          _state_ = IDLE;
 
   bool           _is_state_machine_active_ = false;
-  // | --------------------- class variables -------------------- |
   double         _closest_on_arena_ = 999.9;
+  double         _closest_angle_ = 0;
 
   // | ----------------------- transforms ----------------------- |
 
@@ -226,7 +230,9 @@ private:
   void getAngleToBalloon();
   void generateTrajectory();
   void goAroundArena();
+  void goToChosenBalloon();
   double getBalloonHeading();
+  double getArenaHeading();
   std::string getStateName();
 
 //}
