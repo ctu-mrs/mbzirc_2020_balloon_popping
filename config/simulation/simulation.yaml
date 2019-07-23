@@ -18,7 +18,7 @@ arena_center_x: 15
 arena_center_y: 20
 
 #height where drone will operate ( up to this height )
-height: 4
+height: 7
 #idle_time
 idle_time: 1
 #circling radius - define width from the balloon to circle around
@@ -27,6 +27,8 @@ circling_radius: 3
 circle_accuracy: 100
 #velocity for goTo's
 vel: 1
+#velocity for attack
+vel_attack: 0.3
 #distance to the balloon
 dist_to_balloon: 3
 #distance to kill the balloon
@@ -38,7 +40,7 @@ traj_time: 8
 #distance error to target the closest balloon so, it will be compared to current chosen via KF + dist_error 
 dist_error: 2
 #time for waiting for KF reset
-wait_for_ball: 2
+wait_for_ball: 4
 
 
 world_frame_id: "local_origin"

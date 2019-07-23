@@ -93,6 +93,7 @@ private:
   double         _circle_radius_;
   int            _circle_accuracy_;
   double         _vel_;
+  double         _vel_attack_;
   double         _dist_to_balloon_;
   double         _dist_to_overshoot_;
   int            _traj_len_;
@@ -223,7 +224,7 @@ private:
 
 /* Support Functions //{ */
 
-  void getCloseToBalloon(double dist);
+  void getCloseToBalloon(double dist, double speed_);
   void circleAroundBalloon();
   void getAngleToBalloon();
   void generateTrajectory();
