@@ -35,6 +35,7 @@ namespace balloon_circle_destroy {
     param_loader.load_param("traj_time", _traj_time_);
     param_loader.load_param("traj_len", _traj_len_);
     param_loader.load_param("dist_to_balloon", _dist_to_balloon_);
+    param_loader.load_param("dist_to_overshoot", _dist_to_overshoot_);
     param_loader.load_param("vel", _vel_);
     param_loader.load_param("dist_error", _dist_error_);
     param_loader.load_param("wait_for_ball", _wait_for_ball_);
@@ -44,7 +45,6 @@ namespace balloon_circle_destroy {
     param_loader.load_param("rate/check_subscribers", _rate_timer_check_subscribers_);
     param_loader.load_param("rate/check_balloons", _rate_timer_check_balloons_);
     param_loader.load_param("rate/state_machine", _rate_timer_state_machine_);
-    param_loader.load_param("rate/publish_goto", _rate_timer_publish_goto_);
 
     param_loader.load_param("world_frame_id", world_frame_id_);
     param_loader.load_param("world_point/x", world_point_x_);
@@ -88,7 +88,8 @@ namespace balloon_circle_destroy {
 
     // init service client for publishing trajectories for the drone
     srv_client_trajectory_ = nh.serviceClient<mrs_msgs::TrackerTrajectorySrv>("trajectory_srv");
-    srv_planner_reset_ = nh.serviceClient<std_srvs::Empty>("balloon_reset");
+    srv_planner_reset_ = nh.serviceClient<balloon_planner::ResetChosen>("balloon_reset");
+    time_last_planner_reset_ = ros::Time::now();
 
 
 //}
@@ -189,6 +190,8 @@ void BalloonCircleDestroy::callbackBalloonPointCloud(const sensor_msgs::PointClo
 
 //}
 
+/* callbackTrackerDiag //{ */
+
  void BalloonCircleDestroy::callbackTrackerDiag(const mrs_msgs::TrackerDiagnosticsConstPtr& msg) {
   if(!is_initialized_) {
     return;
@@ -238,14 +241,28 @@ void BalloonCircleDestroy::callbackBalloonPointCloud(const sensor_msgs::PointClo
   time_last_tracker_diagnostics_ = ros::Time::now();
 
  }
-void BalloonCircleDestroy::callbackTimerIdling([[maybe_unused]] const ros::TimerEvent& te) {
+
+
+
+
+//}
+
+ void BalloonCircleDestroy::callbackTimerIdling([[maybe_unused]] const ros::TimerEvent& te) {
 
   ROS_INFO("[%s]: Idling stopped", ros::this_node::getName().c_str());
+  is_idling_ = false;
   if (_state_ == GOING_TO_ANGLE) {
     ROS_INFO_THROTTLE(1.0, "[BalloonCircleDestroy]: Finished observing arena");
   
+  } else if (_state_ == CIRCLE_AROUND) {
+    _state_ = DESTROYING;
+    ROS_WARN_THROTTLE(1.0, "[StateMachine]: State changed to %s ", getStateName().c_str());
+    return;
+    
+  } else if (_state_ == DESTROYING) {
+    _state_ = IDLE;
+    ROS_WARN_THROTTLE(1.0, "[StateMachine]: State changed to %s ", getStateName().c_str());
   }
-  is_idling_ = false;
 }
 
 
@@ -278,46 +295,86 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
     return;
 
   }
-  ROS_INFO_THROTTLE(0.5, "// | ---------------- STATE MACHINE LOOP STATUS --------------- |");
+  ROS_INFO_THROTTLE(0.5, "| ---------------- STATE MACHINE LOOP STATUS --------------- |");
   ROS_INFO_THROTTLE(0.5, "[State]: %s ", getStateName().c_str());
+  ROS_INFO_THROTTLE(0.5, "[IsTracking]: %d", is_tracking_);
   ROS_INFO_THROTTLE(0.5,"[ClosestAngle]: %f ", _closest_angle_);
   ROS_INFO_THROTTLE(0.5,"[CurrentAngle]: %f ", getArenaHeading());
   ROS_INFO_THROTTLE(0.5,"[ClosestDist]: %f ", _closest_on_arena_);
   ROS_INFO_THROTTLE(0.5,"[Current Dist To ball]: %f ", (odom_vector_ - balloon_vector_).norm());
 
-  ROS_INFO_THROTTLE(0.5, "// | ----------------- STATE MACHINE LOOP END ----------------- |");
+  ROS_INFO_THROTTLE(0.5, "| ----------------- STATE MACHINE LOOP END ----------------- |");
 
   if (_state_ == IDLE) {
     _state_ = GOING_AROUND;
     _closest_on_arena_ = 9999;
-    ROS_WARN_THROTTLE(1.0, "[]: STATE RESET TO %s",getStateName().c_str() );
+    ROS_WARN_THROTTLE(1.0, "[StateMachine]: STATE RESET TO %s",getStateName().c_str() );
     goAroundArena();
     return;
 
   } else if (_state_ == GOING_AROUND) {
     if (!is_tracking_) {
       _state_  = GOING_TO_ANGLE;
-      ROS_WARN_THROTTLE(1.0, "[]: STATE RESET TO %s",getStateName().c_str() );
+      ROS_WARN_THROTTLE(1.0, "[StateMachine]: STATE RESET TO %s",getStateName().c_str() );
       goAroundArena();
       return;}
     } else if (_state_ == GOING_TO_ANGLE) {
       if(!is_tracking_) {
           _state_ = CHOOSING_BALLOON;
-          ROS_WARN_THROTTLE(1.0, "[]: STATE RESET TO %s",getStateName().c_str() );
+          ROS_WARN_THROTTLE(1.0, "[StateMachine]: STATE RESET TO %s",getStateName().c_str() );
           return;
       
       }
     } else if (_state_ == CHOOSING_BALLOON) {
       if( (odom_vector_ - balloon_vector_).norm() < _closest_on_arena_+_dist_error_) {
 
-        if (time_last_balloon_point_.toSec() < _wait_for_ball_) {
-            std_srvs::Empty req;
-            srv_planner_reset_.call(req);
-            ROS_WARN_THROTTLE(1.0,"[StateMachine]: req %s ", req.response);
-        }
+        _state_ = State::GOING_TO_BALLOON;
+
         ROS_INFO_THROTTLE(1.0, "[StateMachine]: Ball found, point is in the right distance");
+        ROS_WARN("[StateMachine]: STATE RESET TO %s",getStateName().c_str() );
       }
-    }
+      else {
+          
+        ROS_INFO_THROTTLE(1.0,"[StateMachine]: Planner reset, time since last %f ",time_last_planner_reset_.toSec() );
+        if (ros::Time::now().toSec() - time_last_planner_reset_.toSec() > _wait_for_ball_) {
+            balloon_planner::ResetChosen req_;
+            srv_planner_reset_.call(req_);
+            std::string msg = req_.response.message;
+            ROS_WARN_THROTTLE(1.0,"[StateMachine]: req %d msg %s ", req_.response.success, msg.c_str());
+            ROS_INFO_THROTTLE(1.0,"[StateMachine]: time reset %f ", time_last_planner_reset_.toSec());
+            time_last_planner_reset_ =  ros::Time::now();
+        }
+      }
+    } else if (_state_ == GOING_TO_BALLOON) {
+      
+      if((odom_vector_ - balloon_vector_).norm() < _dist_to_balloon_ + 0.3 && !is_tracking_) {
+        _state_ = AT_BALLOON;
+        ROS_WARN_THROTTLE(1.0, "[StateMachine]: State changed to %s ", getStateName().c_str());
+      
+      } else {
+      
+        if(!is_tracking_){
+          getCloseToBalloon(_dist_to_balloon_);
+        }
+      }
+
+    } else if (_state_ == AT_BALLOON) {
+      if(!is_tracking_) {
+      
+        _state_ = CIRCLE_AROUND; 
+        ROS_WARN_THROTTLE(1.0, "[StateMachine]: State changed to %s ", getStateName().c_str());
+      }
+    
+    } else if (_state_ == CIRCLE_AROUND) {
+        if(!is_tracking_) {
+          circleAroundBalloon();
+        }
+    } else if (_state_ == DESTROYING) {
+      if(!is_tracking_) {
+        getCloseToBalloon(-_dist_to_overshoot_);
+        }
+        
+      } 
   }
 
 
@@ -377,7 +434,6 @@ void BalloonCircleDestroy::callbackTimerCheckSubscribers([[maybe_unused]] const 
 
 //}
 
-
 /* callbackTimerCheckBalloonPoints //{ */
 
 void BalloonCircleDestroy::callbackTimerCheckBalloonPoints([[maybe_unused]] const ros::TimerEvent& te) {
@@ -389,8 +445,6 @@ void BalloonCircleDestroy::callbackTimerCheckBalloonPoints([[maybe_unused]] cons
 }
 
 //}
-
-
 
 /* callbackCircleAround //{ */
 
@@ -405,7 +459,7 @@ bool BalloonCircleDestroy::callbackCircleAround([[maybe_unused]] std_srvs::Trigg
     
     }
     ROS_INFO_THROTTLE(1.0, "[BalloonCircleDestroy]: Start circling, circle radius %f",_circle_radius_ );
-    getCloseToBalloon();
+    getCloseToBalloon(_dist_to_balloon_);
     mrs_msgs::TrackerTrajectory new_trj_;
     new_trj_.header.frame_id = "local_origin";
     new_trj_.header.stamp    = ros::Time::now();
@@ -445,9 +499,7 @@ bool BalloonCircleDestroy::callbackCircleAround([[maybe_unused]] std_srvs::Trigg
 
 //}
 
-
-
-/* callbackCircleAround //{ */
+/* callbackGoCloser //{ */
 
 bool BalloonCircleDestroy::callbackGoCloser([[maybe_unused]] std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res) {
   if (!is_initialized_) {
@@ -459,7 +511,7 @@ bool BalloonCircleDestroy::callbackGoCloser([[maybe_unused]] std_srvs::Trigger::
 
   }
 
-  getCloseToBalloon();
+  getCloseToBalloon(_dist_to_balloon_);
   ROS_INFO_THROTTLE(1.0, "[BalloonCircleDestroy]: I am at the balloon at %f",_dist_to_balloon_);
   res.message = "Getting close to the balloon";
   res.success = true;
@@ -499,15 +551,66 @@ bool BalloonCircleDestroy::callbackStartStateMachine([[maybe_unused]] std_srvs::
 
 //}
 
+/* circleAroundBalloon //{ */
+
+void BalloonCircleDestroy::circleAroundBalloon() {
+
+ if (!is_initialized_) {
+      ROS_WARN("[BalloonCircleDestroy]: couldn't start circling, I am not initialized ");
+      return;  
+    }
+
+
+    if (_state_ != CIRCLE_AROUND) {
+        ROS_INFO_THROTTLE(1.0, "[StateMachine]: State is not CIRCLE_AROUND but is %s", getStateName().c_str());
+        return;
+    
+    } 
+    ROS_INFO_THROTTLE(1.0, "[BalloonCircleDestroy]: Start circling, circle radius %f",_circle_radius_ );
+    mrs_msgs::TrackerTrajectory new_trj_;
+    new_trj_.header.frame_id = "local_origin";
+    new_trj_.header.stamp    = ros::Time::now();
+    new_trj_.fly_now = true;
+    new_trj_.loop = false;
+    new_trj_.use_yaw = true;
+    new_trj_.start_index = 0;
+    double iterat = M_PI/(_circle_accuracy_/2);
+    double angle = 0;
+
+    for (int i = 0; i <_circle_accuracy_; i++) {
+      mrs_msgs::TrackerPoint point;
+      point.x = balloon_point_.pose.pose.position.x + cos(angle)*_circle_radius_;
+      point.y = balloon_point_.pose.pose.position.y + sin(angle)*_circle_radius_;
+      point.z = balloon_point_.pose.pose.position.z;
+      point.yaw = angle + M_PI;
+      angle +=iterat;
+      
+      new_trj_.points.push_back(point);
+    }
+  
+
+    ROS_INFO_THROTTLE(1.0, "[BalloonCircleDestroyer]: publishing trajectory ");
+    mrs_msgs::TrackerTrajectorySrv req_;
+    req_.request.trajectory_msg = new_trj_;
+    
+    srv_client_trajectory_.call(req_);
+    
+
+    ROS_INFO_THROTTLE(1.0, "[BalloonCircleDestroy]: Result of circle service %s ", req_.response.message.c_str());
+    is_tracking_ = true; 
+}
+
+//}
+
 /* getCloseToBalloon //{ */
 
-void BalloonCircleDestroy::getCloseToBalloon() {
+void BalloonCircleDestroy::getCloseToBalloon(double close_dist_) {
    
   double sample_dist_ = _vel_* (_traj_len_/_traj_time_);
   Eigen::Vector3d dir_vector_ = balloon_vector_ - odom_vector_;
 
   double dist_ = dir_vector_.norm();
-  double normed_ = (dist_ - _dist_to_balloon_)/dist_;
+  double normed_ = (dist_ - close_dist_)/dist_;
   Eigen::Vector3d goal_ = normed_*dir_vector_ + odom_vector_;
   goal_(2,0) = balloon_vector_(2,0);
   dir_vector_ = goal_ - odom_vector_; 
@@ -518,7 +621,7 @@ void BalloonCircleDestroy::getCloseToBalloon() {
   Eigen::Vector3d cur_pos_ = odom_vector_;
   mrs_msgs::TrackerTrajectory new_traj_;
   Eigen::Vector3d diff_vector_;
-  double angle_ = getBalloonHeading() + M_PI;
+  double angle_ = getBalloonHeading() ;
 
   while (cur_pos_(0,0) != goal_(0,0) && cur_pos_(1,0)!=goal_(1,0) && cur_pos_(2,0) != goal_(2,0)) {
   
@@ -654,7 +757,6 @@ void BalloonCircleDestroy::goAroundArena() {
 
 //}
 
-
 /* goToChosenBalloon //{ */
 
 
@@ -727,7 +829,6 @@ void BalloonCircleDestroy::goToChosenBalloon() {
 
 //}
 
-
 /* getArenaHeading //{ */
 
 double BalloonCircleDestroy::getArenaHeading() {
@@ -755,8 +856,8 @@ std::string BalloonCircleDestroy::getStateName() {
 }
 //}
 
-
 // | --------------------- transformations -------------------- |
+
 /* getTransform() method //{ */
 bool BalloonCircleDestroy::getTransform(const std::string& from_frame, const std::string& to_frame, const ros::Time& stamp, geometry_msgs::TransformStamped& transform_out)
 {

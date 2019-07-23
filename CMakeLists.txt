@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_ros
   tf2_geometry_msgs
   tf2_sensor_msgs
+  balloon_planner
   )
 
 #Find Eigen libraries

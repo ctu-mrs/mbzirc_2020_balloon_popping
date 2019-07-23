@@ -29,12 +29,14 @@ circle_accuracy: 100
 vel: 1
 #distance to the balloon
 dist_to_balloon: 3
+#distance to kill the balloon
+dist_to_overshoot: 2
 #trajectory length
 traj_len: 40
 #traj time
 traj_time: 8
 #distance error to target the closest balloon so, it will be compared to current chosen via KF + dist_error 
-dist_error: 0.5
+dist_error: 2
 #time for waiting for KF reset
 wait_for_ball: 2
 

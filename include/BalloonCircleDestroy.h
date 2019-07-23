@@ -43,7 +43,6 @@
 #include <mrs_msgs/TrackerPointStamped.h>
 #include <mrs_msgs/TrackerDiagnostics.h>
 #include <mrs_msgs/Float64Stamped.h>
-
 /* custom helper functions from our library */
 #include <mrs_lib/ParamLoader.h>
 
@@ -52,6 +51,7 @@
 #include <std_srvs/Empty.h>
 #include <mrs_msgs/TrackerTrajectorySrvRequest.h>
 #include <mrs_msgs/TrackerTrajectorySrv.h>
+#include <balloon_planner/ResetChosen.h>
 /* for operations with matrices */
 #include <Eigen/Dense>
 /* math  */
@@ -94,6 +94,7 @@ private:
   int            _circle_accuracy_;
   double         _vel_;
   double         _dist_to_balloon_;
+  double         _dist_to_overshoot_;
   int            _traj_len_;
   int            _traj_time_;
   double         _dist_error_;
@@ -169,11 +170,6 @@ private:
 
   // | --------------------- timer callbacks -------------------- |
 
- void           callbackTimerPublishGoTo(const ros::TimerEvent& te);
-  ros::Publisher pub_goto_;
-  ros::Timer     timer_publish_goto_;
-  int            _rate_timer_publish_goto_;
-
   void       callbackTimerCheckSubscribers(const ros::TimerEvent& te);
   ros::Timer timer_check_subscribers_;
   int        _rate_timer_check_subscribers_;
@@ -195,6 +191,7 @@ private:
 
   ros::ServiceClient srv_planner_reset_;
   bool               _planner_reset_;
+  ros::Time          time_last_planner_reset_;
 
   // | ---------------- service server callbacks ---------------- |
   bool       callbackCircleAround(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res);
@@ -226,7 +223,8 @@ private:
 
 /* Support Functions //{ */
 
-  void getCloseToBalloon();
+  void getCloseToBalloon(double dist);
+  void circleAroundBalloon();
   void getAngleToBalloon();
   void generateTrajectory();
   void goAroundArena();
@@ -236,6 +234,7 @@ private:
   std::string getStateName();
 
 //}
+
 };
 //}
 
