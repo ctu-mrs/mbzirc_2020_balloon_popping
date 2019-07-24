@@ -22,9 +22,9 @@ arena_center_x: 15
 arena_center_y: 20
 
 #height where drone will operate ( up to this height )
-elips_height: 3
-height_min: 1
-height_max: 6
+elips_height: 8
+height_min: 6
+height_max: 10
 #idle_time
 idle_time: 0.3
 #circling radius - define width from the balloon to circle around

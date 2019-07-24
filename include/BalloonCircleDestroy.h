@@ -94,10 +94,13 @@ private:
   double         _arena_center_x_;
   double         _arena_center_y_;
   float          _height_;
+  float          _min_height_;
+  float          _max_height_;
   double         _circle_radius_;
   int            _circle_accuracy_;
   double         _vel_;
   double         _vel_attack_;
+  double         _vel_arena_;
   double         _dist_to_balloon_;
   double         _dist_to_overshoot_;
   int            _traj_len_;
