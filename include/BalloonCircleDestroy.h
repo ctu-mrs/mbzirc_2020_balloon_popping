@@ -87,6 +87,8 @@ private:
   int            _arena_width_;
   int            _arena_length_;
   int            _arena_accuracy_;
+  int            _min_arena_accuracy_;
+  int            _arena_area_;
   double         _arena_center_x_;
   double         _arena_center_y_;
   float          _height_;
@@ -100,6 +102,7 @@ private:
   int            _traj_time_;
   double         _dist_error_;
   double         _wait_for_ball_;
+  int            _reset_tries_;
 
 
   // | ------------------------- state machine params ------------------------- |
@@ -109,6 +112,7 @@ private:
   bool           _is_state_machine_active_ = false;
   double         _closest_on_arena_ = 999.9;
   double         _closest_angle_ = 0;
+  int            _reset_count_;
 
   // | ----------------------- transforms ----------------------- |
 
@@ -162,6 +166,7 @@ private:
   void            callbackBalloonPointCloud(const sensor_msgs::PointCloudConstPtr& msg);
   ros::Subscriber           sub_balloon_point_cloud_;
   sensor_msgs::PointCloud   balloon_point_cloud_;
+  Eigen::Vector3d           balloon_closest_vector_;
   bool                      got_balloon_point_cloud_ = false;
   bool                      is_ballon_cloud_incoming_= false;
   std::mutex                mutex_is_balloon_cloud_incoming_;

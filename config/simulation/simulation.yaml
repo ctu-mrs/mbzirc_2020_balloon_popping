@@ -12,7 +12,9 @@ land_at_the_end: false
 arena_width: 30
 #arena length
 arena_length: 40
+#arena  accuracy - how many points should be in arena trajectory
 arena_accuracy: 300
+min_arena_accuracy: 30
 #arena_center_x
 arena_center_x: 15
 arena_center_y: 20
@@ -20,7 +22,7 @@ arena_center_y: 20
 #height where drone will operate ( up to this height )
 height: 7
 #idle_time
-idle_time: 1
+idle_time: 0.3
 #circling radius - define width from the balloon to circle around
 circling_radius: 3
 #circle accuracy - how many points should be in circle trajectory
@@ -28,7 +30,7 @@ circle_accuracy: 100
 #velocity for goTo's
 vel: 1
 #velocity for attack
-vel_attack: 0.3
+vel_attack: 0.1
 #distance to the balloon
 dist_to_balloon: 3
 #distance to kill the balloon
@@ -41,6 +43,8 @@ traj_time: 8
 dist_error: 2
 #time for waiting for KF reset
 wait_for_ball: 4
+#how many time to reset the KF
+reset_tries: 5
 
 
 world_frame_id: "local_origin"

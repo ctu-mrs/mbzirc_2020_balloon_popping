@@ -14,6 +14,7 @@ void BalloonCircleDestroy::onInit() {
   got_tracker_diag_ = false;
 
   is_tracking_ = false;
+  _reset_count_ = 0;
 
   ros::NodeHandle nh("~");
 
@@ -29,6 +30,7 @@ void BalloonCircleDestroy::onInit() {
   param_loader.load_param("arena_center_x", _arena_center_x_);
   param_loader.load_param("arena_center_y", _arena_center_y_);
   param_loader.load_param("arena_accuracy", _arena_accuracy_);
+  param_loader.load_param("min_arena_accuracy", _min_arena_accuracy_);
   param_loader.load_param("height", _height_);
   param_loader.load_param("idle_time", _idle_time_);
   param_loader.load_param("circling_radius", _circle_radius_);
@@ -52,6 +54,7 @@ void BalloonCircleDestroy::onInit() {
   param_loader.load_param("world_point/x", world_point_x_);
   param_loader.load_param("world_point/y", world_point_y_);
   param_loader.load_param("world_point/z", world_point_z_);
+  param_loader.load_param("reset_tries", _reset_tries_);
 
   ROS_INFO_STREAM_ONCE("[BalloonCircleDestroy]: params loaded");
 
@@ -170,6 +173,7 @@ void BalloonCircleDestroy::callbackBalloonPointCloud(const sensor_msgs::PointClo
   {
     std::scoped_lock lock(mutex_is_balloon_cloud_incoming_);
     balloon_point_cloud_ = *msg;
+
   }
 
   if (!got_balloon_point_cloud_) {
@@ -196,7 +200,7 @@ void BalloonCircleDestroy::callbackTrackerDiag(const mrs_msgs::TrackerDiagnostic
 
   if (is_tracking_ && msg->tracking_trajectory && _state_ == GOING_AROUND) {
 
-    Eigen::Vector3d ball_vect;
+    Eigen::Vector3d ball_vect_;
     double          cur_dist_;
 
 
@@ -209,11 +213,12 @@ void BalloonCircleDestroy::callbackTrackerDiag(const mrs_msgs::TrackerDiagnostic
         return;
       }
 
-      ball_vect = Eigen::Vector3d(p_.x, p_.y, p_.z);
-      cur_dist_ = (ball_vect - odom_vector_).norm();
+      ball_vect_ = Eigen::Vector3d(p_.x, p_.y, p_.z);
+      cur_dist_ = (ball_vect_ - odom_vector_).norm();
       if (cur_dist_ < _closest_on_arena_) {
         _closest_on_arena_ = cur_dist_;
         _closest_angle_    = getArenaHeading();
+        balloon_closest_vector_ = ball_vect_;
       }
     }
   }
@@ -249,8 +254,13 @@ void BalloonCircleDestroy::callbackTimerIdling([[maybe_unused]] const ros::Timer
 
   } else if (_state_ == DESTROYING) {
     _state_ = IDLE;
+    _arena_area_ = _arena_width_ * _arena_length_ * M_PI;
     _arena_width_ -= _closest_on_arena_/2;
     _arena_length_ -= _closest_on_arena_/2;
+    _arena_accuracy_ *= (_arena_width_*_arena_length_*M_PI)/_arena_area_;
+    if( _arena_accuracy_ < _min_arena_accuracy_) {
+      _arena_accuracy_ = _min_arena_accuracy_;
+    }
     ROS_WARN_THROTTLE(0.5, "[StateMachine]: State changed to %s ", getStateName().c_str());
   }
 }
@@ -290,6 +300,17 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
   ROS_INFO_THROTTLE(0.5, "[CurrentAngle]: %f ", getArenaHeading());
   ROS_INFO_THROTTLE(0.5, "[ClosestDist]: %f ", _closest_on_arena_);
   ROS_INFO_THROTTLE(0.5, "[Current Dist To ball]: %f ", (odom_vector_ - balloon_vector_).norm());
+  ROS_INFO_THROTTLE(0.5, "[Closest ball (PointCloud)]: x %f ", balloon_closest_vector_(0,0));
+  ROS_INFO_THROTTLE(0.5, "[Closest ball (PointCloud)]: y %f ", balloon_closest_vector_(0,1));
+  ROS_INFO_THROTTLE(0.5, "[Closest ball (PointCloud)]: z %f ", balloon_closest_vector_(0,2));
+  ROS_INFO_THROTTLE(0.5, "[Closest ball (KF)]: x %f ", balloon_vector_(0,0));
+  ROS_INFO_THROTTLE(0.5, "[Closest ball (KF)]: y %f ", balloon_vector_(0,1));
+  ROS_INFO_THROTTLE(0.5, "[Closest ball (KF)]: z %f ", balloon_vector_(0,2));
+  ROS_INFO_THROTTLE(0.5, "[Closest ball (KF)]: z %f ", balloon_vector_(0,2));
+
+  ROS_INFO_THROTTLE(0.5, "[Dist between KF and PCL vectors]: %f ", (balloon_vector_ - balloon_closest_vector_).norm());
+  ROS_INFO_THROTTLE(0.5, "[Dist between Closest chosen by PCL]: %f ", (odom_vector_ - balloon_closest_vector_).norm());
+  ROS_INFO_THROTTLE(0.5, "[KF reset tries]  %d ", _reset_count_);
 
   ROS_INFO_THROTTLE(0.5, "| ----------------- STATE MACHINE LOOP END ----------------- |");
 
@@ -297,6 +318,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
     _state_            = GOING_AROUND;
     _closest_on_arena_ = 9999;
     _closest_angle_ = 0;
+    _reset_count_ = 0;
     ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
     goAroundArena();
     return;
@@ -315,13 +337,28 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
       return;
     }
   } else if (_state_ == CHOOSING_BALLOON) {
+    if( ros::Time::now().toSec() - time_last_balloon_point_.toSec() > _wait_for_ball_) {
+      if(_reset_tries_ == _reset_count_) {
+        _state_ = State::IDLE;
+        ROS_WARN_THROTTLE(0.5, "[StateMachine]: Balloon point (KF) is too old, skipping ");
+      }
+      _reset_count_++;
+    
+    }
     if ((odom_vector_ - balloon_vector_).norm() < _closest_on_arena_ + _dist_error_) {
+
 
       _state_ = State::GOING_TO_BALLOON;
 
       ROS_INFO_THROTTLE(0.5, "[StateMachine]: Ball found, point is in the right distance");
       ROS_WARN("[StateMachine]: STATE RESET TO %s", getStateName().c_str());
     } else {
+      if( _reset_tries_ == _reset_count_) {
+        _state_ = State::IDLE;
+        ROS_WARN_THROTTLE(0.5, "[StateMachine]: Couldn't find the ball, too many resets, going on another cirle ");
+        ROS_WARN_THROTTLE(0.5,"[StateMachine]: STATE RESET TO %s", getStateName().c_str());
+        return;
+      }
 
       ROS_INFO_THROTTLE(0.5, "[StateMachine]: Planner reset, time since last %f ", ros::Time::now().toSec() - time_last_planner_reset_.toSec());
       if (ros::Time::now().toSec() - time_last_planner_reset_.toSec() > _wait_for_ball_) {
@@ -332,6 +369,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
           ROS_INFO_THROTTLE(0.5, "[StateMachine]: req %d msg %s ", req_.response.success, msg.c_str());
           ROS_INFO_THROTTLE(0.5, "[StateMachine]: time reset");
           time_last_planner_reset_ = ros::Time::now();
+          _reset_count_++;
         } else {
           ROS_ERROR("[StateMachine]: service call failed");
           ROS_WARN_THROTTLE(0.5, "[StateMachine]: req %d msg %s ", req_.response.success, msg.c_str());
@@ -454,7 +492,7 @@ bool BalloonCircleDestroy::callbackCircleAround([[maybe_unused]] std_srvs::Trigg
   ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: Start circling, circle radius %f", _circle_radius_);
   getCloseToBalloon(_dist_to_balloon_, _vel_);
   mrs_msgs::TrackerTrajectory new_trj_;
-  new_trj_.header.frame_id = "local_origin";
+  new_trj_.header.frame_id = world_frame_id_;
   new_trj_.header.stamp    = ros::Time::now();
   new_trj_.fly_now         = true;
   new_trj_.loop            = false;
@@ -556,7 +594,7 @@ void BalloonCircleDestroy::circleAroundBalloon() {
   }
   ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: Start circling, circle radius %f", _circle_radius_);
   mrs_msgs::TrackerTrajectory new_trj_;
-  new_trj_.header.frame_id = "local_origin";
+  new_trj_.header.frame_id = world_frame_id_;
   new_trj_.header.stamp    = ros::Time::now();
   new_trj_.fly_now         = true;
   new_trj_.loop            = false;
@@ -632,7 +670,7 @@ void BalloonCircleDestroy::getCloseToBalloon(double close_dist_, double speed_) 
     }
   }
   ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: Trajectory ready ");
-  new_traj_.header.frame_id = "local_origin";
+  new_traj_.header.frame_id = world_frame_id_;
   new_traj_.header.stamp    = ros::Time::now();
   new_traj_.fly_now         = true;
   new_traj_.use_yaw         = true;
@@ -683,7 +721,7 @@ void BalloonCircleDestroy::goAroundArena() {
 
 
   mrs_msgs::TrackerTrajectory new_trj_;
-  new_trj_.header.frame_id = "local_origin";
+  new_trj_.header.frame_id = world_frame_id_;
   new_trj_.header.stamp    = ros::Time::now();
   new_trj_.fly_now         = true;
   new_trj_.loop            = false;
@@ -785,7 +823,7 @@ void BalloonCircleDestroy::goToChosenBalloon() {
     }
   }
   ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: Trajectory ready ");
-  new_traj_.header.frame_id = "local_origin";
+  new_traj_.header.frame_id = world_frame_id_;
   new_traj_.header.stamp    = ros::Time::now();
   new_traj_.fly_now         = true;
   new_traj_.use_yaw         = true;
