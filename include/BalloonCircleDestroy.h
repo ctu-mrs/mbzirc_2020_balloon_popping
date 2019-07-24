@@ -85,7 +85,9 @@ private:
   void           callbackTimerIdling(const ros::TimerEvent& te);
   bool           _simulation_;
   int            _arena_width_;
+  int            _min_arena_width_;
   int            _arena_length_;
+  int            _min_arena_length_;
   int            _arena_accuracy_;
   int            _min_arena_accuracy_;
   int            _arena_area_;

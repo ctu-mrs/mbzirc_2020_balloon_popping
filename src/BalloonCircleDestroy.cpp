@@ -26,7 +26,9 @@ void BalloonCircleDestroy::onInit() {
 
   mrs_lib::ParamLoader param_loader(nh, "BalloonCircleDestroy");
   param_loader.load_param("arena_width", _arena_width_);
+  param_loader.load_param("min_arena_width", _min_arena_width_);
   param_loader.load_param("arena_length", _arena_length_);
+  param_loader.load_param("min_arena_length", _min_arena_length_);
   param_loader.load_param("arena_center_x", _arena_center_x_);
   param_loader.load_param("arena_center_y", _arena_center_y_);
   param_loader.load_param("arena_accuracy", _arena_accuracy_);
@@ -254,9 +256,16 @@ void BalloonCircleDestroy::callbackTimerIdling([[maybe_unused]] const ros::Timer
 
   } else if (_state_ == DESTROYING) {
     _state_ = IDLE;
+    if(_arena_width_ < _min_arena_width_ ) {
+      _arena_width_ = _min_arena_width_;
+    }
+    if (_arena_length_ < _min_arena_length_) {
+      _arena_length_ = _min_arena_length_;
+    }
     _arena_area_ = _arena_width_ * _arena_length_ * M_PI;
     _arena_width_ -= _closest_on_arena_/2;
     _arena_length_ -= _closest_on_arena_/2;
+    
     _arena_accuracy_ *= (_arena_width_*_arena_length_*M_PI)/_arena_area_;
     if( _arena_accuracy_ < _min_arena_accuracy_) {
       _arena_accuracy_ = _min_arena_accuracy_;
@@ -309,8 +318,9 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
   ROS_INFO_THROTTLE(0.5, "[Closest ball (KF)]: z %f ", balloon_vector_(0,2));
 
   ROS_INFO_THROTTLE(0.5, "[Dist between KF and PCL vectors]: %f ", (balloon_vector_ - balloon_closest_vector_).norm());
-  ROS_INFO_THROTTLE(0.5, "[Dist between Closest chosen by PCL]: %f ", (odom_vector_ - balloon_closest_vector_).norm());
   ROS_INFO_THROTTLE(0.5, "[KF reset tries]  %d ", _reset_count_);
+  ROS_INFO_THROTTLE(0.5, "[ARENA LENGTH]:%d ", _arena_length_);
+  ROS_INFO_THROTTLE(0.5, "[ARENA WIDTH]:%d ", _arena_width_);
 
   ROS_INFO_THROTTLE(0.5, "| ----------------- STATE MACHINE LOOP END ----------------- |");
 

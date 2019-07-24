@@ -10,8 +10,10 @@ land_at_the_end: false
 
 #arena width
 arena_width: 30
+min_arena_width: 3
 #arena length
 arena_length: 40
+min_arena_length: 4
 #arena  accuracy - how many points should be in arena trajectory
 arena_accuracy: 300
 min_arena_accuracy: 30
@@ -30,7 +32,7 @@ circle_accuracy: 100
 #velocity for goTo's
 vel: 1
 #velocity for attack
-vel_attack: 0.1
+vel_attack: 0.05
 #distance to the balloon
 dist_to_balloon: 3
 #distance to kill the balloon
@@ -42,7 +44,7 @@ traj_time: 8
 #distance error to target the closest balloon so, it will be compared to current chosen via KF + dist_error 
 dist_error: 2
 #time for waiting for KF reset
-wait_for_ball: 4
+wait_for_ball: 6
 #how many time to reset the KF
 reset_tries: 5
 
