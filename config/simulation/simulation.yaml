@@ -22,9 +22,9 @@ arena_center_x: 15
 arena_center_y: 20
 
 #height where drone will operate ( up to this height )
-elips_height: 4
+elips_height: 8
 height_min: 1
-height_max: 5
+height_max: 4.6
 #idle_time
 idle_time: 0.3
 #circling radius - define width from the balloon to circle around
@@ -37,6 +37,8 @@ vel: 2
 vel_attack: 0.5
 #velocity of going around arena
 vel_arena: 5
+#minimal velocity of going around arena
+min_vel_arena: 0.5
 #distance to the balloon
 dist_to_balloon: 3
 #distance to kill the balloon
@@ -53,6 +55,6 @@ wait_for_ball: 6
 reset_tries: 5
 #time to land - max time of not observing any balloons at all 
 time_to_land: 120 # seconds 
-
+#world frame, all points are tran
 world_frame_id: "local_origin"
 

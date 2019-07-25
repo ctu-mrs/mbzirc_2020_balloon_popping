@@ -99,10 +99,11 @@ private:
   double         _vel_;
   double         _vel_attack_;
   double         _vel_arena_;
+  double         _vel_arena_min_;
   double         _dist_to_balloon_;
   double         _dist_to_overshoot_;
-  double            _traj_len_;
-  double            _traj_time_;
+  double         _traj_len_;
+  double         _traj_time_;
   double         _dist_error_;
   double         _wait_for_ball_;
   int            _reset_tries_;

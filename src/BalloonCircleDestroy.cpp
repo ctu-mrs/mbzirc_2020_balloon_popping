@@ -46,6 +46,7 @@ void BalloonCircleDestroy::onInit() {
   param_loader.load_param("vel", _vel_);
   param_loader.load_param("vel_attack", _vel_attack_);
   param_loader.load_param("vel_arena", _vel_arena_);
+  param_loader.load_param("min_vel_arena", _vel_arena_min_);
   param_loader.load_param("dist_error", _dist_error_);
   param_loader.load_param("wait_for_ball", _wait_for_ball_);
 
@@ -277,23 +278,19 @@ void BalloonCircleDestroy::callbackTimerIdling([[maybe_unused]] const ros::Timer
   } else if (_state_ == DESTROYING) {
     _state_ = IDLE;
 
-    _arena_area_ = _arena_width_ * _arena_length_ * M_PI;
-    _arena_width_ -= _closest_on_arena_ / 2;
-    _arena_length_ -= _closest_on_arena_ / 2;
-
-    /* _arena_accuracy_ *= (_arena_width_ * _arena_length_ * M_PI) / _arena_area_; */
-    /* if (_arena_accuracy_ < _min_arena_accuracy_) { */
-    /*   _arena_accuracy_ = _min_arena_accuracy_; */
-    /* } */
-    if (_arena_width_ < _min_arena_width_) {
+    if( _arena_width_ > _min_arena_width_ && _arena_length_ > _min_arena_length_) {
+    
+      _arena_width_ -= _closest_on_arena_ / 2;
+      _arena_length_ -= _closest_on_arena_ / 2;
+    }else {
       _arena_width_ = _min_arena_width_;
-    }
-    if (_arena_length_ < _min_arena_length_) {
       _arena_length_ = _min_arena_length_;
+      _vel_arena_ = _vel_arena_min_;
+    }
+
     }
     ROS_WARN_THROTTLE(0.5, "[StateMachine]: State changed to %s ", getStateName().c_str());
   }
-}
 
 
 
@@ -346,6 +343,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
   ROS_INFO_THROTTLE(0.5, "[KF reset tries]  %d ", _reset_count_);
   ROS_INFO_THROTTLE(0.5, "[ARENA LENGTH]: %d ", _arena_length_);
   ROS_INFO_THROTTLE(0.5, "[ARENA WIDTH]: %d ", _arena_width_);
+  ROS_INFO_THROTTLE(0.5, "[ARENA VELOCITY]: %f ", _vel_arena_);
   ROS_INFO_THROTTLE(0.5, "[MIN HEIGHT]: %f ", _min_height_);
   ROS_INFO_THROTTLE(0.5, "[MAX HEIGHT]: %f ", _max_height_);
   ROS_INFO_THROTTLE(0.5, "[CUR HEIGHT]: %f ", odom_vector_(2, 0));
@@ -810,6 +808,16 @@ void BalloonCircleDestroy::goAroundArena() {
   new_trj_.start_index     = 0;
 
   double mpc_speed_ = _traj_time_/_traj_len_;
+
+  if(_arena_width_ < _min_arena_width_) {
+    _arena_width_ = _min_arena_width_;
+    _vel_arena_ = _vel_arena_min_;
+  }
+  if (_arena_length_ < _min_arena_width_) {
+    _arena_length_ = _min_arena_length_;
+    _vel_arena_ = _vel_arena_min_;
+  }
+
 
   double arena_accuracy_   = _arena_length_ * _arena_width_ *2*M_PI; 
   arena_accuracy_ = arena_accuracy_ / _vel_arena_ * mpc_speed_;
