@@ -118,6 +118,8 @@ private:
   double         _closest_angle_ = 0;
   int            _reset_count_;
   double         _time_to_land_;
+  double         _cur_arena_width_;
+  double         _cur_arena_length_;
 
   // | ----------------------- transforms ----------------------- |
 

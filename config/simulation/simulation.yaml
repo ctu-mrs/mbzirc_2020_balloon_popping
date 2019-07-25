@@ -22,7 +22,7 @@ arena_center_x: 15
 arena_center_y: 20
 
 #height where drone will operate ( up to this height )
-elips_height: 8
+elips_height: 4
 height_min: 1
 height_max: 4.6
 #idle_time
