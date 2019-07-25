@@ -23,7 +23,7 @@ arena_center_y: 20
 
 #height where drone will operate ( up to this height )
 elips_height: 8
-height_min: 6
+height_min: 5.3
 height_max: 10
 #idle_time
 idle_time: 0.3
@@ -32,11 +32,11 @@ circling_radius: 3
 #circle accuracy - how many points should be in circle trajectory
 circle_accuracy: 100
 #velocity for goTo's
-vel: 1
+vel: 2
 #velocity for attack
-vel_attack: 0.05
+vel_attack: 0.5
 #velocity of going around arena
-vel_arena: 30
+vel_arena: 5
 #distance to the balloon
 dist_to_balloon: 3
 #distance to kill the balloon
@@ -51,7 +51,8 @@ dist_error: 3
 wait_for_ball: 6
 #how many time to reset the KF
 reset_tries: 5
-
+#time to land - max time of not observing any balloons at all 
+time_to_land: 120 # seconds 
 
 world_frame_id: "local_origin"
 world_point:

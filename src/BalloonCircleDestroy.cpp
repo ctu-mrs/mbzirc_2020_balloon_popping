@@ -56,17 +56,14 @@ void BalloonCircleDestroy::onInit() {
   param_loader.load_param("rate/state_machine", _rate_timer_state_machine_);
 
   param_loader.load_param("world_frame_id", world_frame_id_);
-  param_loader.load_param("world_point/x", world_point_x_);
-  param_loader.load_param("world_point/y", world_point_y_);
-  param_loader.load_param("world_point/z", world_point_z_);
   param_loader.load_param("reset_tries", _reset_tries_);
+  param_loader.load_param("time_to_land", _time_to_land_);
 
   ROS_INFO_STREAM_ONCE("[BalloonCircleDestroy]: params loaded");
 
   //}
 
 
-  /* subscribe ground truth only in simulation, where it is available */
   // --------------------------------------------------------------
   // |                         subscribers                        |
   // --------------------------------------------------------------
@@ -87,7 +84,6 @@ void BalloonCircleDestroy::onInit() {
   //}
 
   // | --------------- initialize service servers --------------- |
-  //
   /*  server services //{ */
 
   srv_server_circle_around_       = nh.advertiseService("circle_around", &BalloonCircleDestroy::callbackCircleAround, this);
@@ -96,13 +92,23 @@ void BalloonCircleDestroy::onInit() {
   srv_server_stop_state_machine_  = nh.advertiseService("stop_state_machine", &BalloonCircleDestroy::callbackStartStateMachine, this);
 
 
+  //}
+ 
+/* Service clients //{ */
+
+
+
   // init service client for publishing trajectories for the drone
   srv_client_trajectory_   = nh.serviceClient<mrs_msgs::TrackerTrajectorySrv>("trajectory_srv");
   srv_planner_reset_       = nh.serviceClient<balloon_planner::ResetChosen>("balloon_reset");
   time_last_planner_reset_ = ros::Time::now();
+  srv_client_land_ = nh.serviceClient<std_srvs::Trigger>("land_out");
 
 
-  //}
+
+//}
+
+
   // | ---------- initialize dynamic reconfigure server --------- |
   /* dynamic server //{ */
 
@@ -275,10 +281,10 @@ void BalloonCircleDestroy::callbackTimerIdling([[maybe_unused]] const ros::Timer
     _arena_width_ -= _closest_on_arena_ / 2;
     _arena_length_ -= _closest_on_arena_ / 2;
 
-    _arena_accuracy_ *= (_arena_width_ * _arena_length_ * M_PI) / _arena_area_;
-    if (_arena_accuracy_ < _min_arena_accuracy_) {
-      _arena_accuracy_ = _min_arena_accuracy_;
-    }
+    /* _arena_accuracy_ *= (_arena_width_ * _arena_length_ * M_PI) / _arena_area_; */
+    /* if (_arena_accuracy_ < _min_arena_accuracy_) { */
+    /*   _arena_accuracy_ = _min_arena_accuracy_; */
+    /* } */
     if (_arena_width_ < _min_arena_width_) {
       _arena_width_ = _min_arena_width_;
     }
@@ -540,6 +546,14 @@ void BalloonCircleDestroy::callbackTimerCheckBalloonPoints([[maybe_unused]] cons
   if (!is_initialized_) {
     return;
   }
+  if(_is_state_machine_active_) {
+    if(ros::Time::now().toSec() - time_last_balloon_cloud_point_.toSec() > _time_to_land_) {
+      ROS_WARN_THROTTLE(0.5, "[StateMachine]: Have'nt seen balloon points for %f, landing, state_machine is done", time_last_balloon_cloud_point_.toSec());
+      _is_state_machine_active_ = false;
+      std_srvs::Trigger srv_land_call;
+      srv_client_land_.call(srv_land_call);
+    }
+  }
   /* ROS_INFO_THROTTLE(1.0, "[%s]: Got balloon point at x %f ", ros::this_node::getName().c_str(), balloon_point_.pose.pose.position.x); */
 }
 
@@ -699,7 +713,7 @@ void BalloonCircleDestroy::circleAroundBalloon() {
 
 void BalloonCircleDestroy::getCloseToBalloon(double close_dist_, double speed_) {
 
-  double          sample_dist_ = speed_ * (_traj_len_ / _traj_time_);
+  double          sample_dist_ = speed_ * (_traj_time_/_traj_len_);
   Eigen::Vector3d dir_vector_  = balloon_vector_ - odom_vector_;
 
   double          dist_   = dir_vector_.norm();
@@ -795,14 +809,17 @@ void BalloonCircleDestroy::goAroundArena() {
   new_trj_.use_yaw         = true;
   new_trj_.start_index     = 0;
 
-  double arena_accuracy_   = _arena_length_ * _arena_width_ *2*M_PI / _vel_arena_;
+  double mpc_speed_ = _traj_time_/_traj_len_;
+
+  double arena_accuracy_   = _arena_length_ * _arena_width_ *2*M_PI; 
+  arena_accuracy_ = arena_accuracy_ / _vel_arena_ * mpc_speed_;
   double iterat_           =  M_PI / (arena_accuracy_/2);
-  /* double iterat            = M_PI / (_arena_accuracy_ / 2); */
+  /* double iterat_            = M_PI / (_arena_accuracy_ / 2); */
 
 
   Eigen::Vector3d angle_vector_ = Eigen::Vector3d(_arena_center_x_, _arena_center_y_, _height_) - odom_vector_;
   double          angle         = atan2(angle_vector_(1), angle_vector_(0)) + M_PI;
-  ROS_INFO("[]: angle %f", angle);
+  ROS_INFO("[]: angle %f accuracy %f", angle, arena_accuracy_);
   /* double angle = 0; */
   bool lower = false;
   if (angle > _closest_angle_) {
@@ -833,7 +850,7 @@ void BalloonCircleDestroy::goAroundArena() {
   }
 
 
-  ROS_WARN_THROTTLE(0.5, "[Traj]: %d ", new_trj_.points.size());
+  ROS_WARN_THROTTLE(0.5, "[Traj]: %lu ", new_trj_.points.size());
   ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroyer]: publishing trajectory ");
   mrs_msgs::TrackerTrajectorySrv req_;
   req_.request.trajectory_msg = new_trj_;

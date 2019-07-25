@@ -14,8 +14,6 @@
 
 /* this header file is created during compilation from python script dynparam.cfg */
 #include <balloon_circle_destroy/dynparamConfig.h>
-/*Better enums  */
-#include "enum.h"
 
 /* for smart pointers (do not use raw pointers) */
 #include <memory>
@@ -103,8 +101,8 @@ private:
   double         _vel_arena_;
   double         _dist_to_balloon_;
   double         _dist_to_overshoot_;
-  int            _traj_len_;
-  int            _traj_time_;
+  double            _traj_len_;
+  double            _traj_time_;
   double         _dist_error_;
   double         _wait_for_ball_;
   int            _reset_tries_;
@@ -118,14 +116,12 @@ private:
   double         _closest_on_arena_ = 999.9;
   double         _closest_angle_ = 0;
   int            _reset_count_;
+  double         _time_to_land_;
 
   // | ----------------------- transforms ----------------------- |
 
 
   std::string                                 world_frame_id_;
-  double                                      world_point_x_;
-  double                                      world_point_y_;
-  double                                      world_point_z_;
   tf2_ros::Buffer                             tf_buffer_;
   std::unique_ptr<tf2_ros::TransformListener> tf_listener_ptr_;
 
@@ -203,6 +199,9 @@ private:
   ros::ServiceClient srv_planner_reset_;
   bool               _planner_reset_;
   ros::Time          time_last_planner_reset_;
+
+  ros::ServiceClient srv_client_land_;
+  bool               _land_end_;
 
   // | ---------------- service server callbacks ---------------- |
   bool       callbackCircleAround(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res);
