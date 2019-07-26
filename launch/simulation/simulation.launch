@@ -44,7 +44,10 @@
       <!-- Service clients -->
       <remap from="~trajectory_srv" to="control_manager/mpc_tracker/set_trajectory" />
       <remap from="~land_out" to="uav_manager/land" />
-      <remap from="~balloon_reset" to="balloon_planner/reset_chosen" />
+      <remap from="~reset_estimation" to="balloon_planner/reset_chosen" />
+      <remap from="~start_estimation" to="balloon_planner/start_estimation" />
+      <remap from="~stop_estimation" to="balloon_planner/stop_estimation" />
+      <remap from="~add_zone" to="balloon_planner/add_exclusion_zone" />
 
     </node>
 

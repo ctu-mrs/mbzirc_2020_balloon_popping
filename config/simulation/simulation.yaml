@@ -57,4 +57,7 @@ reset_tries: 5
 time_to_land: 120 # seconds 
 #world frame, all points are tran
 world_frame_id: "local_origin"
-
+# number of trying to hit the same balloon
+balloon_tries: 4
+#forbidden area radius
+forbidden_radius: 1

@@ -49,7 +49,10 @@
 #include <std_srvs/Empty.h>
 #include <mrs_msgs/TrackerTrajectorySrvRequest.h>
 #include <mrs_msgs/TrackerTrajectorySrv.h>
-#include <balloon_planner/ResetChosen.h>
+/* Planner services headers */
+
+#include <balloon_planner/AddExclusionZone.h>
+#include <balloon_planner/StartEstimation.h>
 /* for operations with matrices */
 #include <Eigen/Dense>
 /* math  */
@@ -64,6 +67,14 @@
 
 namespace balloon_circle_destroy
 {
+
+  /* Forbidden struct //{ */
+  
+  struct Forbidden_t {
+    Eigen::Vector3d vect_;
+    double r;
+  };
+  //}
 
 /* class BalloonCircleDestroy //{ */
 class BalloonCircleDestroy : public nodelet::Nodelet {
@@ -107,19 +118,23 @@ private:
   double         _dist_error_;
   double         _wait_for_ball_;
   int            _reset_tries_;
+  int            _balloon_tries_;
+  double         _forbidden_radius_;
 
 
   // | ------------------------- state machine params ------------------------- |
-  enum State     {IDLE,GOING_AROUND, GOING_TO_ANGLE,CHOOSING_BALLOON,GOING_TO_BALLOON,AT_BALLOON,CIRCLE_AROUND, DESTROYING };
-  State          _state_ = IDLE;
+  enum State                {IDLE,GOING_AROUND, GOING_TO_ANGLE,CHECKING_BALLOON,CHOOSING_BALLOON,GOING_TO_BALLOON,AT_BALLOON,CIRCLE_AROUND, DESTROYING };
+  State                     _state_ = IDLE;
 
-  bool           _is_state_machine_active_ = false;
-  double         _closest_on_arena_ = 999.9;
-  double         _closest_angle_ = 0;
-  int            _reset_count_;
-  double         _time_to_land_;
-  double         _cur_arena_width_;
-  double         _cur_arena_length_;
+  bool                      _is_state_machine_active_ = false;
+  double                    _closest_on_arena_ = 999.9;
+  double                    _closest_angle_ = 0;
+  int                       _reset_count_;
+  double                    _time_to_land_;
+  int                       _cur_arena_width_;
+  int                       _cur_arena_length_;
+  std::vector<Forbidden_t>  _forb_vect_;
+  
 
   // | ----------------------- transforms ----------------------- |
 
@@ -199,12 +214,31 @@ private:
   ros::ServiceClient srv_client_trajectory_;
   bool               _trajectory_published_;
 
-  ros::ServiceClient srv_planner_reset_;
-  bool               _planner_reset_;
-  ros::Time          time_last_planner_reset_;
-
   ros::ServiceClient srv_client_land_;
   bool               _land_end_;
+
+  // | ------------------- Estimation services ------------------ |
+  
+  ros::ServiceClient srv_planner_reset_estimation_;
+  bool               _planner_reset_;
+
+  ros::ServiceClient srv_planner_start_estimation_;
+  ros::ServiceClient srv_planner_stop_estimation_;
+  bool               _planner_active_;
+
+  ros::ServiceClient srv_planner_add_zone_;
+  bool               _planner_zone_added_;
+
+  ros::Time          time_last_planner_reset_;
+
+  // | -------------------- Planner functions ------------------- |
+
+  void plannerActivate(Eigen::Vector3d estimation);
+  void plannerStop();
+  void plannerReset();
+  void addForbidden(Eigen::Vector3d forb, double radius );
+  bool checkIfForbidden(Eigen::Vector3d forb, double raidus);
+
 
   // | ---------------- service server callbacks ---------------- |
   bool       callbackCircleAround(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res);
@@ -245,7 +279,6 @@ private:
   double getBalloonHeading();
   double getArenaHeading();
   std::string getStateName();
-
 //}
 
 };
