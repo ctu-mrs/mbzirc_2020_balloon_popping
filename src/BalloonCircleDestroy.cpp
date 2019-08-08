@@ -252,6 +252,7 @@ void BalloonCircleDestroy::callbackTrackerDiag(const mrs_msgs::TrackerDiagnostic
       cur_dist_ = (odom_vector_ - ball_vect_).norm();
       if (cur_dist_ < _closest_on_arena_) {
         if (pointInForbidden(ball_vect_)) {
+          ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: point in forbidden zone");
           continue;
         }
         _closest_on_arena_      = cur_dist_;
@@ -417,6 +418,8 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
           _reset_count_++;
         } else {
           ROS_ERROR("[StateMachine]: reset service call failed");
+          _state_ = IDLE;
+          ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
         }
       }
       return;
@@ -473,16 +476,26 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
       ROS_WARN_THROTTLE(0.5, "[StateMachine]: State changed to %s ", getStateName().c_str());
     }
     if ((odom_vector_ - balloon_vector_).norm() < _dist_to_balloon_ + 0.3) {
+
       _state_ = AT_BALLOON;
       ROS_WARN_THROTTLE(0.5, "[StateMachine]: State changed to %s ", getStateName().c_str());
 
     } else {
 
+      if (ros::Time::now().toSec() - time_last_balloon_point_.toSec() > _wait_for_ball_) {
+        ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: point is outdated");
+        _state_ = IDLE;
+        checkForbidden();
+
+
+        ROS_WARN_THROTTLE(0.5, "[StateMachine]: State changed to %s ", getStateName().c_str());
+      }
       if ((balloon_closest_vector_ - balloon_vector_).norm() < _dist_error_) {
         getCloseToBalloon(_dist_to_balloon_, _vel_);
       } else {
         ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: Dist betweer pcl balloon and KF is larger than dist_error");
         _state_ = IDLE;
+        checkForbidden();
         ROS_WARN_THROTTLE(0.5, "[StateMachine]: State changed to %s ", getStateName().c_str());
       }
     }
@@ -492,7 +505,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
       ROS_WARN_THROTTLE(0.5, "[StateMachine]: Point outdated, skipping ");
       _state_ = GOING_TO_BALLOON;
       ROS_WARN_THROTTLE(0.5, "[StateMachine]: State changed to %s ", getStateName().c_str());
-    } else if ((odom_vector_ - balloon_vector_).norm() > _dist_to_balloon_ ) {
+    } else if ((odom_vector_ - balloon_vector_).norm() > _dist_to_balloon_) {
 
       _state_ = GOING_TO_BALLOON;
       ROS_WARN_THROTTLE(0.5, "[StateMachine]: State changed to %s ", getStateName().c_str());
@@ -506,7 +519,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
   } else if (_state_ == CIRCLE_AROUND) {
     if (ros::Time::now().toSec() - time_last_balloon_point_.toSec() > _wait_for_ball_) {
       ROS_WARN_THROTTLE(0.5, "[StateMachine]: Point outdated, skipping ");
-      if((odom_vector_ - balloon_vector_).norm() > _dist_error_) {
+      if ((odom_vector_ - balloon_vector_).norm() > _dist_error_) {
         _state_ = CHOOSING_BALLOON;
         ROS_WARN_THROTTLE(0.5, "[StateMachine]: State changed to %s ", getStateName().c_str());
         return;
@@ -649,6 +662,7 @@ void BalloonCircleDestroy::callbackTimerPublishRviz([[maybe_unused]] const ros::
       marker.color.b            = 0.0;
 
       marker.mesh_resource = "package://pr2_description/meshes/base_v0/base.dae";
+      ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: publishing forbidden zones");
 
       msg_out.markers.push_back(marker);
     }
@@ -1233,6 +1247,29 @@ bool BalloonCircleDestroy::pointInForbidden(Eigen::Vector3d vect_) {
   return false;
 }
 //}
+
+/* checkForbidden //{ */
+
+void BalloonCircleDestroy::checkForbidden() {
+  if ((_prev_closest_ - balloon_closest_vector_).norm() < _dist_error_) {
+    if (_balloon_tries_ == _balloon_try_count_) {
+      Forbidden_t forb_;
+      forb_.vect_ = balloon_closest_vector_;
+      forb_.r     = _forbidden_radius_;
+      _forb_vect_.push_back(forb_);
+      _balloon_try_count_ = 0;
+    } else {
+      _balloon_try_count_++;
+    }
+  } else {
+    _balloon_try_count_ = 0;
+    _prev_closest_      = balloon_closest_vector_;
+  }
+}
+
+//}
+
+
 // | --------------------- transformations -------------------- |
 
 /* getTransform() method //{ */

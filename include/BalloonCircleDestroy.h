@@ -292,6 +292,7 @@ private:
   double getArenaHeading();
   std::string getStateName();
   bool pointInForbidden(Eigen::Vector3d vect_);
+  void checkForbidden();
 //}
 
 };
