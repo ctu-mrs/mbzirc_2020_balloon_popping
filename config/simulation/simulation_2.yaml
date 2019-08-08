@@ -3,6 +3,7 @@ rate:
   check_subscribers: 1 # [Hz]
   check_balloons: 20
   state_machine: 30
+  pub_rviz: 30
 
 
 # should the UAV land after flying through all the waypoints?
@@ -23,7 +24,7 @@ arena_center_y: 20
 
 #height where drone will operate ( up to this height )
 elips_height: 8
-height_min: 5.4
+height_min: 4.8
 height_max: 10
 #idle_time
 idle_time: 0.3
@@ -57,4 +58,7 @@ reset_tries: 5
 time_to_land: 120 # seconds 
 #world frame, all points are tran
 world_frame_id: "local_origin"
-
+# number of trying to hit the same balloon
+balloon_tries: 2
+#forbidden area radius
+forbidden_radius: 1

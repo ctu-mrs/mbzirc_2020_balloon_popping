@@ -34,7 +34,9 @@
 
 /* for storing information about the state of the uav (position, twist) + covariances */
 #include <nav_msgs/Odometry.h>
-
+/* visulization msgs */
+#include <visualization_msgs/Marker.h>
+#include <visualization_msgs/MarkerArray.h>
 /* custom msgs of MRS group */
 #include <mrs_msgs/TrackerTrajectory.h>
 #include <mrs_msgs/TrackerPoint.h>
@@ -134,6 +136,10 @@ private:
   int                       _cur_arena_width_;
   int                       _cur_arena_length_;
   std::vector<Forbidden_t>  _forb_vect_;
+  Eigen::Vector3d           _estimate_vect_;
+  Eigen::Vector3d           _prev_closest_;
+  int                       _balloon_try_count_;
+  
   
 
   // | ----------------------- transforms ----------------------- |
@@ -208,6 +214,12 @@ private:
   ros::Timer timer_state_machine_;
   int        _rate_timer_state_machine_;
 
+  // | ------------------ visulization markers ------------------ |
+  void            callbackTimerPublishRviz(const ros::TimerEvent& te);
+  ros::Timer      timer_publish_rviz_;
+  ros::Publisher  rviz_pub_;
+  std::mutex      mutex_rviz_;
+  int             _rate_time_publish_rviz_;
 
   // | --------------------- service clients -------------------- |
 
@@ -224,7 +236,7 @@ private:
 
   ros::ServiceClient srv_planner_start_estimation_;
   ros::ServiceClient srv_planner_stop_estimation_;
-  bool               _planner_active_;
+  bool               _planner_active_ = false;
 
   ros::ServiceClient srv_planner_add_zone_;
   bool               _planner_zone_added_;
@@ -235,7 +247,7 @@ private:
 
   void plannerActivate(Eigen::Vector3d estimation);
   void plannerStop();
-  void plannerReset();
+  bool plannerReset();
   void addForbidden(Eigen::Vector3d forb, double radius );
   bool checkIfForbidden(Eigen::Vector3d forb, double raidus);
 
@@ -279,6 +291,7 @@ private:
   double getBalloonHeading();
   double getArenaHeading();
   std::string getStateName();
+  bool pointInForbidden(Eigen::Vector3d vect_);
 //}
 
 };
