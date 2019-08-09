@@ -44,6 +44,8 @@ min_vel_arena: 0.5
 dist_to_balloon: 3
 #distance to kill the balloon
 dist_to_overshoot: 2
+#dist accurace to be as close to the balloon
+dist_acc: 0.5
 #trajectory length
 traj_len: 40
 #traj time
@@ -61,4 +63,6 @@ world_frame_id: "local_origin"
 # number of trying to hit the same balloon
 balloon_tries: 2
 #forbidden area radius
-forbidden_radius: 1
+forbidden_radius: 2.5
+# height tolerance
+height_tol: 0.5

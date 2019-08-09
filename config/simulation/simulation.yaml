@@ -50,6 +50,8 @@ traj_len: 40
 traj_time: 8
 #distance error to target the closest balloon so, it will be compared to current chosen via KF + dist_error 
 dist_error: 4
+#dist accurace to be as close to the balloon
+dist_acc: 0.5
 #time for waiting for KF reset
 wait_for_ball: 6
 #how many time to reset the KF
@@ -61,4 +63,6 @@ world_frame_id: "local_origin"
 # number of trying to hit the same balloon
 balloon_tries: 2
 #forbidden area radius
-forbidden_radius: 1
+forbidden_radius: 4
+# height tolerance
+height_tol: 0.5
