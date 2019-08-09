@@ -11,10 +11,10 @@ land_at_the_end: false
 
 #arena width
 arena_width: 30
-min_arena_width: 3
+min_arena_width: 6
 #arena length
 arena_length: 40
-min_arena_length: 4
+min_arena_length: 6
 #arena  accuracy - how many points should be in arena trajectory
 arena_accuracy: 300
 min_arena_accuracy: 30
@@ -63,6 +63,6 @@ world_frame_id: "local_origin"
 # number of trying to hit the same balloon
 balloon_tries: 2
 #forbidden area radius
-forbidden_radius: 4
+forbidden_radius: 2
 # height tolerance
 height_tol: 0.5

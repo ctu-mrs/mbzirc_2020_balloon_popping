@@ -64,6 +64,7 @@ void BalloonCircleDestroy::onInit() {
   param_loader.load_param("reset_tries", _reset_tries_);
   param_loader.load_param("balloon_tries", _balloon_tries_);
   param_loader.load_param("time_to_land", _time_to_land_);
+  param_loader.load_param("forbidden_radius", _forbidden_radius_);
 
   ROS_INFO_STREAM_ONCE("[BalloonCircleDestroy]: params loaded");
 
@@ -185,9 +186,7 @@ void BalloonCircleDestroy::callbackBalloonPoint(const geometry_msgs::PoseWithCov
     balloon_vector_ = Eigen::Vector3d(balloon_point_.pose.pose.position.x, balloon_point_.pose.pose.position.y, balloon_point_.pose.pose.position.z);
   }
 
-  if (balloon_vector_(2, 0) > _min_height_ && balloon_vector_(2, 0) < _max_height_) {
-    time_last_balloon_point_ = ros::Time::now();
-  }
+  time_last_balloon_point_ = ros::Time::now();
   if (!got_balloon_point_) {
     got_balloon_point_ = true;
     ROS_INFO("[%s]: got first balloon point", ros::this_node::getName().c_str());
@@ -250,9 +249,8 @@ void BalloonCircleDestroy::callbackTrackerDiag(const mrs_msgs::TrackerDiagnostic
         ball_vect_ = Eigen::Vector3d(p_.x, p_.y, p_.z);
 
         cur_dist_ = (odom_vector_ - ball_vect_).norm();
-        if(pointInForbidden(ball_vect_)) {
+        if (pointInForbidden(ball_vect_)) {
           ROS_WARN_THROTTLE(0.5, "[BalloonCircleDestroy]: POINT IN FORBIDDEN KURWA");
-        
         }
         if (cur_dist_ < _closest_on_arena_ && !pointInForbidden(ball_vect_)) {
           _closest_on_arena_      = cur_dist_;
@@ -343,6 +341,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
   ROS_INFO_THROTTLE(0.5, "[ClosestDist]: %f ", _closest_on_arena_);
   ROS_INFO_THROTTLE(0.5, "[Current Dist To ball]: %f ", (odom_vector_ - balloon_vector_).norm());
   ROS_INFO_THROTTLE(0.5, "[Dist between KF and PCL vectors]: %f ", (balloon_vector_ - balloon_closest_vector_).norm());
+  ROS_INFO_THROTTLE(0.5, "[Is closest in forbidden]: %d ", pointInForbidden(balloon_closest_vector_));
   ROS_INFO_THROTTLE(0.5, "[Closest ball (PointCloud)]: x %f ", balloon_closest_vector_(0, 0));
   ROS_INFO_THROTTLE(0.5, "[Closest ball (PointCloud)]: y %f ", balloon_closest_vector_(1, 0));
   ROS_INFO_THROTTLE(0.5, "[Closest ball (PointCloud)]: z %f ", balloon_closest_vector_(2, 0));
@@ -458,6 +457,9 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
     if (!is_tracking_ && !is_idling_ && is_ballon_incoming_) {
       _state_ = READY_TO_DESTROY;
       ROS_WARN_THROTTLE(0.5, "[StateMachine]: 453 STATE RESET TO %s", getStateName().c_str());
+    } else if (!is_ballon_incoming_) {
+      _state_ = IDLE;
+      ROS_WARN_THROTTLE(0.5, "[StateMachine]: 462 STATE RESET TO %s", getStateName().c_str());
     }
   } else if (_state_ == READY_TO_DESTROY) {
 
@@ -466,10 +468,16 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
       ROS_WARN_THROTTLE(0.5, "[StateMachine]: 460 STATE RESET TO %s", getStateName().c_str());
     }
   } else if (_state_ == DESTROYING) {
+
     if (is_ballon_incoming_ && (balloon_closest_vector_ - balloon_vector_).norm()) {
       getCloseToBalloon(balloon_vector_, -_dist_to_overshoot_, _vel_attack_);
     } else {
+
       plannerStop();
+      if (balloonOutdated()) {
+        _state_ = IDLE;
+        ROS_WARN_THROTTLE(0.5, "[StateMachine]: 460 STATE RESET TO %s", getStateName().c_str());
+      }
     }
   }
 }
@@ -596,8 +604,8 @@ void BalloonCircleDestroy::callbackTimerPublishRviz([[maybe_unused]] const ros::
       marker.pose.orientation.y = 0.0;
       marker.pose.orientation.z = 0.0;
       marker.pose.orientation.w = 1.0;
-      marker.scale.x            = 5.0;
-      marker.scale.y            = 5.0;
+      marker.scale.x            = _forbidden_radius_;
+      marker.scale.y            = _forbidden_radius_;
       marker.scale.z            = 1;
       marker.color.a            = 0.3;
       marker.color.r            = 1.0;
@@ -901,12 +909,12 @@ void BalloonCircleDestroy::goAroundArena() {
   double mpc_speed_ = _traj_time_ / _traj_len_;
 
   if (_cur_arena_width_ < _min_arena_width_) {
-    _cur_arena_width_  = _arena_width_;
-    _cur_arena_length_ = _arena_length_;
+    _cur_arena_width_  = _arena_width_ / 2;
+    _cur_arena_length_ = _arena_length_ / 2;
   }
   if (_cur_arena_length_ < _min_arena_width_) {
-    _cur_arena_length_ = _arena_length_;
-    _cur_arena_width_  = _arena_width_;
+    _cur_arena_length_ = _arena_length_ / 2;
+    _cur_arena_width_  = _arena_width_ / 2;
   }
 
 
@@ -1200,11 +1208,12 @@ void BalloonCircleDestroy::addForbidden(Eigen::Vector3d forb_, double radius_) {
 //}
 
 /* pointInForbidden //{ */
+
 bool BalloonCircleDestroy::pointInForbidden(Eigen::Vector3d vect_) {
-  for (const auto& zone : _forb_vect_) {
-    const double dist_from_center = (vect_ - zone.vect_).norm();
-    if (dist_from_center < zone.r)
+  for (uint i = 0; i < _forb_vect_.size(); i++) {
+    if ((vect_ - _forb_vect_[i].vect_).norm() < _forb_vect_[i].r) {
       return true;
+    }
   }
   return false;
 }

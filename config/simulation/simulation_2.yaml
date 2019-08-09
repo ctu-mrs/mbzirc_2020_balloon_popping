@@ -63,6 +63,6 @@ world_frame_id: "local_origin"
 # number of trying to hit the same balloon
 balloon_tries: 2
 #forbidden area radius
-forbidden_radius: 2.5
+forbidden_radius: 2
 # height tolerance
 height_tol: 0.5
