@@ -87,7 +87,7 @@ public:
 
 private:
   /* flags */
-  bool is_initialized_ = false;
+  bool       is_initialized_ = false;
 
   bool       is_idling_ = false;
   ros::Timer timer_idling_;
@@ -144,6 +144,7 @@ private:
   State _state_ = IDLE;
 
   bool                     _is_state_machine_active_ = false;
+  bool                     _height_checking_         = false;
   double                   _closest_on_arena_        = 999.9;
   double                   _closest_angle_           = 0;
   int                      _reset_count_;
@@ -305,6 +306,7 @@ private:
   std::string getStateName();
   bool        pointInForbidden(Eigen::Vector3d vect_);
   void        checkForbidden();
+  void        addToForbidden(Eigen::Vector3d dest_);
   bool        balloonOutdated();
   void        landAndEnd();
   //}

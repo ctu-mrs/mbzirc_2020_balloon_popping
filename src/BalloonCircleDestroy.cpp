@@ -401,6 +401,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
     double min_tol_ = std::abs(_min_height_ - balloon_closest_vector_(2, 0));
     if (max_tol_ < _height_tol_ || min_tol_ < _height_tol_) {
       getCloseToBalloon(balloon_closest_vector_, (odom_vector_ - balloon_closest_vector_).norm() / 2, _vel_);
+      _height_checking_ = true;
     }
 
     _state_ = CHOOSING_BALLOON;
@@ -412,6 +413,10 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
     if (_reset_count_ == _reset_tries_) {
       _state_ = IDLE;
       ROS_WARN_THROTTLE(0.5, "[StateMachine]: 411 STATE RESET TO %s", getStateName().c_str());
+      if ( _height_checking_ ) {
+       addToForbidden(balloon_closest_vector_);
+       _height_checking_ = false;
+      }
       return;
     }
 
@@ -457,7 +462,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
     if (!is_tracking_ && !is_idling_ && is_ballon_incoming_) {
       _state_ = READY_TO_DESTROY;
       ROS_WARN_THROTTLE(0.5, "[StateMachine]: 453 STATE RESET TO %s", getStateName().c_str());
-    } else if (!is_ballon_incoming_) {
+    } else if (!is_tracking_ && !is_idling_ && !is_ballon_incoming_) {
       _state_ = IDLE;
       ROS_WARN_THROTTLE(0.5, "[StateMachine]: 462 STATE RESET TO %s", getStateName().c_str());
     }
@@ -474,10 +479,10 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
     } else {
 
       plannerStop();
-      if (balloonOutdated()) {
-        _state_ = IDLE;
-        ROS_WARN_THROTTLE(0.5, "[StateMachine]: 460 STATE RESET TO %s", getStateName().c_str());
-      }
+      /* * if (balloonOutdated()) { *1/ */
+      /*   _state_ = IDLE; */
+      /*   ROS_WARN_THROTTLE(0.5, "[StateMachine]: 460 STATE RESET TO %s", getStateName().c_str()); */
+      /* } */
     }
   }
 }
@@ -595,7 +600,7 @@ void BalloonCircleDestroy::callbackTimerPublishRviz([[maybe_unused]] const ros::
       marker.header.stamp       = ros::Time::now();
       marker.ns                 = "mtsp";
       marker.id                 = id++;
-      marker.type               = visualization_msgs::Marker::CYLINDER;
+      marker.type               = visualization_msgs::Marker::SPHERE;
       marker.action             = visualization_msgs::Marker::ADD;
       marker.pose.position.x    = _forb_vect_[i].vect_(0, 0);
       marker.pose.position.y    = _forb_vect_[i].vect_(1, 0);
@@ -606,7 +611,7 @@ void BalloonCircleDestroy::callbackTimerPublishRviz([[maybe_unused]] const ros::
       marker.pose.orientation.w = 1.0;
       marker.scale.x            = _forbidden_radius_;
       marker.scale.y            = _forbidden_radius_;
-      marker.scale.z            = 1;
+      marker.scale.z            = _forbidden_radius_;
       marker.color.a            = 0.3;
       marker.color.r            = 1.0;
       marker.color.g            = 0.0;
@@ -623,7 +628,7 @@ void BalloonCircleDestroy::callbackTimerPublishRviz([[maybe_unused]] const ros::
       marker.header.stamp       = ros::Time::now();
       marker.ns                 = "mtsp";
       marker.id                 = id++;
-      marker.type               = visualization_msgs::Marker::CYLINDER;
+      marker.type               = visualization_msgs::Marker::SPHERE;
       marker.action             = visualization_msgs::Marker::ADD;
       marker.pose.position.x    = _estimate_vect_(0, 0);
       marker.pose.position.y    = _estimate_vect_(1, 0);
@@ -634,7 +639,7 @@ void BalloonCircleDestroy::callbackTimerPublishRviz([[maybe_unused]] const ros::
       marker.pose.orientation.w = 1.0;
       marker.scale.x            = 2.0 * 3;
       marker.scale.y            = 2.0 * 3;
-      marker.scale.z            = 1;
+      marker.scale.z            = 6;
       marker.color.a            = 0.3;
       marker.color.r            = 0.0;
       marker.color.g            = 1.0;
@@ -1224,10 +1229,7 @@ bool BalloonCircleDestroy::pointInForbidden(Eigen::Vector3d vect_) {
 void BalloonCircleDestroy::checkForbidden() {
   if ((_prev_closest_ - balloon_closest_vector_).norm() < _dist_error_) {
     if (_balloon_tries_ == _balloon_try_count_) {
-      Forbidden_t forb_;
-      forb_.vect_ = balloon_closest_vector_;
-      forb_.r     = _forbidden_radius_;
-      _forb_vect_.push_back(forb_);
+      addToForbidden(balloon_closest_vector_);
       _balloon_try_count_ = 0;
     } else {
       _balloon_try_count_++;
@@ -1236,6 +1238,17 @@ void BalloonCircleDestroy::checkForbidden() {
     _balloon_try_count_ = 0;
     _prev_closest_      = balloon_closest_vector_;
   }
+}
+
+//}
+
+/* addToForbidden //{ */
+
+void BalloonCircleDestroy::addToForbidden(Eigen::Vector3d dest_) {
+      Forbidden_t forb_;
+      forb_.vect_ = dest_;
+      forb_.r     = _forbidden_radius_;
+      _forb_vect_.push_back(forb_);
 }
 
 //}
