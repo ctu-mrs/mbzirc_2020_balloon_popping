@@ -288,11 +288,13 @@ void BalloonCircleDestroy::callbackTimerIdling([[maybe_unused]] const ros::Timer
     _state_ = IDLE;
     plannerStop();
     if (_cur_arena_width_ < _min_arena_width_) {
-      _cur_arena_width_  = _arena_width_;
-      _cur_arena_length_ = _arena_length_;
-    } else if (_cur_arena_length_ < _min_arena_width_) {
-      _cur_arena_length_ = _arena_length_;
-      _cur_arena_width_  = _arena_width_;
+      ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: ARENA IS SMALLER (width)");
+      _cur_arena_width_  = _arena_width_/2;
+      _cur_arena_length_ = _arena_length_/2;
+    } else if (_cur_arena_length_ < _min_arena_length_) {
+      ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: ARENA IS SMALLER (length)");
+      _cur_arena_length_ = _arena_length_/2;
+      _cur_arena_width_  = _arena_width_/2;
     } else {
       _cur_arena_width_ -= _closest_on_arena_ / 2;
       _cur_arena_length_ -= _closest_on_arena_ / 2;
@@ -326,7 +328,7 @@ void BalloonCircleDestroy::callbackOdomGt(const nav_msgs::OdometryConstPtr& msg)
 
 //}
 
-/* callbackTimerStateMachine //{ */
+//* callbackTimerStateMachine //{ */
 
 void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros::TimerEvent& te) {
   if (!_is_state_machine_active_) {
@@ -356,6 +358,8 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
   ROS_INFO_THROTTLE(0.5, "[Same balloon tries]  %d ", _balloon_try_count_);
   ROS_INFO_THROTTLE(0.5, "[ARENA LENGTH]: %d ", _cur_arena_length_);
   ROS_INFO_THROTTLE(0.5, "[ARENA WIDTH]: %d ", _cur_arena_width_);
+  ROS_INFO_THROTTLE(0.5, "[MIN ARENA LENGTH]: %d ", _min_arena_length_);
+  ROS_INFO_THROTTLE(0.5, "[MIN ARENA WIDTH]: %d ", _min_arena_width_);
   ROS_INFO_THROTTLE(0.5, "[ARENA VELOCITY]: %f ", _vel_arena_);
   ROS_INFO_THROTTLE(0.5, "[MIN HEIGHT]: %f ", _min_height_);
   ROS_INFO_THROTTLE(0.5, "[MAX HEIGHT]: %f ", _max_height_);
@@ -371,6 +375,15 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
     _reset_count_      = 0;
     balloon_vector_    = Eigen::Vector3d();
     ROS_WARN_THROTTLE(0.5, "[StateMachine]: 374 STATE RESET TO %s", getStateName().c_str());
+    if (_cur_arena_width_ < _min_arena_width_) {
+      ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: ARENA IS SMALLER (width)");
+      _cur_arena_width_  = _arena_width_/2;
+      _cur_arena_length_ = _arena_length_/2;
+    } else if (_cur_arena_length_ < _min_arena_length_) {
+      ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: ARENA IS SMALLER (length)");
+      _cur_arena_length_ = _arena_length_/2;
+      _cur_arena_width_  = _arena_width_/2;
+    }
     plannerStop();
     goAroundArena();
     return;
@@ -390,7 +403,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
   } else if (_state_ == GOING_TO_ANGLE) {
     if (_closest_on_arena_ == 9999) {
       ROS_WARN_THROTTLE(0.5, "[BalloonCircleDestroy]: Couldn't find any suitable balloons, landing");
-      landAndEnd();
+      /* landAndEnd(); */
     }
     if (!is_tracking_ && !is_idling_) {
       _state_ = CHECKING_BALLOON;
@@ -400,7 +413,11 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
     double max_tol_ = std::abs(_max_height_ - balloon_closest_vector_(2, 0));
     double min_tol_ = std::abs(_min_height_ - balloon_closest_vector_(2, 0));
     if (max_tol_ < _height_tol_ || min_tol_ < _height_tol_) {
-      getCloseToBalloon(balloon_closest_vector_, (odom_vector_ - balloon_closest_vector_).norm() / 2, _vel_);
+      double closer_dist_ = (odom_vector_ - balloon_closest_vector_).norm() / 2;
+      if (closer_dist_ < _dist_to_balloon_) {
+        closer_dist_ = _dist_to_balloon_;
+      }
+      getCloseToBalloon(balloon_closest_vector_,closer_dist_ , _vel_);
       _height_checking_ = true;
     }
 
@@ -442,12 +459,15 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
       }
     }
   } else if (_state_ == GOING_TO_BALLOON) {
-    if (is_ballon_incoming_ && (odom_vector_ - balloon_vector_).norm() < _dist_acc_ + _dist_to_balloon_ &&
+    if(balloonOutdated()) {
+        _state_ = CHOOSING_BALLOON; 
+      ROS_WARN_THROTTLE(0.5, "[StateMachine]: 435 STATE RESET TO %s", getStateName().c_str());
+    }
+    if (is_ballon_incoming_ && (odom_vector_ - balloon_vector_).norm() - _dist_acc_ > _dist_acc_ + _dist_to_balloon_ &&
         (balloon_vector_ - balloon_closest_vector_).norm() < _dist_acc_ + _dist_to_balloon_) {
       getCloseToBalloon(balloon_vector_, _dist_to_balloon_, _vel_);
       return;
-    }
-    if (!is_tracking_ && !is_idling_ && is_ballon_incoming_) {
+    } else if (!is_tracking_ && !is_idling_ && is_ballon_incoming_) {
       _state_ = AT_BALLOON;
       ROS_WARN_THROTTLE(0.5, "[StateMachine]: 441 STATE RESET TO %s", getStateName().c_str());
     }
@@ -567,7 +587,7 @@ void BalloonCircleDestroy::callbackTimerCheckBalloonPoints([[maybe_unused]] cons
     if (got_balloon_point_cloud_) {
       if (ros::Time::now().toSec() - time_last_balloon_cloud_point_.toSec() > _time_to_land_) {
         ROS_WARN_THROTTLE(0.5, "[BalloonCircleDestroy]: State machine finished, landing");
-        landAndEnd();
+        /* landAndEnd(); */
       }
     }
   }
@@ -912,16 +932,6 @@ void BalloonCircleDestroy::goAroundArena() {
   new_trj_.start_index     = 0;
 
   double mpc_speed_ = _traj_time_ / _traj_len_;
-
-  if (_cur_arena_width_ < _min_arena_width_) {
-    _cur_arena_width_  = _arena_width_ / 2;
-    _cur_arena_length_ = _arena_length_ / 2;
-  }
-  if (_cur_arena_length_ < _min_arena_width_) {
-    _cur_arena_length_ = _arena_length_ / 2;
-    _cur_arena_width_  = _arena_width_ / 2;
-  }
-
 
   double arena_accuracy_ = _cur_arena_length_ * _cur_arena_width_ * 2 * M_PI;
   arena_accuracy_        = arena_accuracy_ / _vel_arena_ * mpc_speed_;

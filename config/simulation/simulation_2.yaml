@@ -11,10 +11,10 @@ land_at_the_end: false
 
 #arena width
 arena_width: 30
-min_arena_width: 3
+min_arena_width: 12
 #arena length
 arena_length: 40
-min_arena_length: 4
+min_arena_length: 10
 #arena  accuracy - how many points should be in arena trajectory
 arena_accuracy: 300
 min_arena_accuracy: 30
@@ -37,7 +37,7 @@ vel: 2
 #velocity for attack
 vel_attack: 0.5
 #velocity of going around arena
-vel_arena: 5
+vel_arena: 6
 #minimal velocity of going around arena
 min_vel_arena: 0.5
 #distance to the balloon
@@ -45,23 +45,23 @@ dist_to_balloon: 3
 #distance to kill the balloon
 dist_to_overshoot: 2
 #dist accurace to be as close to the balloon
-dist_acc: 0.5
+dist_acc: 0.6
 #trajectory length
 traj_len: 40
 #traj time
 traj_time: 8
 #distance error to target the closest balloon so, it will be compared to current chosen via KF + dist_error 
-dist_error: 3
+dist_error: 4
 #time for waiting for KF reset
-wait_for_ball: 6
+wait_for_ball: 3
 #how many time to reset the KF
-reset_tries: 5
+reset_tries: 3
 #time to land - max time of not observing any balloons at all 
 time_to_land: 120 # seconds 
 #world frame, all points are tran
 world_frame_id: "local_origin"
 # number of trying to hit the same balloon
-balloon_tries: 2
+balloon_tries: 1
 #forbidden area radius
 forbidden_radius: 2
 # height tolerance

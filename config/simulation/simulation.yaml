@@ -11,10 +11,10 @@ land_at_the_end: false
 
 #arena width
 arena_width: 30
-min_arena_width: 6
+min_arena_width: 12
 #arena length
 arena_length: 40
-min_arena_length: 6
+min_arena_length: 12
 #arena  accuracy - how many points should be in arena trajectory
 arena_accuracy: 300
 min_arena_accuracy: 30
@@ -37,7 +37,7 @@ vel: 2
 #velocity for attack
 vel_attack: 0.5
 #velocity of going around arena
-vel_arena: 5
+vel_arena: 6
 #minimal velocity of going around arena
 min_vel_arena: 0.5
 #distance to the balloon
