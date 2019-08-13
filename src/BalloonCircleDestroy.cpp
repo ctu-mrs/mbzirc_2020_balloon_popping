@@ -289,12 +289,12 @@ void BalloonCircleDestroy::callbackTimerIdling([[maybe_unused]] const ros::Timer
     plannerStop();
     if (_cur_arena_width_ < _min_arena_width_) {
       ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: ARENA IS SMALLER (width)");
-      _cur_arena_width_  = _arena_width_/2;
-      _cur_arena_length_ = _arena_length_/2;
+      _cur_arena_width_  = _arena_width_ / 2;
+      _cur_arena_length_ = _arena_length_ / 2;
     } else if (_cur_arena_length_ < _min_arena_length_) {
       ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: ARENA IS SMALLER (length)");
-      _cur_arena_length_ = _arena_length_/2;
-      _cur_arena_width_  = _arena_width_/2;
+      _cur_arena_length_ = _arena_length_ / 2;
+      _cur_arena_width_  = _arena_width_ / 2;
     } else {
       _cur_arena_width_ -= _closest_on_arena_ / 2;
       _cur_arena_length_ -= _closest_on_arena_ / 2;
@@ -377,12 +377,12 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
     ROS_WARN_THROTTLE(0.5, "[StateMachine]: 374 STATE RESET TO %s", getStateName().c_str());
     if (_cur_arena_width_ < _min_arena_width_) {
       ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: ARENA IS SMALLER (width)");
-      _cur_arena_width_  = _arena_width_/2;
-      _cur_arena_length_ = _arena_length_/2;
+      _cur_arena_width_  = _arena_width_ / 2;
+      _cur_arena_length_ = _arena_length_ / 2;
     } else if (_cur_arena_length_ < _min_arena_length_) {
       ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: ARENA IS SMALLER (length)");
-      _cur_arena_length_ = _arena_length_/2;
-      _cur_arena_width_  = _arena_width_/2;
+      _cur_arena_length_ = _arena_length_ / 2;
+      _cur_arena_width_  = _arena_width_ / 2;
     }
     plannerStop();
     goAroundArena();
@@ -417,7 +417,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
       if (closer_dist_ < _dist_to_balloon_) {
         closer_dist_ = _dist_to_balloon_;
       }
-      getCloseToBalloon(balloon_closest_vector_,closer_dist_ , _vel_);
+      getCloseToBalloon(balloon_closest_vector_, closer_dist_, _vel_);
       _height_checking_ = true;
     }
 
@@ -430,9 +430,9 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
     if (_reset_count_ == _reset_tries_) {
       _state_ = IDLE;
       ROS_WARN_THROTTLE(0.5, "[StateMachine]: 411 STATE RESET TO %s", getStateName().c_str());
-      if ( _height_checking_ ) {
-       addToForbidden(balloon_closest_vector_);
-       _height_checking_ = false;
+      if (_height_checking_) {
+        addToForbidden(balloon_closest_vector_);
+        _height_checking_ = false;
       }
       return;
     }
@@ -459,12 +459,13 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
       }
     }
   } else if (_state_ == GOING_TO_BALLOON) {
-    if(balloonOutdated()) {
-        _state_ = CHOOSING_BALLOON; 
+    if (balloonOutdated()) {
+      _state_ = CHOOSING_BALLOON;
       ROS_WARN_THROTTLE(0.5, "[StateMachine]: 435 STATE RESET TO %s", getStateName().c_str());
     }
-    if (is_ballon_incoming_ && (odom_vector_ - balloon_vector_).norm() - _dist_acc_ > _dist_acc_ + _dist_to_balloon_ &&
-        (balloon_vector_ - balloon_closest_vector_).norm() < _dist_acc_ + _dist_to_balloon_) {
+    if (is_ballon_incoming_ && 
+        ((odom_vector_ - balloon_vector_).norm() - _dist_acc_ > _dist_acc_ + _dist_to_balloon_) &&
+        ((balloon_vector_ - balloon_closest_vector_).norm() < _dist_acc_ + _dist_to_balloon_)) {
       getCloseToBalloon(balloon_vector_, _dist_to_balloon_, _vel_);
       return;
     } else if (!is_tracking_ && !is_idling_ && is_ballon_incoming_) {
@@ -1255,10 +1256,10 @@ void BalloonCircleDestroy::checkForbidden() {
 /* addToForbidden //{ */
 
 void BalloonCircleDestroy::addToForbidden(Eigen::Vector3d dest_) {
-      Forbidden_t forb_;
-      forb_.vect_ = dest_;
-      forb_.r     = _forbidden_radius_;
-      _forb_vect_.push_back(forb_);
+  Forbidden_t forb_;
+  forb_.vect_ = dest_;
+  forb_.r     = _forbidden_radius_;
+  _forb_vect_.push_back(forb_);
 }
 
 //}
