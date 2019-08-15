@@ -439,6 +439,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
     } else {
 
       plannerStop();
+      _is_state_machine_active_ = false;
       /* * if (balloonOutdated()) { *1/ */
       /*   _state_ = IDLE; */
       /*   ROS_WARN_THROTTLE(0.5, "[StateMachine]: 460 STATE RESET TO %s", getStateName().c_str()); */

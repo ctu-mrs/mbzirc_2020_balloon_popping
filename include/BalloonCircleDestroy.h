@@ -87,7 +87,7 @@ public:
 
 private:
   /* flags */
-  bool       is_initialized_ = false;
+  bool is_initialized_ = false;
 
   bool       is_idling_ = false;
   ros::Timer timer_idling_;
@@ -295,20 +295,22 @@ private:
 
   /* Support Functions //{ */
 
-  void        getCloseToBalloon(Eigen::Vector3d dest_,double dist, double speed_);
-  void        circleAroundBalloon();
-  void        getAngleToBalloon();
-  void        generateTrajectory();
-  void        goAroundArena();
-  void        goToChosenBalloon();
-  double      getBalloonHeading(Eigen::Vector3d dest_);
-  double      getArenaHeading();
-  std::string getStateName();
-  bool        pointInForbidden(Eigen::Vector3d vect_);
-  void        checkForbidden();
-  void        addToForbidden(Eigen::Vector3d dest_);
-  bool        balloonOutdated();
-  void        landAndEnd();
+  void            getCloseToBalloon(Eigen::Vector3d dest_, double dist, double speed_);
+  void            circleAroundBalloon();
+  void            getAngleToBalloon();
+  void            generateTrajectory();
+  void            goAroundArena();
+  void            goToChosenBalloon();
+  double          getBalloonHeading(Eigen::Vector3d dest_);
+  double          getArenaHeading();
+  std::string     getStateName();
+  bool            pointInForbidden(Eigen::Vector3d vect_);
+  void            checkForbidden();
+  void            addToForbidden(Eigen::Vector3d dest_);
+  bool            balloonOutdated();
+  void            landAndEnd();
+  Eigen::Vector3d getClosestBalloon();
+
   //}
 };
 //}
