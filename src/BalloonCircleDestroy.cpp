@@ -65,6 +65,7 @@ void BalloonCircleDestroy::onInit() {
   param_loader.load_param("balloon_tries", _balloon_tries_);
   param_loader.load_param("time_to_land", _time_to_land_);
   param_loader.load_param("forbidden_radius", _forbidden_radius_);
+  param_loader.load_param("height_offset", _height_offset_);
 
   ROS_INFO_STREAM_ONCE("[BalloonCircleDestroy]: params loaded");
 
@@ -72,7 +73,9 @@ void BalloonCircleDestroy::onInit() {
 
   _cur_arena_width_  = _arena_width_;
   _cur_arena_length_ = _arena_length_;
-
+  reconfigure_server_.reset(new ReconfigureServer(mutex_dynamic_reconfigure_, nh));
+  ReconfigureServer::CallbackType f = boost::bind(&BalloonCircleDestroy::callbackDynamicReconfigure, this, _1, _2);
+  reconfigure_server_->setCallback(f);
   // --------------------------------------------------------------
   // |                         subscribers                        |
   // --------------------------------------------------------------
@@ -786,10 +789,10 @@ void BalloonCircleDestroy::getCloseToBalloon(Eigen::Vector3d dest_, double close
   double          normed_ = (dist_ - close_dist_) / dist_;
   Eigen::Vector3d goal_   = normed_ * dir_vector_ + odom_vector_;
   if (dest_(2, 0) < _min_height_) {
-    goal_(2, 0) = _min_height_;
+    goal_(2, 0) = _min_height_ + _height_offset_;
   }
   if (dest_(2, 0) > _max_height_) {
-    goal_(2, 0) = _max_height_;
+    goal_(2, 0) = _max_height_ + _height_offset_;
   }
   dir_vector_ = goal_ - odom_vector_;
 
@@ -1267,8 +1270,13 @@ Eigen::Vector3d BalloonCircleDestroy::getClosestBalloon() {
 
 //}
 
+void BalloonCircleDestroy::callbackDynamicReconfigure([[maybe_unused]] Config& config, uint32_t level) {
+  {
+    std::scoped_lock lock(mutex_dynamic_reconfigure_);
+    _height_offset_ = config.height_offset;
+  }
+}
 // | --------------------- transformations -------------------- |
-
 /* getTransform() method //{ */
 bool BalloonCircleDestroy::getTransform(const std::string& from_frame, const std::string& to_frame, const ros::Time& stamp,
                                         geometry_msgs::TransformStamped& transform_out) {
@@ -1300,8 +1308,7 @@ bool BalloonCircleDestroy::transformPointFromWorld(const geometry_msgs::Point32&
   return true;
 }
 //}
-
-
+//
 }  // namespace balloon_circle_destroy
 
 PLUGINLIB_EXPORT_CLASS(balloon_circle_destroy::BalloonCircleDestroy, nodelet::Nodelet);

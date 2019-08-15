@@ -124,6 +124,7 @@ private:
   int    _reset_tries_;
   int    _balloon_tries_;
   double _forbidden_radius_;
+  double _height_offset_;
 
 
   // | ------------------------- state machine params ------------------------- |
@@ -280,12 +281,12 @@ private:
   /* dynamic server //{ */
 
 
-  /*   typedef balloon_circle_destroy::dynparamConfig                              Config; */
-  /*   typedef dynamic_reconfigure::Server<balloon_circle_destroy::dynparamConfig> ReconfigureServer; */
-  /*   boost::recursive_mutex                                              mutex_dynamic_reconfigure_; */
-  /*   boost::shared_ptr<ReconfigureServer>                                reconfigure_server_; */
-  /*   void                                                                callbackDynamicReconfigure(Config& config, uint32_t level); */
-  /*   balloon_circle_destroy::dynparamConfig                             last_drs_config_; */
+  typedef balloon_circle_destroy::dynparamConfig                              Config;
+  typedef dynamic_reconfigure::Server<balloon_circle_destroy::dynparamConfig> ReconfigureServer;
+  boost::recursive_mutex                                                      mutex_dynamic_reconfigure_;
+  boost::shared_ptr<ReconfigureServer>                                        reconfigure_server_;
+  void                                                                        callbackDynamicReconfigure(Config& config, uint32_t level);
+  balloon_circle_destroy::dynparamConfig                                      last_drs_config_;
 
 
   //}

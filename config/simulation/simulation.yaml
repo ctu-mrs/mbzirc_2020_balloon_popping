@@ -22,6 +22,8 @@ min_arena_accuracy: 30
 arena_center_x: 15
 arena_center_y: 20
 
+#height offset when killing the balloon
+height_offset: 0.2
 #height where drone will operate ( up to this height )
 elips_height: 10
 height_min: 1
