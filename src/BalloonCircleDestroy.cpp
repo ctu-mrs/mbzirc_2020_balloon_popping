@@ -176,9 +176,11 @@ void BalloonCircleDestroy::callbackOdomUav(const nav_msgs::OdometryConstPtr& msg
 
 void BalloonCircleDestroy::callbackBalloonPoint(const geometry_msgs::PoseWithCovarianceStampedConstPtr& msg) {
   if (!is_initialized_) {
+    ROS_INFO("[BalloonCircleDestroy]: not inited");
     return;
   }
 
+  ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: shiiiitt incoming");
   {
     std::scoped_lock lock(mutex_is_balloon_incoming_);
 
@@ -463,8 +465,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
       _state_ = CHOOSING_BALLOON;
       ROS_WARN_THROTTLE(0.5, "[StateMachine]: 435 STATE RESET TO %s", getStateName().c_str());
     }
-    if (is_ballon_incoming_ && 
-        ((odom_vector_ - balloon_vector_).norm() - _dist_acc_ > _dist_acc_ + _dist_to_balloon_) &&
+    if (is_ballon_incoming_ && ((odom_vector_ - balloon_vector_).norm() - _dist_acc_ > _dist_acc_ + _dist_to_balloon_) &&
         ((balloon_vector_ - balloon_closest_vector_).norm() < _dist_acc_ + _dist_to_balloon_)) {
       getCloseToBalloon(balloon_vector_, _dist_to_balloon_, _vel_);
       return;
@@ -579,12 +580,15 @@ void BalloonCircleDestroy::callbackTimerCheckBalloonPoints([[maybe_unused]] cons
   if (!is_initialized_) {
     return;
   }
-  if (_is_state_machine_active_) {
+  if (_planner_active_) {
     if (ros::Time::now().toSec() - time_last_balloon_point_.toSec() < 1) {
       is_ballon_incoming_ = true;
     } else {
       is_ballon_incoming_ = false;
     }
+  }
+
+  if (_is_state_machine_active_) {
     if (got_balloon_point_cloud_) {
       if (ros::Time::now().toSec() - time_last_balloon_cloud_point_.toSec() > _time_to_land_) {
         ROS_WARN_THROTTLE(0.5, "[BalloonCircleDestroy]: State machine finished, landing");
@@ -737,6 +741,11 @@ bool BalloonCircleDestroy::callbackGoCloser([[maybe_unused]] std_srvs::Trigger::
     res.message = "Node isn't initialized";
     res.success = false;
     return false;
+  }
+  plannerActivate(getClosestBalloon(), _dist_to_balloon_);
+  while (got_balloon_point_ == false || _planner_active_ == false) {
+    ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: waiting for estimation");
+    ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: x %f y %f z %f",balloon_vector_(0,0),balloon_vector_(1,0),balloon_vector_(2,0) );
   }
 
   getCloseToBalloon(balloon_vector_, _dist_to_balloon_, _vel_);
@@ -1281,6 +1290,40 @@ void BalloonCircleDestroy::landAndEnd() {
   _is_state_machine_active_ = false;
   std_srvs::Trigger srv_land_call;
   srv_client_land_.call(srv_land_call);
+}
+
+//}
+
+/* getClosestBalloon //{ */
+
+Eigen::Vector3d BalloonCircleDestroy::getClosestBalloon() {
+
+  double          dist_;
+  double          best_dist_ = 999;
+  Eigen::Vector3d ball_vect_;
+  {
+    std::scoped_lock lock_uav(mutex_odom_uav_);
+    std::scoped_lock lock_balloon(mutex_is_balloon_cloud_incoming_);
+
+    for (auto point_ : balloon_point_cloud_.points) {
+      geometry_msgs::Point p_;
+
+      bool ts_res = transformPointFromWorld(point_, balloon_point_cloud_.header.frame_id, balloon_point_cloud_.header.stamp, p_);
+      if (!ts_res) {
+        ROS_WARN_THROTTLE(1, "[BalloonCircleDestroy]: No transform,skipping");
+        break;
+      }
+      ball_vect_(0, 0) = p_.x;
+      ball_vect_(1, 0) = p_.y;
+      ball_vect_(2, 0) = p_.z;
+      dist_            = (odom_vector_ - ball_vect_).norm();
+      if (dist_ < best_dist_) {
+
+        balloon_closest_vector_ = ball_vect_;
+      }
+    }
+  }
+  return balloon_closest_vector_;
 }
 
 //}
