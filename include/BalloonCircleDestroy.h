@@ -145,6 +145,7 @@ private:
   State _state_ = IDLE;
 
   bool                     _is_state_machine_active_ = false;
+  bool                     _is_destroy_enabled_      = false;
   bool                     _height_checking_         = false;
   double                   _closest_on_arena_        = 999.9;
   double                   _closest_angle_           = 0;
@@ -273,9 +274,13 @@ private:
 
   bool               callbackGoCloser(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res);
   ros::ServiceServer srv_server_go_closer_;
+
   bool               callbackStartStateMachine(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res);
   ros::ServiceServer srv_server_start_state_machine_;
   ros::ServiceServer srv_server_stop_state_machine_;
+
+  bool               callbackToggleDestroy(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res);
+  ros::ServiceServer srv_server_toggle_destroy_;
 
   // | ------------------- dynamic reconfigure ------------------ |
   /* dynamic server //{ */

@@ -68,14 +68,21 @@ void BalloonCircleDestroy::onInit() {
   param_loader.load_param("height_offset", _height_offset_);
 
   ROS_INFO_STREAM_ONCE("[BalloonCircleDestroy]: params loaded");
-
-  //}
-
   _cur_arena_width_  = _arena_width_;
   _cur_arena_length_ = _arena_length_;
+
+  //}
+  // | ------------------- Dynamic reconfigure ------------------ |
+
+  /*  Dynamic reconfigure //{ */
+
   reconfigure_server_.reset(new ReconfigureServer(mutex_dynamic_reconfigure_, nh));
   ReconfigureServer::CallbackType f = boost::bind(&BalloonCircleDestroy::callbackDynamicReconfigure, this, _1, _2);
   reconfigure_server_->setCallback(f);
+
+
+  //}
+
   // --------------------------------------------------------------
   // |                         subscribers                        |
   // --------------------------------------------------------------
@@ -96,7 +103,9 @@ void BalloonCircleDestroy::onInit() {
   //}
 
   // | ----------------------- Publishers ----------------------- |
+
   rviz_pub_ = nh.advertise<visualization_msgs::MarkerArray>("rviz_out", 1);
+
   // | --------------- initialize service servers --------------- |
   /*  server services //{ */
 
@@ -104,6 +113,7 @@ void BalloonCircleDestroy::onInit() {
   srv_server_go_closer_           = nh.advertiseService("go_closer", &BalloonCircleDestroy::callbackGoCloser, this);
   srv_server_start_state_machine_ = nh.advertiseService("start_state_machine", &BalloonCircleDestroy::callbackStartStateMachine, this);
   srv_server_stop_state_machine_  = nh.advertiseService("stop_state_machine", &BalloonCircleDestroy::callbackStartStateMachine, this);
+  srv_server_toggle_destroy_  = nh.advertiseService("toggle_destroy", &BalloonCircleDestroy::callbackToggleDestroy, this);
 
 
   //}
@@ -124,7 +134,6 @@ void BalloonCircleDestroy::onInit() {
 
 
   //}
-
 
   // | ---------- initialize dynamic reconfigure server --------- |
   /* dynamic server //{ */
@@ -183,7 +192,6 @@ void BalloonCircleDestroy::callbackBalloonPoint(const geometry_msgs::PoseWithCov
     return;
   }
 
-  ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: shiiiitt incoming");
   {
     std::scoped_lock lock(mutex_is_balloon_incoming_);
 
@@ -343,6 +351,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
   ROS_INFO_THROTTLE(0.5, "[State]: %s ", getStateName().c_str());
   ROS_INFO_THROTTLE(0.5, "[IsTracking]: %d", is_tracking_);
   ROS_INFO_THROTTLE(0.5, "[Planner Status]: %d", _planner_active_);
+  ROS_INFO_THROTTLE(0.5, "[Destroy Status]: %d", _is_destroy_enabled_);
   /* ROS_INFO_THROTTLE(0.5, "[ClosestAngle]: %f ", _closest_angle_); */
   /* ROS_INFO_THROTTLE(0.5, "[CurrentAngle]: %f ", getArenaHeading()); */
   /* ROS_INFO_THROTTLE(0.5, "[ClosestDist]: %f ", _closest_on_arena_); */
@@ -437,6 +446,9 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
     }
   } else if (_state_ == DESTROYING) {
 
+    if(!_is_destroy_enabled_) {
+      return;
+    }
     if (is_ballon_incoming_ && (balloon_closest_vector_ - balloon_vector_).norm()) {
       getCloseToBalloon(balloon_vector_, -_dist_to_overshoot_, _vel_attack_);
     } else {
@@ -722,6 +734,33 @@ bool BalloonCircleDestroy::callbackStartStateMachine([[maybe_unused]] std_srvs::
   }
 
   _state_     = IDLE;
+  res.success = true;
+  return true;
+}
+
+//}
+
+/* callbackToggleDestroy //{ */
+
+
+bool BalloonCircleDestroy::callbackToggleDestroy([[maybe_unused]] std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res) {
+
+  if (!is_initialized_) {
+    res.success = false;
+    res.message = "Can't trigger service, not initialized";
+    ROS_WARN_THROTTLE(0.5, "[BalloonCircleDestroy]: Could'nt call the service, not inited yet");
+
+    return false;
+  }
+  if (_is_destroy_enabled_) {
+    _is_destroy_enabled_ = false;
+    res.message               = "Destroy disabled";
+
+  } else {
+    _is_destroy_enabled_ = true;
+    res.message               = "Destroy activated";
+  }
+
   res.success = true;
   return true;
 }
