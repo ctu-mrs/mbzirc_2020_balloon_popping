@@ -28,7 +28,7 @@
       <param name="simulation" value="$(arg simulation)" />
 
       <!-- ROS parameters config file -->
-      <rosparam file="$(find balloon_circle_destroy)/config/simulation/simulation.yaml" />
+      <rosparam file="$(find balloon_circle_destroy)/config/uav/f550.yaml" />
 
       <!-- Subscribers -->
       <remap from="~odom_uav_in" to="odometry/odom_main" />
