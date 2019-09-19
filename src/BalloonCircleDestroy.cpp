@@ -113,7 +113,7 @@ void BalloonCircleDestroy::onInit() {
   srv_server_go_closer_           = nh.advertiseService("go_closer", &BalloonCircleDestroy::callbackGoCloser, this);
   srv_server_start_state_machine_ = nh.advertiseService("start_state_machine", &BalloonCircleDestroy::callbackStartStateMachine, this);
   srv_server_stop_state_machine_  = nh.advertiseService("stop_state_machine", &BalloonCircleDestroy::callbackStartStateMachine, this);
-  srv_server_toggle_destroy_  = nh.advertiseService("toggle_destroy", &BalloonCircleDestroy::callbackToggleDestroy, this);
+  srv_server_toggle_destroy_      = nh.advertiseService("toggle_destroy", &BalloonCircleDestroy::callbackToggleDestroy, this);
 
 
   //}
@@ -230,7 +230,7 @@ void BalloonCircleDestroy::callbackBalloonPointCloud(const sensor_msgs::PointClo
 
 /* callbackTrackerDiag //{ */
 
-void BalloonCircleDestroy::callbackTrackerDiag(const mrs_msgs::TrackerDiagnosticsConstPtr& msg) {
+void BalloonCircleDestroy::callbackTrackerDiag(const mrs_msgs::MpcTrackerDiagnosticsConstPtr& msg) {
   if (!is_initialized_) {
     return;
   }
@@ -383,7 +383,12 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
   ROS_INFO_THROTTLE(0.5, "| ----------------- STATE MACHINE LOOP END ----------------- |");
 
   if (_state_ == IDLE) {
-    _state_            = CHECKING_BALLOON;
+    if (is_ballon_cloud_incoming_) {
+      _state_ = CHECKING_BALLOON;
+    } else {
+      _state_ = GOING_AROUND;
+      goAroundArena();
+    }
     _closest_on_arena_ = 9999;
     _closest_angle_    = 0;
     _reset_count_      = 0;
@@ -391,6 +396,12 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
     ROS_WARN_THROTTLE(0.5, "[StateMachine]: 374 STATE RESET TO %s", getStateName().c_str());
     plannerStop();
     return;
+  } else if (_state_ == GOING_AROUND) {
+    if (is_ballon_incoming_) {
+      _state_ = CHECKING_BALLOON;
+      ROS_WARN_THROTTLE(0.5, "[StateMachine]: 374 STATE RESET TO %s", getStateName().c_str());
+    }
+
   } else if (_state_ == CHECKING_BALLOON) {
 
     balloon_closest_vector_ = getClosestBalloon();
@@ -446,7 +457,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
     }
   } else if (_state_ == DESTROYING) {
 
-    if(!_is_destroy_enabled_) {
+    if (!_is_destroy_enabled_) {
       return;
     }
     if (is_ballon_incoming_ && (balloon_closest_vector_ - balloon_vector_).norm()) {
@@ -520,6 +531,11 @@ void BalloonCircleDestroy::callbackTimerCheckSubscribers([[maybe_unused]] const 
     if ((time_now - time_last_balloon_cloud_point_).toSec() > 1) {
       ROS_WARN_THROTTLE(0.5, "[%s]: haven't received any balloon cloud points for %f", ros::this_node::getName().c_str(),
                         (time_now - time_last_balloon_cloud_point_).toSec());
+      is_ballon_cloud_incoming_ = false;
+    } else {
+      if (balloon_point_cloud_.points.size() > 0) {
+        is_ballon_cloud_incoming_ = true;
+      }
     }
   }
 }
@@ -754,11 +770,11 @@ bool BalloonCircleDestroy::callbackToggleDestroy([[maybe_unused]] std_srvs::Trig
   }
   if (_is_destroy_enabled_) {
     _is_destroy_enabled_ = false;
-    res.message               = "Destroy disabled";
+    res.message          = "Destroy disabled";
 
   } else {
     _is_destroy_enabled_ = true;
-    res.message               = "Destroy activated";
+    res.message          = "Destroy activated";
   }
 
   res.success = true;
@@ -1294,10 +1310,14 @@ Eigen::Vector3d BalloonCircleDestroy::getClosestBalloon() {
         ROS_WARN_THROTTLE(1, "[BalloonCircleDestroy]: No transform,skipping");
         break;
       }
+      if (p_.z < _max_height_ && p_.z > _min_height_) {
+        continue;
+      }
       ball_vect_(0, 0) = p_.x;
       ball_vect_(1, 0) = p_.y;
       ball_vect_(2, 0) = p_.z;
-      dist_            = (odom_vector_ - ball_vect_).norm();
+
+      dist_ = (odom_vector_ - ball_vect_).norm();
       if (dist_ < best_dist_) {
 
         balloon_closest_vector_ = ball_vect_;
@@ -1309,12 +1329,17 @@ Eigen::Vector3d BalloonCircleDestroy::getClosestBalloon() {
 
 //}
 
+/* callbackDynamicReconfigure //{ */
+
 void BalloonCircleDestroy::callbackDynamicReconfigure([[maybe_unused]] Config& config, uint32_t level) {
   {
     std::scoped_lock lock(mutex_dynamic_reconfigure_);
     _height_offset_ = config.height_offset;
   }
 }
+
+//}
+
 // | --------------------- transformations -------------------- |
 /* getTransform() method //{ */
 bool BalloonCircleDestroy::getTransform(const std::string& from_frame, const std::string& to_frame, const ros::Time& stamp,

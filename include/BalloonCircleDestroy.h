@@ -41,7 +41,7 @@
 #include <mrs_msgs/TrackerTrajectory.h>
 #include <mrs_msgs/TrackerPoint.h>
 #include <mrs_msgs/TrackerPointStamped.h>
-#include <mrs_msgs/TrackerDiagnostics.h>
+#include <mrs_msgs/MpcTrackerDiagnostics.h>
 #include <mrs_msgs/Float64Stamped.h>
 /* custom helper functions from our library */
 #include <mrs_lib/ParamLoader.h>
@@ -188,7 +188,7 @@ private:
   ros::Time          time_last_odom_gt_;
 
 
-  void            callbackTrackerDiag(const mrs_msgs::TrackerDiagnosticsConstPtr& msg);
+  void            callbackTrackerDiag(const mrs_msgs::MpcTrackerDiagnosticsConstPtr& msg);
   ros::Subscriber sub_tracker_diag_;
   bool            got_tracker_diag_ = false;
   bool            is_tracking_      = false;
