@@ -352,11 +352,8 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
   ROS_INFO_THROTTLE(0.5, "[IsTracking]: %d", is_tracking_);
   ROS_INFO_THROTTLE(0.5, "[Planner Status]: %d", _planner_active_);
   ROS_INFO_THROTTLE(0.5, "[Destroy Status]: %d", _is_destroy_enabled_);
-  /* ROS_INFO_THROTTLE(0.5, "[ClosestAngle]: %f ", _closest_angle_); */
-  /* ROS_INFO_THROTTLE(0.5, "[CurrentAngle]: %f ", getArenaHeading()); */
-  /* ROS_INFO_THROTTLE(0.5, "[ClosestDist]: %f ", _closest_on_arena_); */
-  /* ROS_INFO_THROTTLE(0.5, "[Current Dist To ball]: %f ", (odom_vector_ - balloon_vector_).norm()); */
-  /* ROS_INFO_THROTTLE(0.5, "[Dist between KF and PCL vectors]: %f ", (balloon_vector_ - balloon_closest_vector_).norm()); */
+  ROS_INFO_THROTTLE(0.5, "[Current Dist To ball]: %f ", (odom_vector_ - balloon_vector_).norm());
+  ROS_INFO_THROTTLE(0.5, "[Dist between KF and PCL vectors]: %f ", (balloon_vector_ - balloon_closest_vector_).norm());
   /* ROS_INFO_THROTTLE(0.5, "[Is closest in forbidden]: %d ", pointInForbidden(balloon_closest_vector_)); */
   ROS_INFO_THROTTLE(0.5, "[Closest ball (PointCloud)]: x %f ", balloon_closest_vector_(0, 0));
   ROS_INFO_THROTTLE(0.5, "[Closest ball (PointCloud)]: y %f ", balloon_closest_vector_(1, 0));
@@ -368,7 +365,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
   ROS_INFO_THROTTLE(0.5, "[Closest ball (KF)]: y %f ", balloon_vector_(1, 0));
   ROS_INFO_THROTTLE(0.5, "[Closest ball (KF)]: z %f ", balloon_vector_(2, 0));
 
-  /* ROS_INFO_THROTTLE(0.5, "[KF reset tries]  %d ", _reset_count_); */
+  ROS_INFO_THROTTLE(0.5, "[KF reset tries]  %d ", _reset_count_);
   /* ROS_INFO_THROTTLE(0.5, "[Same balloon tries]  %d ", _balloon_try_count_); */
   /* ROS_INFO_THROTTLE(0.5, "[ARENA LENGTH]: %d ", _cur_arena_length_); */
   /* ROS_INFO_THROTTLE(0.5, "[ARENA WIDTH]: %d ", _cur_arena_width_); */
@@ -377,8 +374,8 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
   /* ROS_INFO_THROTTLE(0.5, "[ARENA VELOCITY]: %f ", _vel_arena_); */
   /* ROS_INFO_THROTTLE(0.5, "[MIN HEIGHT]: %f ", _min_height_); */
   /* ROS_INFO_THROTTLE(0.5, "[MAX HEIGHT]: %f ", _max_height_); */
-  /* ROS_INFO_THROTTLE(0.5, "[CUR HEIGHT]: %f ", odom_vector_(2, 0)); */
-  /* ROS_INFO_THROTTLE(0.5, "[Forb length]: %d ", int(_forb_vect_.size())); */
+  ROS_INFO_THROTTLE(0.5, "[CUR HEIGHT]: %f ", odom_vector_(2, 0));
+  ROS_INFO_THROTTLE(0.5, "[Cloud size]: %d ", int(balloon_point_cloud_.points.size()));
 
   ROS_INFO_THROTTLE(0.5, "| ----------------- STATE MACHINE LOOP END ----------------- |");
 
@@ -420,6 +417,11 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
       if (plannerReset()) {
         _reset_count_++;
       }
+    }
+    if (_reset_tries_ == _reset_count_) {
+      _state_ = IDLE;
+
+      ROS_WARN_THROTTLE(0.5, "[StateMachine]: 423 STATE RESET TO %s", getStateName().c_str());
     }
   } else if (_state_ == GOING_TO_BALLOON) {
     if (balloonOutdated()) {
@@ -1298,33 +1300,38 @@ Eigen::Vector3d BalloonCircleDestroy::getClosestBalloon() {
   double          dist_;
   double          best_dist_ = 999;
   Eigen::Vector3d ball_vect_;
+  Eigen::Vector3d ball_vect_best_;
   {
     std::scoped_lock lock_uav(mutex_odom_uav_);
     std::scoped_lock lock_balloon(mutex_is_balloon_cloud_incoming_);
 
-    for (auto point_ : balloon_point_cloud_.points) {
+    for (uint8_t i = 0; i < balloon_point_cloud_.points.size(); i++) {
+
       geometry_msgs::Point p_;
 
-      bool ts_res = transformPointFromWorld(point_, balloon_point_cloud_.header.frame_id, balloon_point_cloud_.header.stamp, p_);
+      ROS_INFO_THROTTLE(0.5, "[ishiiit]: ");
+      bool ts_res = transformPointFromWorld(balloon_point_cloud_.points.at(i), balloon_point_cloud_.header.frame_id, balloon_point_cloud_.header.stamp, p_);
       if (!ts_res) {
         ROS_WARN_THROTTLE(1, "[BalloonCircleDestroy]: No transform,skipping");
         break;
       }
-      if (p_.z < _max_height_ && p_.z > _min_height_) {
+      if (p_.z > _max_height_ || p_.z < _min_height_) {
         continue;
       }
       ball_vect_(0, 0) = p_.x;
       ball_vect_(1, 0) = p_.y;
       ball_vect_(2, 0) = p_.z;
 
+      ROS_INFO_THROTTLE(1.0, "[StateMachine]: closest ball %f, %f, %f ", ball_vect_(0, 0), ball_vect_(1, 0), ball_vect_(2, 0));
       dist_ = (odom_vector_ - ball_vect_).norm();
       if (dist_ < best_dist_) {
 
-        balloon_closest_vector_ = ball_vect_;
+        ball_vect_best_ = ball_vect_;
       }
     }
   }
-  return balloon_closest_vector_;
+  ROS_INFO_THROTTLE(1.0, "[StateMachine]: closest ball %f, %f, %f ", ball_vect_best_(0, 0), ball_vect_best_(1, 0), ball_vect_best_(2, 0));
+  return ball_vect_best_;
 }
 
 //}

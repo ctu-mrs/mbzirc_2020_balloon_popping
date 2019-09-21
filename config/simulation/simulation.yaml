@@ -51,7 +51,7 @@ traj_len: 40
 #traj time
 traj_time: 8
 #distance error to target the closest balloon so, it will be compared to current chosen via KF + dist_error 
-dist_error: 4
+dist_error: 2
 #dist accurace to be as close to the balloon
 dist_acc: 0.5
 #time for waiting for KF reset
