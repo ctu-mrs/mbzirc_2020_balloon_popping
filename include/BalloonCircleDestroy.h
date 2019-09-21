@@ -157,6 +157,7 @@ private:
   Eigen::Vector3d          _estimate_vect_;
   Eigen::Vector3d          _prev_closest_;
   int                      _balloon_try_count_;
+  bool                     _is_going_around_;
 
 
   // | ----------------------- transforms ----------------------- |
@@ -241,13 +242,13 @@ private:
 
   ros::ServiceClient srv_client_trajectory_;
   bool               _trajectory_published_;
+  ros::Time          time_last_traj_published_;
 
   ros::ServiceClient srv_client_land_;
   bool               _land_end_;
 
   ros::ServiceClient srv_client_stop_;
-  bool               _mpc_stop_=false;
-  void droneStop();
+  bool               _mpc_stop_ = false;
   // | ------------------- Estimation services ------------------ |
 
   ros::ServiceClient srv_planner_reset_estimation_;
@@ -259,7 +260,7 @@ private:
 
   ros::ServiceClient srv_planner_add_zone_;
   bool               _planner_zone_added_;
-  
+
 
   ros::Time time_last_planner_reset_;
 
@@ -321,6 +322,7 @@ private:
   void            landAndEnd();
   Eigen::Vector3d getClosestBalloon();
   bool            isBalloonVisible(Eigen::Vector3d baloon_);
+  bool            droneStop();
 
   //}
 };
