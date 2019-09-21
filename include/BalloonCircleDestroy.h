@@ -245,6 +245,9 @@ private:
   ros::ServiceClient srv_client_land_;
   bool               _land_end_;
 
+  ros::ServiceClient srv_client_stop_;
+  bool               _mpc_stop_=false;
+  void droneStop();
   // | ------------------- Estimation services ------------------ |
 
   ros::ServiceClient srv_planner_reset_estimation_;
@@ -256,6 +259,7 @@ private:
 
   ros::ServiceClient srv_planner_add_zone_;
   bool               _planner_zone_added_;
+  
 
   ros::Time time_last_planner_reset_;
 
@@ -316,6 +320,7 @@ private:
   bool            balloonOutdated();
   void            landAndEnd();
   Eigen::Vector3d getClosestBalloon();
+  bool            isBalloonVisible(Eigen::Vector3d baloon_);
 
   //}
 };

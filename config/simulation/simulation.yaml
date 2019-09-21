@@ -25,17 +25,17 @@ arena_center_y: 20
 #height offset when killing the balloon
 height_offset: 0.2
 #height where drone will operate ( up to this height )
-elips_height: 10
+elips_height: 4
 height_min: 1
 height_max: 30
 #idle_time
-idle_time: 0.3
+idle_time: 3
 #circling radius - define width from the balloon to circle around
 circling_radius: 3
 #circle accuracy - how many points should be in circle trajectory
 circle_accuracy: 100
 #velocity for goTo's
-vel: 2
+vel: 1.5
 #velocity for attack
 vel_attack: 0.5
 #velocity of going around arena
