@@ -240,6 +240,11 @@ void BalloonCircleDestroy::callbackTrackerDiag(const mrs_msgs::MpcTrackerDiagnos
     ROS_INFO("[%s]: got first tracker diagnostics msg", ros::this_node::getName().c_str());
   }
 
+  if (_state_ == DESTROYING) {
+    if( (odom_vector_ -_last_goal_ ).norm() < _dist_acc_  ) {
+      _last_goal_reached_ = true;
+    }
+  }
 
   if (is_tracking_ && !msg->tracking_trajectory) {
     ROS_INFO("[%s]: reached final point", ros::this_node::getName().c_str());
@@ -416,9 +421,9 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
         return;
       }
 
-      if (!is_tracking_ && !is_idling_) {
+      if (!is_tracking_ && !is_idling_ && _last_goal_reached_) {
         _state_ = IDLE;
-        ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
+        ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s destroying ended", getStateName().c_str());
       }
     }
   }
@@ -904,6 +909,8 @@ void BalloonCircleDestroy::getCloseToBalloon(Eigen::Vector3d dest_, double close
       new_traj_.points.push_back(p);
     }
   }
+  _last_goal_ = cur_pos_;
+  _last_goal_reached_ = false;
   ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: Trajectory ready ");
   new_traj_.header.frame_id = world_frame_id_;
   new_traj_.header.stamp    = ros::Time::now();

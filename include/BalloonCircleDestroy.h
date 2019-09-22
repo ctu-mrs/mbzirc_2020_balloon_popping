@@ -156,6 +156,8 @@ private:
   std::vector<Forbidden_t> _forb_vect_;
   Eigen::Vector3d          _estimate_vect_;
   Eigen::Vector3d          _prev_closest_;
+  Eigen::Vector3d          _last_goal_;
+  bool                     _last_goal_reached_;
   int                      _balloon_try_count_;
   bool                     _is_going_around_;
 
