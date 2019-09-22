@@ -241,7 +241,7 @@ void BalloonCircleDestroy::callbackTrackerDiag(const mrs_msgs::MpcTrackerDiagnos
   }
 
   if (_state_ == DESTROYING) {
-    if( (odom_vector_ -_last_goal_ ).norm() < _dist_acc_  ) {
+    if ((odom_vector_ - _last_goal_).norm() < _dist_acc_) {
       _last_goal_reached_ = true;
     }
   }
@@ -390,8 +390,12 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
           getCloseToBalloon(balloon_closest_vector_, _dist_to_balloon_, _vel_);
         } else {
           _state_ = IDLE;
-          ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: baloon is not visible");
+          ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: baloon is not visible, stop");
           ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
+          is_idling_ = true;
+          ros::NodeHandle nh("~");
+          timer_idling_ = nh.createTimer(ros::Duration(_idle_time_), &BalloonCircleDestroy::callbackTimerIdling, this,
+                                         true);  // the last boolean argument makes the timer run only once
         }
 
       } else {
@@ -909,7 +913,7 @@ void BalloonCircleDestroy::getCloseToBalloon(Eigen::Vector3d dest_, double close
       new_traj_.points.push_back(p);
     }
   }
-  _last_goal_ = cur_pos_;
+  _last_goal_         = cur_pos_;
   _last_goal_reached_ = false;
   ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: Trajectory ready ");
   new_traj_.header.frame_id = world_frame_id_;
@@ -1362,6 +1366,7 @@ Eigen::Vector3d BalloonCircleDestroy::getClosestBalloon() {
       if (dist_ < best_dist_) {
 
         ball_vect_best_ = ball_vect_;
+        best_dist_ = dist_;
       }
     }
   }
@@ -1416,7 +1421,6 @@ bool BalloonCircleDestroy::isBalloonVisible(Eigen::Vector3d baloon_) {
 
       geometry_msgs::Point p_;
 
-      ROS_INFO_THROTTLE(0.5, "[ishiiit]: ");
       bool ts_res = transformPointFromWorld(balloon_point_cloud_.points.at(i), balloon_point_cloud_.header.frame_id, balloon_point_cloud_.header.stamp, p_);
       if (!ts_res) {
         ROS_WARN_THROTTLE(1, "[BalloonCircleDestroy]: No transform,skipping");
@@ -1429,9 +1433,8 @@ bool BalloonCircleDestroy::isBalloonVisible(Eigen::Vector3d baloon_) {
       ball_vect_(1, 0) = p_.y;
       ball_vect_(2, 0) = p_.z;
 
-      ROS_INFO_THROTTLE(1.0, "[StateMachine]: closest ball %f, %f, %f ", ball_vect_(0, 0), ball_vect_(1, 0), ball_vect_(2, 0));
       dist_ = (baloon_ - ball_vect_).norm();
-      if (dist_ < _dist_error_) {
+      if (dist_ < _dist_error_ + _dist_acc_) {
         res_ = true;
         if (_state_ == GOING_TO_BALLOON) {
           balloon_closest_vector_ = ball_vect_;
