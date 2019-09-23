@@ -125,6 +125,7 @@ private:
   int    _balloon_tries_;
   double _forbidden_radius_;
   double _height_offset_;
+  double _max_time_balloon_;
 
 
   // | ------------------------- state machine params ------------------------- |
@@ -160,6 +161,7 @@ private:
   bool                     _last_goal_reached_;
   int                      _balloon_try_count_;
   bool                     _is_going_around_;
+  ros::Time                _last_time_balloon_seen_;
 
 
   // | ----------------------- transforms ----------------------- |

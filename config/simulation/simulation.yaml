@@ -43,7 +43,7 @@ vel_arena: 6
 #minimal velocity of going around arena
 min_vel_arena: 0.5
 #distance to the balloon
-dist_to_balloon: 3
+dist_to_balloon: 4
 #distance to kill the balloon
 dist_to_overshoot: 2
 #trajectory length
@@ -56,6 +56,8 @@ dist_error: 4.5
 dist_acc: 0.5
 #time for waiting for KF reset
 wait_for_ball: 6
+#max time balloon not seen in PCL
+max_time_balloon: 3
 #how many time to reset the KF
 reset_tries: 5
 #time to land - max time of not observing any balloons at all 

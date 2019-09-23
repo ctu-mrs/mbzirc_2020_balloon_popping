@@ -44,7 +44,7 @@
       <!-- Service clients -->
       <remap from="~trajectory_srv" to="control_manager/mpc_tracker/set_trajectory" />
       <remap from="~land_out" to="uav_manager/land" />
-      <remap from="~drone_stop" to="control_manager/mpc_tracker/stop_trajectory_following" />
+      <remap from="~drone_stop" to="control_manager/hover" />
       <remap from="~reset_estimation" to="balloon_planner/reset_estimation" />
       <remap from="~start_estimation" to="balloon_planner/start_estimation" />
       <remap from="~stop_estimation" to="balloon_planner/stop_estimation" />
