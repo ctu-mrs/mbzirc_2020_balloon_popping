@@ -126,6 +126,12 @@ private:
   double _forbidden_radius_;
   double _height_offset_;
   double _max_time_balloon_;
+  double _x_min_;
+  double _x_max_;
+  double _y_min_;
+  double _y_max_;
+  double _z_min_;
+  double _z_max_;
 
 
   // | ------------------------- state machine params ------------------------- |
@@ -310,24 +316,24 @@ private:
 
   /* Support Functions //{ */
 
-  void            getCloseToBalloon(Eigen::Vector3d dest_, double dist, double speed_);
-  void            circleAroundBalloon();
-  void            getAngleToBalloon();
-  void            generateTrajectory();
-  void            goAroundArena();
-  void            goToChosenBalloon();
-  double          getBalloonHeading(Eigen::Vector3d dest_);
-  double          getArenaHeading();
-  std::string     getStateName();
-  bool            pointInForbidden(Eigen::Vector3d vect_);
-  void            checkForbidden();
-  void            addToForbidden(Eigen::Vector3d dest_);
-  bool            balloonOutdated();
-  void            landAndEnd();
-  Eigen::Vector3d getClosestBalloon();
-  bool            isBalloonVisible(Eigen::Vector3d baloon_);
-  bool            droneStop();
-
+  void                       getCloseToBalloon(Eigen::Vector3d dest_, double dist, double speed_);
+  void                       circleAroundBalloon();
+  void                       getAngleToBalloon();
+  void                       generateTrajectory();
+  void                       goAroundArena();
+  void                       goToChosenBalloon();
+  double                     getBalloonHeading(Eigen::Vector3d dest_);
+  double                     getArenaHeading();
+  std::string                getStateName();
+  bool                       pointInForbidden(Eigen::Vector3d vect_);
+  void                       checkForbidden();
+  void                       addToForbidden(Eigen::Vector3d dest_);
+  bool                       balloonOutdated();
+  void                       landAndEnd();
+  Eigen::Vector3d            getClosestBalloon();
+  bool                       isBalloonVisible(Eigen::Vector3d baloon_);
+  bool                       droneStop();
+  visualization_msgs::Marker fillArenaBounds(int id_);
   //}
 };
 //}
