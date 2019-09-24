@@ -684,10 +684,204 @@ void BalloonCircleDestroy::callbackTimerPublishRviz([[maybe_unused]] const ros::
       msg_out.markers.push_back(line_kf);
     }
 
-    fillArenaBounds(arena_bound);
-    ROS_INFO_THROTTLE(0.5, "[size]:%d ", arena_bound.points.size());
+    visualization_msgs::Marker arena_bound_;
+    arena_bound_.header.frame_id    = "local_origin";
+    arena_bound_.header.stamp       = ros::Time::now();
+    arena_bound_.ns                 = "mtsp";
+    arena_bound_.id                 = id++;
+    arena_bound_.type               = visualization_msgs::Marker::LINE_STRIP;
+    arena_bound_.action             = visualization_msgs::Marker::ADD;
+    arena_bound_.pose.position.x    = 0;
+    arena_bound_.pose.position.y    = 0;
+    arena_bound_.pose.position.z    = 0;
+    arena_bound_.pose.orientation.x = 0.0;
+    arena_bound_.pose.orientation.y = 0.0;
+    arena_bound_.pose.orientation.z = 0.0;
+    arena_bound_.pose.orientation.w = 1.0;
+    arena_bound_.scale.x            = 0.35;
+    arena_bound_.scale.y            = 0.35;
+    arena_bound_.scale.z            = 0.35;
+    arena_bound_.color.a            = 0.3;
+    arena_bound_.color.r            = 0.0;
+    arena_bound_.color.g            = 1.0;
+    arena_bound_.color.b            = 0.0;
 
-    msg_out.markers.push_back(arena_bound);
+
+    geometry_msgs::Point mark_point_;
+    // x min y min z min
+    mark_point_.x = _x_min_;
+    mark_point_.y = _y_min_;
+    mark_point_.z = _z_min_;
+    arena_bound_.points.push_back(mark_point_);
+    mark_point_.x = _x_min_;
+    mark_point_.y = _y_max_;
+    mark_point_.z = _z_min_;
+    arena_bound_.points.push_back(mark_point_);
+
+    mark_point_.x = _x_max_;
+    mark_point_.y = _y_max_;
+    mark_point_.z = _z_min_;
+    arena_bound_.points.push_back(mark_point_);
+
+    mark_point_.x = _x_max_;
+    mark_point_.y = _y_min_;
+    mark_point_.z = _z_min_;
+    arena_bound_.points.push_back(mark_point_);
+
+    mark_point_.x = _x_min_;
+    mark_point_.y = _y_min_;
+    mark_point_.z = _z_min_;
+    arena_bound_.points.push_back(mark_point_);
+
+
+
+    msg_out.markers.push_back(arena_bound_);
+
+    visualization_msgs::Marker arena_bound_top_;
+    arena_bound_top_.header.frame_id    = "local_origin";
+    arena_bound_top_.header.stamp       = ros::Time::now();
+    arena_bound_top_.ns                 = "mtsp";
+    arena_bound_top_.id                 = id++;
+    arena_bound_top_.type               = visualization_msgs::Marker::LINE_STRIP;
+    arena_bound_top_.action             = visualization_msgs::Marker::ADD;
+    arena_bound_top_.pose.position.x    = 0;
+    arena_bound_top_.pose.position.y    = 0;
+    arena_bound_top_.pose.position.z    = 0;
+    arena_bound_top_.pose.orientation.x = 0.0;
+    arena_bound_top_.pose.orientation.y = 0.0;
+    arena_bound_top_.pose.orientation.z = 0.0;
+    arena_bound_top_.pose.orientation.w = 1.0;
+    arena_bound_top_.scale.x            = 0.35;
+    arena_bound_top_.scale.y            = 0.35;
+    arena_bound_top_.scale.z            = 0.35;
+    arena_bound_top_.color.a            = 0.3;
+    arena_bound_top_.color.r            = 0.0;
+    arena_bound_top_.color.g            = 1.0;
+    arena_bound_top_.color.b            = 0.0;
+
+
+    geometry_msgs::Point mark_point_top_;
+    // x min y min z min
+    mark_point_top_.x = _x_min_;
+    mark_point_top_.y = _y_min_;
+    mark_point_top_.z = _z_max_;
+    arena_bound_top_.points.push_back(mark_point_top_);
+    mark_point_top_.x = _x_min_;
+    mark_point_top_.y = _y_max_;
+    mark_point_top_.z = _z_max_;
+    arena_bound_top_.points.push_back(mark_point_top_);
+
+    mark_point_top_.x = _x_max_;
+    mark_point_top_.y = _y_max_;
+    mark_point_top_.z = _z_max_;
+    arena_bound_top_.points.push_back(mark_point_top_);
+
+    mark_point_top_.x = _x_max_;
+    mark_point_top_.y = _y_min_;
+    mark_point_top_.z = _z_max_;
+    arena_bound_top_.points.push_back(mark_point_top_);
+
+    mark_point_top_.x = _x_min_;
+    mark_point_top_.y = _y_min_;
+    mark_point_top_.z = _z_max_;
+    arena_bound_top_.points.push_back(mark_point_top_);
+
+    msg_out.markers.push_back(arena_bound_top_);
+
+    visualization_msgs::Marker arena_pole_1;
+    arena_pole_1.header.frame_id    = "local_origin";
+    arena_pole_1.header.stamp       = ros::Time::now();
+    arena_pole_1.ns                 = "mtsp";
+    arena_pole_1.id                 = id++;
+    arena_pole_1.type               = visualization_msgs::Marker::CYLINDER;
+    arena_pole_1.action             = visualization_msgs::Marker::ADD;
+    arena_pole_1.pose.position.x    = _x_min_;
+    arena_pole_1.pose.position.y    = _y_min_;
+    arena_pole_1.pose.position.z    = _z_min_ + 0.43*_z_max_;
+    arena_pole_1.pose.orientation.x = 0.0;
+    arena_pole_1.pose.orientation.y = 0.0;
+    arena_pole_1.pose.orientation.z = 0.0;
+    arena_pole_1.pose.orientation.w = 1.0;
+    arena_pole_1.scale.x            = 0.5;
+    arena_pole_1.scale.y            = 0.5;
+    arena_pole_1.scale.z            = _z_max_ -1;
+    arena_pole_1.color.a            = 0.3;
+    arena_pole_1.color.r            = 0.0;
+    arena_pole_1.color.g            = 1.0;
+    arena_pole_1.color.b            = 0.0;
+
+    msg_out.markers.push_back(arena_pole_1);
+    visualization_msgs::Marker arena_pole_2;
+    arena_pole_2.header.frame_id    = "local_origin";
+    arena_pole_2.header.stamp       = ros::Time::now();
+    arena_pole_2.ns                 = "mtsp";
+    arena_pole_2.id                 = id++;
+    arena_pole_2.type               = visualization_msgs::Marker::CYLINDER;
+    arena_pole_2.action             = visualization_msgs::Marker::ADD;
+    arena_pole_2.pose.position.x    = _x_min_;
+    arena_pole_2.pose.position.y    = _y_max_;
+    arena_pole_2.pose.position.z    = _z_min_ + 0.43*_z_max_;
+    arena_pole_2.pose.orientation.x = 0.0;
+    arena_pole_2.pose.orientation.y = 0.0;
+    arena_pole_2.pose.orientation.z = 0.0;
+    arena_pole_2.pose.orientation.w = 1.0;
+    arena_pole_2.scale.x            = 0.5;
+    arena_pole_2.scale.y            = 0.5;
+    arena_pole_2.scale.z            = _z_max_ -1;
+    arena_pole_2.color.a            = 0.3;
+    arena_pole_2.color.r            = 0.0;
+    arena_pole_2.color.g            = 1.0;
+    arena_pole_2.color.b            = 0.0;
+
+    msg_out.markers.push_back(arena_pole_2);
+    visualization_msgs::Marker arena_pole_3;
+    arena_pole_3.header.frame_id    = "local_origin";
+    arena_pole_3.header.stamp       = ros::Time::now();
+    arena_pole_3.ns                 = "mtsp";
+    arena_pole_3.id                 = id++;
+    arena_pole_3.type               = visualization_msgs::Marker::CYLINDER;
+    arena_pole_3.action             = visualization_msgs::Marker::ADD;
+    arena_pole_3.pose.position.x    = _x_max_;
+    arena_pole_3.pose.position.y    = _y_max_;
+    arena_pole_3.pose.position.z    = _z_min_ + 0.43*_z_max_;
+    arena_pole_3.pose.orientation.x = 0.0;
+    arena_pole_3.pose.orientation.y = 0.0;
+    arena_pole_3.pose.orientation.z = 0.0;
+    arena_pole_3.pose.orientation.w = 1.0;
+    arena_pole_3.scale.x            = 0.5;
+    arena_pole_3.scale.y            = 0.5;
+    arena_pole_3.scale.z            = _z_max_ -1;
+    arena_pole_3.color.a            = 0.3;
+    arena_pole_3.color.r            = 0.0;
+    arena_pole_3.color.g            = 1.0;
+    arena_pole_3.color.b            = 0.0;
+
+
+    msg_out.markers.push_back(arena_pole_3);
+    visualization_msgs::Marker arena_pole_4;
+    arena_pole_4.header.frame_id    = "local_origin";
+    arena_pole_4.header.stamp       = ros::Time::now();
+    arena_pole_4.ns                 = "mtsp";
+    arena_pole_4.id                 = id++;
+    arena_pole_4.type               = visualization_msgs::Marker::CYLINDER;
+    arena_pole_4.action             = visualization_msgs::Marker::ADD;
+    arena_pole_4.pose.position.x    = _x_max_;
+    arena_pole_4.pose.position.y    = _y_min_;
+    arena_pole_4.pose.position.z    = _z_min_ + 0.43*_z_max_;
+    arena_pole_4.pose.orientation.x = 0.0;
+    arena_pole_4.pose.orientation.y = 0.0;
+    arena_pole_4.pose.orientation.z = 0.0;
+    arena_pole_4.pose.orientation.w = 1.0;
+    arena_pole_4.scale.x            = 0.5;
+    arena_pole_4.scale.y            = 0.5;
+    arena_pole_4.scale.z            = _z_max_;
+    arena_pole_4.color.a            = 0.3;
+    arena_pole_4.color.r            = 0.0;
+    arena_pole_4.color.g            = 1.0;
+    arena_pole_4.color.b            = 0.0;
+
+
+    msg_out.markers.push_back(arena_pole_4);
 
     rviz_pub_.publish(msg_out);
   }
@@ -1473,7 +1667,7 @@ visualization_msgs::Marker BalloonCircleDestroy::fillArenaBounds(int id_) {
   arena_bound_.header.frame_id    = "local_origin";
   arena_bound_.header.stamp       = ros::Time::now();
   arena_bound_.ns                 = "mtsp";
-  arena_bound_.id                 = id_++;
+  arena_bound_.id                 = id_;
   arena_bound_.type               = visualization_msgs::Marker::LINE_STRIP;
   arena_bound_.action             = visualization_msgs::Marker::ADD;
   arena_bound_.pose.position.x    = 0;
@@ -1492,55 +1686,55 @@ visualization_msgs::Marker BalloonCircleDestroy::fillArenaBounds(int id_) {
   arena_bound_.color.b            = 0.0;
 
 
-  geometry_msgs::Point mark_point_;
-  // x min y min z min
-  mark_point_.x = _x_min_;
-  mark_point_.y = _y_min_;
-  mark_point_.z = _z_min_;
-  arena_bound_.points.push_back(mark_point_);
+  /* geometry_msgs::Point mark_point_; */
+  /* // x min y min z min */
+  /* mark_point_.x = _x_min_; */
+  /* mark_point_.y = _y_min_; */
+  /* mark_point_.z = _z_min_; */
+  /* arena_bound_.points.push_back(mark_point_); */
 
   // x min y max z min
-  mark_point_.x = _x_min_;
-  mark_point_.y = _y_max_;
-  mark_point_.z = _z_min_;
-  arena_bound_.points.push_back(mark_point_);
+  /* mark_point_.x = _x_min_; */
+  /* mark_point_.y = _y_max_; */
+  /* mark_point_.z = _z_min_; */
+  /* arena_bound_.points.push_back(mark_point_); */
 
   // x max y min z min
-  mark_point_.x = _x_max_;
-  mark_point_.y = _y_min_;
-  mark_point_.z = _z_min_;
-  arena_bound_.points.push_back(mark_point_);
+  /* mark_point_.x = _x_max_; */
+  /* mark_point_.y = _y_min_; */
+  /* mark_point_.z = _z_min_; */
+  /* arena_bound_.points.push_back(mark_point_); */
 
-  // x max y max z min
-  mark_point_.x = _x_max_;
-  mark_point_.y = _y_max_;
-  mark_point_.z = _z_min_;
-  arena_bound_.points.push_back(mark_point_);
+  /* // x max y max z min */
+  /* mark_point_.x = _x_max_; */
+  /* mark_point_.y = _y_max_; */
+  /* mark_point_.z = _z_min_; */
+  /* arena_bound_.points.push_back(mark_point_); */
 
-  // x min y min z max
-  mark_point_.x = _x_min_;
-  mark_point_.y = _y_min_;
-  mark_point_.z = _z_max_;
-  arena_bound_.points.push_back(mark_point_);
+  /* // x min y min z max */
+  /* mark_point_.x = _x_min_; */
+  /* mark_point_.y = _y_min_; */
+  /* mark_point_.z = _z_max_; */
+  /* arena_bound_.points.push_back(mark_point_); */
 
 
-  // x min y max z max
-  mark_point_.x = _x_min_;
-  mark_point_.y = _y_max_;
-  mark_point_.z = _z_max_;
-  arena_bound_.points.push_back(mark_point_);
+  /* // x min y max z max */
+  /* mark_point_.x = _x_min_; */
+  /* mark_point_.y = _y_max_; */
+  /* mark_point_.z = _z_max_; */
+  /* arena_bound_.points.push_back(mark_point_); */
 
-  // x max y min z max
-  mark_point_.x = _x_max_;
-  mark_point_.y = _y_min_;
-  mark_point_.z = _z_max_;
-  arena_bound_.points.push_back(mark_point_);
+  /* // x max y min z max */
+  /* mark_point_.x = _x_max_; */
+  /* mark_point_.y = _y_min_; */
+  /* mark_point_.z = _z_max_; */
+  /* arena_bound_.points.push_back(mark_point_); */
 
-  // x max y max z max
-  mark_point_.x = _x_max_;
-  mark_point_.y = _y_max_;
-  mark_point_.z = _z_max_;
-  arena_bound_.points.push_back(mark_point_);
+  /* // x max y max z max */
+  /* mark_point_.x = _x_max_; */
+  /* mark_point_.y = _y_max_; */
+  /* mark_point_.z = _z_max_; */
+  /* arena_bound_.points.push_back(mark_point_); */
   ROS_INFO_THROTTLE(0.5, "[called]: %d", arena_bound_.points.size());
 }
 
