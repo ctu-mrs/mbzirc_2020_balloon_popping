@@ -59,6 +59,7 @@
 #include <Eigen/Dense>
 /* math  */
 #include <math.h>
+#include <cmath>
 // | ------------------- transfroms include ------------------- |
 #include <tf2_ros/transform_listener.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
