@@ -439,7 +439,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
           _reset_count_ = 0;
         }
         return;
-      }else if(isBalloonVisible(balloon_vector_)) {
+      } else if (isBalloonVisible(balloon_vector_)) {
         getCloseToBalloon(balloon_vector_, -_dist_to_overshoot_, _vel_attack_);
         return;
       }
@@ -1175,74 +1175,75 @@ void BalloonCircleDestroy::goAroundArena() {
   if (!_is_state_machine_active_) {
     return;
   }
+  {
+    std::scoped_lock lock(mutex_odom_uav_);
+    if (_state_ != State::GOING_AROUND) {
 
-  if (_state_ != State::GOING_AROUND) {
-
-    if (_state_ != State::GOING_TO_ANGLE) {
-      ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: Can't circle around arena, drone state isn't GOING_AROUND or GOING_TO_ANGLE but is %s ",
-                        getStateName().c_str());
-      return;
-    }
-  }
-
-
-  mrs_msgs::TrackerTrajectory new_trj_;
-  new_trj_.header.frame_id = world_frame_id_;
-  new_trj_.header.stamp    = ros::Time::now();
-  new_trj_.fly_now         = true;
-  new_trj_.loop            = false;
-  new_trj_.use_yaw         = true;
-  new_trj_.start_index     = 0;
-
-  double mpc_speed_ = _traj_time_ / _traj_len_;
-
-  double arena_accuracy_ = _cur_arena_length_ * _cur_arena_width_ * 2 * M_PI;
-  arena_accuracy_        = arena_accuracy_ / _vel_arena_ * mpc_speed_;
-  double iterat_         = M_PI / (arena_accuracy_ / 2);
-  /* double iterat_            = M_PI / (_arena_accuracy_ / 2); */
-
-
-  Eigen::Vector3d angle_vector_ = Eigen::Vector3d(_arena_center_x_, _arena_center_y_, _height_) - odom_vector_;
-  double          angle         = atan2(angle_vector_(1), angle_vector_(0)) + M_PI;
-  /* ROS_INFO("[]: angle %f accuracy %f", angle, arena_accuracy_); */
-  /* double angle = 0; */
-  bool lower = false;
-  if (angle > _closest_angle_) {
-    lower = true;
-  }
-
-  for (int i = 0; i < arena_accuracy_; i++) {
-    mrs_msgs::TrackerPoint point;
-    point.x   = _arena_center_x_ + cos(angle) * _cur_arena_width_ / 2;
-    point.y   = _arena_center_y_ + sin(angle) * _cur_arena_length_ / 2;
-    point.z   = _height_;
-    point.yaw = angle + M_PI;
-    if (_state_ == State::GOING_TO_ANGLE && lower) {
-      angle -= iterat_;
-    } else {
-      angle += iterat_;
-    }
-    new_trj_.points.push_back(point);
-    // if state is going to angle  we should stop at the closest balloon found
-    if (_state_ == State::GOING_TO_ANGLE) {
-      if (lower && angle < _closest_angle_) {
-        break;
-      }
-      if (angle > _closest_angle_ && !lower) {
-        break;
+      if (_state_ != State::GOING_TO_ANGLE) {
+        ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: Can't circle around arena, drone state isn't GOING_AROUND or GOING_TO_ANGLE but is %s ",
+                          getStateName().c_str());
+        return;
       }
     }
+
+
+    mrs_msgs::TrackerTrajectory new_trj_;
+    new_trj_.header.frame_id = world_frame_id_;
+    new_trj_.header.stamp    = ros::Time::now();
+    new_trj_.fly_now         = true;
+    new_trj_.loop            = false;
+    new_trj_.use_yaw         = true;
+    new_trj_.start_index     = 0;
+
+    double mpc_speed_ = _traj_time_ / _traj_len_;
+
+    double arena_accuracy_ = _cur_arena_length_ * _cur_arena_width_ * 2 * M_PI;
+    arena_accuracy_        = arena_accuracy_ / _vel_arena_ * mpc_speed_;
+    double iterat_         = M_PI / (arena_accuracy_ / 2);
+    /* double iterat_            = M_PI / (_arena_accuracy_ / 2); */
+
+
+    Eigen::Vector3d angle_vector_ = Eigen::Vector3d(_arena_center_x_, _arena_center_y_, _height_) - odom_vector_;
+    double          angle         = atan2(angle_vector_(1), angle_vector_(0)) + M_PI;
+    /* double angle = 0; */
+    bool lower = false;
+    if (angle > _closest_angle_) {
+      lower = true;
+    }
+
+    for (int i = 0; i < arena_accuracy_; i++) {
+      mrs_msgs::TrackerPoint point;
+      point.x   = _arena_center_x_ + cos(angle) * _cur_arena_width_ / 2;
+      point.y   = _arena_center_y_ + sin(angle) * _cur_arena_length_ / 2;
+      point.z   = _height_;
+      point.yaw = angle + M_PI;
+      if (_state_ == State::GOING_TO_ANGLE && lower) {
+        angle -= iterat_;
+      } else {
+        angle += iterat_;
+      }
+      new_trj_.points.push_back(point);
+      // if state is going to angle  we should stop at the closest balloon found
+      if (_state_ == State::GOING_TO_ANGLE) {
+        if (lower && angle < _closest_angle_) {
+          break;
+        }
+        if (angle > _closest_angle_ && !lower) {
+          break;
+        }
+      }
+    }
+
+
+    /* ROS_WARN_THROTTLE(0.5, "[Traj]: %lu ", new_trj_.points.size()); */
+    /* ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroyer]: publishing trajectory "); */
+    mrs_msgs::TrackerTrajectorySrv req_;
+    req_.request.trajectory_msg = new_trj_;
+
+    srv_client_trajectory_.call(req_);
+    time_last_traj_published_ = ros::Time::now();
+    is_tracking_              = true;
   }
-
-
-  /* ROS_WARN_THROTTLE(0.5, "[Traj]: %lu ", new_trj_.points.size()); */
-  /* ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroyer]: publishing trajectory "); */
-  mrs_msgs::TrackerTrajectorySrv req_;
-  req_.request.trajectory_msg = new_trj_;
-
-  srv_client_trajectory_.call(req_);
-  time_last_traj_published_ = ros::Time::now();
-  is_tracking_              = true;
 }
 
 //}
