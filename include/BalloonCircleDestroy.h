@@ -217,14 +217,15 @@ private:
   std::mutex                               mutex_is_balloon_incoming_;
   ros::Time                                time_last_balloon_point_;
 
-  void                    callbackBalloonPointCloud(const sensor_msgs::PointCloudConstPtr& msg);
-  ros::Subscriber         sub_balloon_point_cloud_;
-  sensor_msgs::PointCloud balloon_point_cloud_;
-  Eigen::Vector3d         balloon_closest_vector_;
-  bool                    got_balloon_point_cloud_  = false;
-  bool                    is_ballon_cloud_incoming_ = false;
-  std::mutex              mutex_is_balloon_cloud_incoming_;
-  ros::Time               time_last_balloon_cloud_point_;
+  void                         callbackBalloonPointCloud(const sensor_msgs::PointCloudConstPtr& msg);
+  ros::Subscriber              sub_balloon_point_cloud_;
+  sensor_msgs::PointCloud      balloon_point_cloud_;
+  std::vector<Eigen::Vector3d> balloon_pcl_processed_;
+  Eigen::Vector3d              balloon_closest_vector_;
+  bool                         got_balloon_point_cloud_  = false;
+  bool                         is_ballon_cloud_incoming_ = false;
+  std::mutex                   mutex_is_balloon_cloud_incoming_;
+  ros::Time                    time_last_balloon_cloud_point_;
 
 
   // | --------------------- timer callbacks -------------------- |
@@ -234,9 +235,10 @@ private:
   int        _rate_timer_check_subscribers_;
 
 
-  void       callbackTimerCheckBalloonPoints(const ros::TimerEvent& te);
-  ros::Timer timer_check_balloons_;
-  int        _rate_timer_check_balloons_;
+  void           callbackTimerCheckBalloonPoints(const ros::TimerEvent& te);
+  ros::Timer     timer_check_balloons_;
+  ros::Publisher publish_debug_points_;
+  int            _rate_timer_check_balloons_;
 
   void       callbackTimerStateMachine(const ros::TimerEvent& te);
   ros::Timer timer_state_machine_;
@@ -335,6 +337,7 @@ private:
   bool                       isBalloonVisible(Eigen::Vector3d baloon_);
   bool                       droneStop();
   visualization_msgs::Marker fillArenaBounds(int id_);
+  bool                       isPointInArena(geometry_msgs::Point p_);
   //}
 };
 //}

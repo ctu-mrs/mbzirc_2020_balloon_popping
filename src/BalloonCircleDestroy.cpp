@@ -77,8 +77,8 @@ void BalloonCircleDestroy::onInit() {
   ROS_INFO_STREAM_ONCE("[BalloonCircleDestroy]: params loaded");
   _cur_arena_width_  = std::abs(_x_max_ - _x_min_);
   _cur_arena_length_ = std::abs(_y_max_ - _y_min_);
-  _arena_center_x_ = (_x_min_ + _x_max_) /2;
-  _arena_center_y_ = (_y_min_ + _y_max_) /2;
+  _arena_center_x_   = (_x_min_ + _x_max_) / 2;
+  _arena_center_y_   = (_y_min_ + _y_max_) / 2;
 
   //}
   // | ------------------- Dynamic reconfigure ------------------ |
@@ -113,7 +113,8 @@ void BalloonCircleDestroy::onInit() {
 
   // | ----------------------- Publishers ----------------------- |
 
-  rviz_pub_ = nh.advertise<visualization_msgs::MarkerArray>("rviz_out", 1);
+  rviz_pub_             = nh.advertise<visualization_msgs::MarkerArray>("rviz_out", 1);
+  publish_debug_points_ = nh.advertise<sensor_msgs::PointCloud>("balloon_points_out", 1);
 
   // | --------------- initialize service servers --------------- |
   /*  server services //{ */
@@ -223,10 +224,23 @@ void BalloonCircleDestroy::callbackBalloonPointCloud(const sensor_msgs::PointClo
   {
     std::scoped_lock lock(mutex_is_balloon_cloud_incoming_);
     balloon_point_cloud_ = *msg;
+    balloon_pcl_processed_.clear();
+    for (unsigned i = 0; i < balloon_point_cloud_.points.size(); i++) {
+      geometry_msgs::Point p_;
+
+      bool ts_res = transformPointFromWorld(balloon_point_cloud_.points.at(i), balloon_point_cloud_.header.frame_id, balloon_point_cloud_.header.stamp, p_);
+      if (!ts_res) {
+        ROS_WARN_THROTTLE(1, "[BalloonCircleDestroy]: No transform,skipping");
+        continue;
+      }
+      if (isPointInArena(p_)) {
+        balloon_pcl_processed_.push_back(Eigen::Vector3d(p_.x, p_.y, p_.z));
+      }
+    }
   }
 
 
-  if (balloon_point_cloud_.points.size() > 0) {
+  if (balloon_pcl_processed_.size() > 0) {
     if (!got_balloon_point_cloud_) {
       got_balloon_point_cloud_ = true;
       ROS_INFO("[%s]: got first balloon point cloud", ros::this_node::getName().c_str());
@@ -323,7 +337,6 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
     ROS_INFO_THROTTLE(0.5, "[State]: %s ", getStateName().c_str());
     ROS_INFO_THROTTLE(0.5, "[IsTracking]: %d", is_tracking_);
     ROS_INFO_THROTTLE(0.5, "[Planner Status]: %d", _planner_active_);
-    ROS_INFO_THROTTLE(0.5, "[Destroy Status]: %d", _is_destroy_enabled_);
     ROS_INFO_THROTTLE(0.5, "[Balloon cloud incoming]: %d", is_ballon_cloud_incoming_);
     ROS_INFO_THROTTLE(0.5, "[Current Dist To ball]: %f ", (odom_vector_ - balloon_vector_).norm());
     ROS_INFO_THROTTLE(0.5, "[Dist between KF and PCL vectors]: %f ", (balloon_vector_ - balloon_closest_vector_).norm());
@@ -343,7 +356,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
     ROS_INFO_THROTTLE(0.5, "[MIN HEIGHT]: %f ", _min_height_);
     ROS_INFO_THROTTLE(0.5, "[MAX HEIGHT]: %f ", _max_height_);
     ROS_INFO_THROTTLE(0.5, "[CUR HEIGHT]: %f ", odom_vector_(2, 0));
-    ROS_INFO_THROTTLE(0.5, "[Cloud size]: %d ", int(balloon_point_cloud_.points.size()));
+    ROS_INFO_THROTTLE(0.5, "[Cloud size]: %d ", int(balloon_pcl_processed_.size()));
 
     ROS_INFO_THROTTLE(0.5, "| ----------------- STATE MACHINE LOOP END ----------------- |");
 
@@ -426,9 +439,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
           _reset_count_ = 0;
         }
         return;
-      }
-
-      if (!balloonOutdated() && isBalloonVisible(balloon_vector_)) {
+      }else if(isBalloonVisible(balloon_vector_)) {
         getCloseToBalloon(balloon_vector_, -_dist_to_overshoot_, _vel_attack_);
         return;
       }
@@ -500,7 +511,7 @@ void BalloonCircleDestroy::callbackTimerCheckSubscribers([[maybe_unused]] const 
                         (time_now - time_last_balloon_cloud_point_).toSec());
       is_ballon_cloud_incoming_ = false;
     } else {
-      if (balloon_point_cloud_.points.size() > 0) {
+      if (balloon_pcl_processed_.size() > 0) {
         is_ballon_cloud_incoming_ = true;
       }
     }
@@ -736,7 +747,6 @@ void BalloonCircleDestroy::callbackTimerPublishRviz([[maybe_unused]] const ros::
     arena_bound_.points.push_back(mark_point_);
 
 
-
     msg_out.markers.push_back(arena_bound_);
 
     visualization_msgs::Marker arena_bound_top_;
@@ -799,14 +809,14 @@ void BalloonCircleDestroy::callbackTimerPublishRviz([[maybe_unused]] const ros::
     arena_pole_1.action             = visualization_msgs::Marker::ADD;
     arena_pole_1.pose.position.x    = _x_min_;
     arena_pole_1.pose.position.y    = _y_min_;
-    arena_pole_1.pose.position.z    = _z_min_ + 0.43*_z_max_;
+    arena_pole_1.pose.position.z    = _z_min_ + 0.43 * _z_max_;
     arena_pole_1.pose.orientation.x = 0.0;
     arena_pole_1.pose.orientation.y = 0.0;
     arena_pole_1.pose.orientation.z = 0.0;
     arena_pole_1.pose.orientation.w = 1.0;
     arena_pole_1.scale.x            = 0.5;
     arena_pole_1.scale.y            = 0.5;
-    arena_pole_1.scale.z            = _z_max_ -1;
+    arena_pole_1.scale.z            = _z_max_ - 1;
     arena_pole_1.color.a            = 0.3;
     arena_pole_1.color.r            = 0.0;
     arena_pole_1.color.g            = 1.0;
@@ -822,14 +832,14 @@ void BalloonCircleDestroy::callbackTimerPublishRviz([[maybe_unused]] const ros::
     arena_pole_2.action             = visualization_msgs::Marker::ADD;
     arena_pole_2.pose.position.x    = _x_min_;
     arena_pole_2.pose.position.y    = _y_max_;
-    arena_pole_2.pose.position.z    = _z_min_ + 0.43*_z_max_;
+    arena_pole_2.pose.position.z    = _z_min_ + 0.43 * _z_max_;
     arena_pole_2.pose.orientation.x = 0.0;
     arena_pole_2.pose.orientation.y = 0.0;
     arena_pole_2.pose.orientation.z = 0.0;
     arena_pole_2.pose.orientation.w = 1.0;
     arena_pole_2.scale.x            = 0.5;
     arena_pole_2.scale.y            = 0.5;
-    arena_pole_2.scale.z            = _z_max_ -1;
+    arena_pole_2.scale.z            = _z_max_ - 1;
     arena_pole_2.color.a            = 0.3;
     arena_pole_2.color.r            = 0.0;
     arena_pole_2.color.g            = 1.0;
@@ -845,14 +855,14 @@ void BalloonCircleDestroy::callbackTimerPublishRviz([[maybe_unused]] const ros::
     arena_pole_3.action             = visualization_msgs::Marker::ADD;
     arena_pole_3.pose.position.x    = _x_max_;
     arena_pole_3.pose.position.y    = _y_max_;
-    arena_pole_3.pose.position.z    = _z_min_ + 0.43*_z_max_;
+    arena_pole_3.pose.position.z    = _z_min_ + 0.43 * _z_max_;
     arena_pole_3.pose.orientation.x = 0.0;
     arena_pole_3.pose.orientation.y = 0.0;
     arena_pole_3.pose.orientation.z = 0.0;
     arena_pole_3.pose.orientation.w = 1.0;
     arena_pole_3.scale.x            = 0.5;
     arena_pole_3.scale.y            = 0.5;
-    arena_pole_3.scale.z            = _z_max_ -1;
+    arena_pole_3.scale.z            = _z_max_ - 1;
     arena_pole_3.color.a            = 0.3;
     arena_pole_3.color.r            = 0.0;
     arena_pole_3.color.g            = 1.0;
@@ -869,7 +879,7 @@ void BalloonCircleDestroy::callbackTimerPublishRviz([[maybe_unused]] const ros::
     arena_pole_4.action             = visualization_msgs::Marker::ADD;
     arena_pole_4.pose.position.x    = _x_max_;
     arena_pole_4.pose.position.y    = _y_min_;
-    arena_pole_4.pose.position.z    = _z_min_ + 0.43*_z_max_;
+    arena_pole_4.pose.position.z    = _z_min_ + 0.43 * _z_max_;
     arena_pole_4.pose.orientation.x = 0.0;
     arena_pole_4.pose.orientation.y = 0.0;
     arena_pole_4.pose.orientation.z = 0.0;
@@ -1554,22 +1564,9 @@ Eigen::Vector3d BalloonCircleDestroy::getClosestBalloon() {
     std::scoped_lock lock_uav(mutex_odom_uav_);
     std::scoped_lock lock_balloon(mutex_is_balloon_cloud_incoming_);
 
-    for (uint8_t i = 0; i < balloon_point_cloud_.points.size(); i++) {
+    for (uint8_t i = 0; i < balloon_pcl_processed_.size(); i++) {
 
-      geometry_msgs::Point p_;
-
-      ROS_INFO_THROTTLE(0.5, "[ishiiit]: ");
-      bool ts_res = transformPointFromWorld(balloon_point_cloud_.points.at(i), balloon_point_cloud_.header.frame_id, balloon_point_cloud_.header.stamp, p_);
-      if (!ts_res) {
-        ROS_WARN_THROTTLE(1, "[BalloonCircleDestroy]: No transform,skipping");
-        break;
-      }
-      if (p_.z > _max_height_ || p_.z < _min_height_) {
-        continue;
-      }
-      ball_vect_(0, 0) = p_.x;
-      ball_vect_(1, 0) = p_.y;
-      ball_vect_(2, 0) = p_.z;
+      ball_vect_ = balloon_pcl_processed_.at(i);
 
       ROS_INFO_THROTTLE(1.0, "[StateMachine]: closest ball %f, %f, %f ", ball_vect_(0, 0), ball_vect_(1, 0), ball_vect_(2, 0));
       dist_ = (odom_vector_ - ball_vect_).norm();
@@ -1596,6 +1593,12 @@ void BalloonCircleDestroy::callbackDynamicReconfigure([[maybe_unused]] Config& c
     _dist_to_balloon_ = config.dist_to_balloon;
     _wait_for_ball_   = config.wait_for_ball;
     _vel_             = config.vel;
+    /* _x_min_ = config._x_min_; */
+    /* _x_max_ = config._x_min_; */
+    /* _y_min_ = config._y_min_; */
+    /* _y_max_ = config._y_min_; */
+    /* _z_min_ = config._z_min_; */
+    /* _z_max_ = config._z_min_; */
   }
 }
 
@@ -1627,21 +1630,10 @@ bool BalloonCircleDestroy::isBalloonVisible(Eigen::Vector3d baloon_) {
     std::scoped_lock lock_uav(mutex_odom_uav_);
     std::scoped_lock lock_balloon(mutex_is_balloon_cloud_incoming_);
 
-    for (uint8_t i = 0; i < balloon_point_cloud_.points.size(); i++) {
+    for (uint8_t i = 0; i < balloon_pcl_processed_.size(); i++) {
 
-      geometry_msgs::Point p_;
 
-      bool ts_res = transformPointFromWorld(balloon_point_cloud_.points.at(i), balloon_point_cloud_.header.frame_id, balloon_point_cloud_.header.stamp, p_);
-      if (!ts_res) {
-        ROS_WARN_THROTTLE(1, "[BalloonCircleDestroy]: No transform,skipping");
-        break;
-      }
-      if (p_.z > _max_height_ || p_.z < _min_height_) {
-        continue;
-      }
-      ball_vect_(0, 0) = p_.x;
-      ball_vect_(1, 0) = p_.y;
-      ball_vect_(2, 0) = p_.z;
+      ball_vect_ = balloon_pcl_processed_.at(i);
 
       dist_ = (baloon_ - ball_vect_).norm();
       if (dist_ < _dist_error_ + _dist_acc_) {
@@ -1737,7 +1729,18 @@ visualization_msgs::Marker BalloonCircleDestroy::fillArenaBounds(int id_) {
   /* mark_point_.y = _y_max_; */
   /* mark_point_.z = _z_max_; */
   /* arena_bound_.points.push_back(mark_point_); */
-  ROS_INFO_THROTTLE(0.5, "[called]: %d", arena_bound_.points.size());
+}
+
+//}
+
+/* isPointInArena //{ */
+
+bool BalloonCircleDestroy::isPointInArena(geometry_msgs::Point p_) {
+  bool is_x_ = p_.x > _x_min_ && p_.x < _x_max_;
+  bool is_y_ = p_.y > _y_min_ && p_.y < _y_max_;
+  bool is_z_ = p_.z > _z_min_ && p_.z < _z_max_;
+
+  return is_x_ && is_y_ && is_z_;
 }
 
 //}
