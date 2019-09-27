@@ -1191,7 +1191,7 @@ void BalloonCircleDestroy::goAroundArena(double angle_) {
 
     double arena_accuracy_ = _cur_arena_length_ * _cur_arena_width_ * 2 * M_PI;
     arena_accuracy_        = arena_accuracy_ / _vel_arena_ * mpc_speed_;
-    double iterat_         = M_PI / (arena_accuracy_ / 2);
+    double iterat_         = (M_PI) / (arena_accuracy_ / 2);
     double angle           = getArenaHeading();
     double target_angle_   = angle_ + angle;
 
@@ -1286,8 +1286,14 @@ void BalloonCircleDestroy::goToChosenBalloon() {
 /* getArenaHeading //{ */
 
 double BalloonCircleDestroy::getArenaHeading() {
+ 
   Eigen::Vector3d angle_vector_ = Eigen::Vector3d(_arena_center_x_, _arena_center_y_, _height_) - odom_vector_;
-  return atan2(angle_vector_(1), angle_vector_(0)) + M_PI;
+  double theta_ = atan2(angle_vector_(1), angle_vector_(0)) + M_PI/2;
+  ROS_INFO_THROTTLE(0.5, "[]: theta_ %f", theta_);
+  if(theta_ < 0) {
+    theta_+=2*M_PI;
+  }
+  return theta_;
 }
 
 //}
