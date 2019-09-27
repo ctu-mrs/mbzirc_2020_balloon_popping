@@ -65,12 +65,14 @@ void BalloonCircleDestroy::onInit() {
   param_loader.load_param("area/y_max", _y_max_);
   param_loader.load_param("area/z_min", _z_min_);
   param_loader.load_param("area/z_max", _z_max_);
+  param_loader.load_param("area/offset", _arena_offset_);
 
   ROS_INFO_STREAM_ONCE("[BalloonCircleDestroy]: params loaded");
   _cur_arena_width_  = std::abs(_x_max_ - _x_min_);
+  /* _cur_arena_length_ = std::abs(_x_max_ - _x_min_); */
   _cur_arena_length_ = std::abs(_y_max_ - _y_min_);
-  _arena_center_x_   = (_x_min_ + _x_max_) / 2;
-  _arena_center_y_   = (_y_min_ + _y_max_) / 2;
+  _arena_center_x_ = (_x_min_ + _x_max_) / 2;
+  _arena_center_y_ = (_y_min_ + _y_max_) / 2;
 
   //}
   // | ------------------- Dynamic reconfigure ------------------ |
@@ -255,7 +257,7 @@ void BalloonCircleDestroy::callbackTrackerDiag(const mrs_msgs::MpcTrackerDiagnos
     ROS_INFO("[%s]: got first tracker diagnostics msg", ros::this_node::getName().c_str());
   }
 
-  if (_state_ == DESTROYING) {
+  if (_state_ == DESTROY_OVERSHOOT) {
     if ((odom_vector_ - _last_goal_).norm() < _dist_acc_) {
       _last_goal_reached_ = true;
     }
@@ -284,7 +286,7 @@ void BalloonCircleDestroy::callbackTimerIdling([[maybe_unused]] const ros::Timer
 
   ROS_INFO("[%s]: Idling stopped", ros::this_node::getName().c_str());
   is_idling_ = false;
-  if (_state_ == DESTROYING) {
+  if (_state_ == DESTROY_OVERSHOOT) {
     _state_ = IDLE;
     ROS_WARN_THROTTLE(0.5, "[StateMachine]: State changed to %s ", getStateName().c_str());
   }
@@ -431,11 +433,18 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
           _reset_count_ = 0;
         }
         return;
-      } else if (isBalloonVisible(balloon_vector_)) {
+      }
+      if (isBalloonVisible(balloon_vector_)) {
         getCloseToBalloon(balloon_vector_, -_dist_to_overshoot_, _vel_attack_);
+        return;
+      } else {
+        _state_ = DESTROY_OVERSHOOT;
+        ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
         return;
       }
 
+
+    } else if (_state_ == DESTROY_OVERSHOOT) {
       if (!is_tracking_ && !is_idling_ && _last_goal_reached_) {
         _state_ = IDLE;
         ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s destroying ended", getStateName().c_str());
@@ -1192,7 +1201,7 @@ void BalloonCircleDestroy::goAroundArena(double angle_) {
     double arena_accuracy_ = _cur_arena_length_ * _cur_arena_width_ * 2 * M_PI;
     arena_accuracy_        = arena_accuracy_ / _vel_arena_ * mpc_speed_;
     double iterat_         = (M_PI) / (arena_accuracy_ / 2);
-    double angle           = getArenaHeading();
+    double angle           = getArenaHeading(odom_vector_);
     double target_angle_   = angle_ + angle;
 
     for (int i = 0; i < arena_accuracy_; i++) {
@@ -1285,14 +1294,15 @@ void BalloonCircleDestroy::goToChosenBalloon() {
 
 /* getArenaHeading //{ */
 
-double BalloonCircleDestroy::getArenaHeading() {
- 
-  Eigen::Vector3d angle_vector_ = Eigen::Vector3d(_arena_center_x_, _arena_center_y_, _height_) - odom_vector_;
-  double theta_ = atan2(angle_vector_(1), angle_vector_(0)) + M_PI/2;
-  ROS_INFO_THROTTLE(0.5, "[]: theta_ %f", theta_);
-  if(theta_ < 0) {
-    theta_+=2*M_PI;
-  }
+
+double BalloonCircleDestroy::getArenaHeading(Eigen::Vector3d p_) {
+
+  Eigen::Vector3d angle_vector_ = Eigen::Vector3d(_arena_center_x_, _arena_center_y_, _height_) - p_;
+  double          theta_        = atan2(angle_vector_(1), angle_vector_(0)) + M_PI;
+  /* ROS_INFO_THROTTLE(0.5, "[]: theta_ %f", theta_); */
+  /* if(theta_ < 0) { */
+  /*   theta_+=2*M_PI; */
+  /* } */
   return theta_;
 }
 
@@ -1322,6 +1332,8 @@ std::string BalloonCircleDestroy::getStateName() {
       return "CHECKING_BALLOON";
     case READY_TO_DESTROY:
       return "READY_TO_DESTROY";
+    case DESTROY_OVERSHOOT:
+      return "DESTROY_OVERSHOOT";
   }
 }
 //}
@@ -1723,6 +1735,77 @@ bool BalloonCircleDestroy::isPointInArena(geometry_msgs::Point p_) {
 }
 
 //}
+
+/* scanArena //{ */
+
+void BalloonCircleDestroy::scanArena() {
+  mrs_msgs::TrackerTrajectory new_traj_;
+  new_traj_.header.frame_id = world_frame_id_;
+  new_traj_.header.stamp    = ros::Time::now();
+  new_traj_.fly_now         = true;
+  new_traj_.use_yaw         = true;
+  new_traj_.loop            = false;
+  new_traj_.start_index     = 0;
+  goToPoint(Eigen::Vector3d(_x_min_, _y_min_, _height_), _vel_, new_traj_);
+  goToPoint(Eigen::Vector3d(_x_max_, _y_min_, _height_), _vel_, new_traj_);
+  goToPoint(Eigen::Vector3d(_x_min_, _y_max_, _height_), _vel_, new_traj_);
+  goToPoint(Eigen::Vector3d(_x_min_, _y_min_, _height_), _vel_, new_traj_);
+
+
+
+
+  mrs_msgs::TrackerTrajectorySrv req_;
+  ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: calling service to get closer ");
+  req_.request.trajectory_msg = new_traj_;
+  srv_client_trajectory_.call(req_);
+  is_tracking_ = true;
+}
+
+//}
+
+/* goToPoint //{ */
+
+void BalloonCircleDestroy::goToPoint(Eigen::Vector3d p_, double speed_, mrs_msgs::TrackerTrajectory new_traj_) {
+  double          sample_dist_ = speed_ * (_traj_time_ / _traj_len_);
+  Eigen::Vector3d dir_vector_  = p_ - odom_vector_;
+
+  double          dist_   = dir_vector_.norm();
+  double          normed_ = (dist_ - _arena_offset_) / dist_;
+  Eigen::Vector3d goal_   = normed_ * dir_vector_ + odom_vector_;
+  goal_(2,0) = p_(2,0);
+
+  dir_vector_ = goal_ - odom_vector_;
+
+  dist_       = dir_vector_.norm();
+  dir_vector_ = (dir_vector_ / dist_) * sample_dist_;
+
+  Eigen::Vector3d             cur_pos_ = odom_vector_;
+  Eigen::Vector3d             diff_vector_;
+
+  while (cur_pos_(0, 0) != goal_(0, 0) && cur_pos_(1, 0) != goal_(1, 0) && cur_pos_(2, 0) != goal_(2, 0)) {
+
+    for (int i = 0; i < _traj_len_; i++) {
+      mrs_msgs::TrackerPoint p;
+      cur_pos_     = cur_pos_ + dir_vector_;
+      diff_vector_ = cur_pos_ - odom_vector_;
+
+      if (diff_vector_.norm() >= dist_) {
+        cur_pos_ = goal_;
+      }
+
+      p.x   = cur_pos_(0, 0);
+      p.y   = cur_pos_(1, 0);
+      p.z   = cur_pos_(2, 0);
+      p.yaw = getArenaHeading(cur_pos_);
+
+
+      new_traj_.points.push_back(p);
+    }
+  }
+}
+
+//}
+
 
 // | --------------------- transformations -------------------- |
 /* getTransform() method //{ */

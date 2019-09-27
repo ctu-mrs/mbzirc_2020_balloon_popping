@@ -148,6 +148,7 @@ private:
     CIRCLE_AROUND,
     READY_TO_DESTROY,
     DESTROYING,
+    DESTROY_OVERSHOOT,
 
   };
   State _state_ = IDLE;
@@ -169,6 +170,7 @@ private:
   int                      _balloon_try_count_;
   bool                     _is_going_around_;
   ros::Time                _last_time_balloon_seen_;
+  double                   _arena_offset_;
 
 
   // | ----------------------- transforms ----------------------- |
@@ -326,7 +328,7 @@ private:
   void                       goAroundArena(double angle_);
   void                       goToChosenBalloon();
   double                     getBalloonHeading(Eigen::Vector3d dest_);
-  double                     getArenaHeading();
+  double                     getArenaHeading(Eigen::Vector3d p_);
   std::string                getStateName();
   bool                       pointInForbidden(Eigen::Vector3d vect_);
   void                       checkForbidden();
@@ -338,6 +340,8 @@ private:
   bool                       droneStop();
   visualization_msgs::Marker fillArenaBounds(int id_);
   bool                       isPointInArena(geometry_msgs::Point p_);
+  void                       scanArena();
+  void                       goToPoint(Eigen::Vector3d p_,double speed_, mrs_msgs::TrackerTrajectory new_traj_);
   //}
 };
 //}
