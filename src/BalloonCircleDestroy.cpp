@@ -68,9 +68,9 @@ void BalloonCircleDestroy::onInit() {
   param_loader.load_param("area/offset", _arena_offset_);
 
   ROS_INFO_STREAM_ONCE("[BalloonCircleDestroy]: params loaded");
-  _cur_arena_width_  = std::abs(_x_max_ - _x_min_);
+  _cur_arena_width_  = std::abs(_x_max_ - _x_min_) - _arena_offset_;
   /* _cur_arena_length_ = std::abs(_x_max_ - _x_min_); */
-  _cur_arena_length_ = std::abs(_y_max_ - _y_min_);
+  _cur_arena_length_ = std::abs(_y_max_ - _y_min_) - _arena_offset_;
   _arena_center_x_ = (_x_min_ + _x_max_) / 2;
   _arena_center_y_ = (_y_min_ + _y_max_) / 2;
 

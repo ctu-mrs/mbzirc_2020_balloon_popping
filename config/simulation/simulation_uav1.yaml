@@ -12,7 +12,7 @@ area:
   y_max: 40
   z_min: 1
   z_max: 8
-  offset: 5
+  offset: 3
 # should the UAV land after destroying all balloons
 land_at_the_end: false
 #arena width
