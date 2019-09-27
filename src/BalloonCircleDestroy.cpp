@@ -27,14 +27,6 @@ void BalloonCircleDestroy::onInit() {
   /* params //{ */
 
   mrs_lib::ParamLoader param_loader(nh, "BalloonCircleDestroy");
-  param_loader.load_param("arena_width", _arena_width_);
-  param_loader.load_param("min_arena_width", _min_arena_width_);
-  param_loader.load_param("arena_length", _arena_length_);
-  param_loader.load_param("min_arena_length", _min_arena_length_);
-  param_loader.load_param("arena_center_x", _arena_center_x_);
-  param_loader.load_param("arena_center_y", _arena_center_y_);
-  param_loader.load_param("arena_accuracy", _arena_accuracy_);
-  param_loader.load_param("min_arena_accuracy", _min_arena_accuracy_);
   param_loader.load_param("elips_height", _height_);
   param_loader.load_param("height_min", _min_height_);
   param_loader.load_param("height_max", _max_height_);
@@ -366,7 +358,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
       } else {
         _state_    = GOING_AROUND;
         _mpc_stop_ = false;
-        goAroundArena();
+        goAroundArena(0.5);
       }
       ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
       plannerStop();
@@ -387,7 +379,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
         ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
       } else {
         if (ros::Time::now().toSec() - time_last_traj_published_.toSec() > _wait_for_ball_) {
-          goAroundArena();
+          goAroundArena(0.5);
         }
       }
       return;
@@ -1165,7 +1157,7 @@ double BalloonCircleDestroy::getBalloonHeading(Eigen::Vector3d dest_) {
 
 /* goAroundArena //{ */
 
-void BalloonCircleDestroy::goAroundArena() {
+void BalloonCircleDestroy::goAroundArena(double angle_) {
 
   if (!is_initialized_) {
     ROS_WARN("[BalloonCircleDestroy]: couldn't start going around arena, I am not initialized ");
@@ -1200,16 +1192,8 @@ void BalloonCircleDestroy::goAroundArena() {
     double arena_accuracy_ = _cur_arena_length_ * _cur_arena_width_ * 2 * M_PI;
     arena_accuracy_        = arena_accuracy_ / _vel_arena_ * mpc_speed_;
     double iterat_         = M_PI / (arena_accuracy_ / 2);
-    /* double iterat_            = M_PI / (_arena_accuracy_ / 2); */
-
-
-    Eigen::Vector3d angle_vector_ = Eigen::Vector3d(_arena_center_x_, _arena_center_y_, _height_) - odom_vector_;
-    double          angle         = atan2(angle_vector_(1), angle_vector_(0)) + M_PI;
-    /* double angle = 0; */
-    bool lower = false;
-    if (angle > _closest_angle_) {
-      lower = true;
-    }
+    double angle           = getArenaHeading();
+    double target_angle_   = angle_ + angle;
 
     for (int i = 0; i < arena_accuracy_; i++) {
       mrs_msgs::TrackerPoint point;
@@ -1217,26 +1201,14 @@ void BalloonCircleDestroy::goAroundArena() {
       point.y   = _arena_center_y_ + sin(angle) * _cur_arena_length_ / 2;
       point.z   = _height_;
       point.yaw = angle + M_PI;
-      if (_state_ == State::GOING_TO_ANGLE && lower) {
-        angle -= iterat_;
-      } else {
-        angle += iterat_;
+      angle += iterat_;
+      if (angle > target_angle_) {
+        break;
       }
       new_trj_.points.push_back(point);
-      // if state is going to angle  we should stop at the closest balloon found
-      if (_state_ == State::GOING_TO_ANGLE) {
-        if (lower && angle < _closest_angle_) {
-          break;
-        }
-        if (angle > _closest_angle_ && !lower) {
-          break;
-        }
-      }
     }
 
 
-    /* ROS_WARN_THROTTLE(0.5, "[Traj]: %lu ", new_trj_.points.size()); */
-    /* ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroyer]: publishing trajectory "); */
     mrs_msgs::TrackerTrajectorySrv req_;
     req_.request.trajectory_msg = new_trj_;
 

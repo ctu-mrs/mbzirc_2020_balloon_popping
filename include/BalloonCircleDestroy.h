@@ -323,7 +323,7 @@ private:
   void                       circleAroundBalloon();
   void                       getAngleToBalloon();
   void                       generateTrajectory();
-  void                       goAroundArena();
+  void                       goAroundArena(double angle_);
   void                       goToChosenBalloon();
   double                     getBalloonHeading(Eigen::Vector3d dest_);
   double                     getArenaHeading();
