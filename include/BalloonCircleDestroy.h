@@ -153,24 +153,25 @@ private:
   };
   State _state_ = IDLE;
 
-  bool                     _is_state_machine_active_ = false;
-  bool                     _is_destroy_enabled_      = false;
-  bool                     _height_checking_         = false;
-  double                   _closest_on_arena_        = 999.9;
-  double                   _closest_angle_           = 0;
-  int                      _reset_count_;
-  double                   _time_to_land_;
-  int                      _cur_arena_width_;
-  int                      _cur_arena_length_;
-  std::vector<Forbidden_t> _forb_vect_;
-  Eigen::Vector3d          _estimate_vect_;
-  Eigen::Vector3d          _prev_closest_;
-  Eigen::Vector3d          _last_goal_;
-  bool                     _last_goal_reached_;
-  int                      _balloon_try_count_;
-  bool                     _is_going_around_;
-  ros::Time                _last_time_balloon_seen_;
-  double                   _arena_offset_;
+  bool                                _is_state_machine_active_ = false;
+  bool                                _is_destroy_enabled_      = false;
+  bool                                _height_checking_         = false;
+  double                              _closest_on_arena_        = 999.9;
+  double                              _closest_angle_           = 0;
+  int                                 _reset_count_;
+  double                              _time_to_land_;
+  int                                 _cur_arena_width_;
+  int                                 _cur_arena_length_;
+  std::vector<Forbidden_t>            _forb_vect_;
+  Eigen::Vector3d                     _estimate_vect_;
+  Eigen::Vector3d                     _prev_closest_;
+  Eigen::Vector3d                     _last_goal_;
+  bool                                _last_goal_reached_;
+  int                                 _balloon_try_count_;
+  bool                                _is_going_around_;
+  ros::Time                           _last_time_balloon_seen_;
+  double                              _arena_offset_;
+  std::vector<mrs_msgs::TrackerPoint> _arena_elipse_;
 
 
   // | ----------------------- transforms ----------------------- |
@@ -321,27 +322,29 @@ private:
 
   /* Support Functions //{ */
 
-  void                       getCloseToBalloon(Eigen::Vector3d dest_, double dist, double speed_);
-  void                       circleAroundBalloon();
-  void                       getAngleToBalloon();
-  void                       generateTrajectory();
-  void                       goAroundArena(double angle_);
-  void                       goToChosenBalloon();
-  double                     getBalloonHeading(Eigen::Vector3d dest_);
-  double                     getArenaHeading(Eigen::Vector3d p_);
-  std::string                getStateName();
-  bool                       pointInForbidden(Eigen::Vector3d vect_);
-  void                       checkForbidden();
-  void                       addToForbidden(Eigen::Vector3d dest_);
-  bool                       balloonOutdated();
-  void                       landAndEnd();
-  Eigen::Vector3d            getClosestBalloon();
-  bool                       isBalloonVisible(Eigen::Vector3d baloon_);
-  bool                       droneStop();
-  visualization_msgs::Marker fillArenaBounds(int id_);
-  bool                       isPointInArena(geometry_msgs::Point p_);
-  void                       scanArena();
-  void                       goToPoint(Eigen::Vector3d p_,double speed_, mrs_msgs::TrackerTrajectory new_traj_);
+  void                                getCloseToBalloon(Eigen::Vector3d dest_, double dist, double speed_);
+  void                                circleAroundBalloon();
+  void                                getAngleToBalloon();
+  void                                generateTrajectory();
+  void                                goAroundArena(double angle_);
+  void                                goToChosenBalloon();
+  double                              getBalloonHeading(Eigen::Vector3d dest_);
+  double                              getArenaHeading(Eigen::Vector3d p_);
+  std::string                         getStateName();
+  bool                                pointInForbidden(Eigen::Vector3d vect_);
+  void                                checkForbidden();
+  void                                addToForbidden(Eigen::Vector3d dest_);
+  bool                                balloonOutdated();
+  void                                landAndEnd();
+  Eigen::Vector3d                     getClosestBalloon();
+  bool                                isBalloonVisible(Eigen::Vector3d baloon_);
+  bool                                droneStop();
+  visualization_msgs::Marker          fillArenaBounds(int id_);
+  bool                                isPointInArena(geometry_msgs::Point p_);
+  void                                scanArena();
+  void                                goToPoint(Eigen::Vector3d p_, double speed_, mrs_msgs::TrackerTrajectory new_traj_);
+  bool                                comparePoints(mrs_msgs::TrackerPoint a, mrs_msgs::TrackerPoint b);
+  std::vector<mrs_msgs::TrackerPoint> generateElipse();
   //}
 };
 //}

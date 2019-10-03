@@ -68,11 +68,13 @@ void BalloonCircleDestroy::onInit() {
   param_loader.load_param("area/offset", _arena_offset_);
 
   ROS_INFO_STREAM_ONCE("[BalloonCircleDestroy]: params loaded");
-  _cur_arena_width_  = std::abs(_x_max_ - _x_min_) - _arena_offset_;
+  _cur_arena_width_ = std::abs(_x_max_ - _x_min_) - _arena_offset_;
   /* _cur_arena_length_ = std::abs(_x_max_ - _x_min_); */
   _cur_arena_length_ = std::abs(_y_max_ - _y_min_) - _arena_offset_;
-  _arena_center_x_ = (_x_min_ + _x_max_) / 2;
-  _arena_center_y_ = (_y_min_ + _y_max_) / 2;
+  _arena_center_x_   = (_x_min_ + _x_max_) / 2;
+  _arena_center_y_   = (_y_min_ + _y_max_) / 2;
+
+  _arena_elipse_ = generateElipse();
 
   //}
   // | ------------------- Dynamic reconfigure ------------------ |
@@ -1196,28 +1198,7 @@ void BalloonCircleDestroy::goAroundArena(double angle_) {
     new_trj_.use_yaw         = true;
     new_trj_.start_index     = 0;
 
-    double mpc_speed_ = _traj_time_ / _traj_len_;
-
-    double arena_accuracy_ = _cur_arena_length_ * _cur_arena_width_ * 2 * M_PI;
-    arena_accuracy_        = arena_accuracy_ / _vel_arena_ * mpc_speed_;
-    double iterat_         = (M_PI) / (arena_accuracy_ / 2);
-    double angle           = getArenaHeading(odom_vector_);
-    double target_angle_   = angle_ + angle;
-
-    for (int i = 0; i < arena_accuracy_; i++) {
-      mrs_msgs::TrackerPoint point;
-      point.x   = _arena_center_x_ + cos(angle) * _cur_arena_width_ / 2;
-      point.y   = _arena_center_y_ + sin(angle) * _cur_arena_length_ / 2;
-      point.z   = _height_;
-      point.yaw = angle + M_PI;
-      angle += iterat_;
-      if (angle > target_angle_) {
-        break;
-      }
-      new_trj_.points.push_back(point);
-    }
-
-
+    new_trj_.points = _arena_elipse_;
     mrs_msgs::TrackerTrajectorySrv req_;
     req_.request.trajectory_msg = new_trj_;
 
@@ -1299,6 +1280,7 @@ double BalloonCircleDestroy::getArenaHeading(Eigen::Vector3d p_) {
 
   Eigen::Vector3d angle_vector_ = Eigen::Vector3d(_arena_center_x_, _arena_center_y_, _height_) - p_;
   double          theta_        = atan2(angle_vector_(1), angle_vector_(0)) + M_PI;
+
   /* ROS_INFO_THROTTLE(0.5, "[]: theta_ %f", theta_); */
   /* if(theta_ < 0) { */
   /*   theta_+=2*M_PI; */
@@ -1338,40 +1320,13 @@ std::string BalloonCircleDestroy::getStateName() {
 }
 //}
 
-// | ------------------- Estimation services ------------------ |
+/* comparePoints //{ */
 
-/* plannerActivate //{ */
+bool BalloonCircleDestroy::comparePoints(mrs_msgs::TrackerPoint a, mrs_msgs::TrackerPoint b) {
 
-void BalloonCircleDestroy::plannerActivate(Eigen::Vector3d estimation_, double radius_) {
-  if (_planner_active_) {
-    ROS_WARN_THROTTLE(0.5, "[BalloonCircleDestroyi]: planner is already active, I'll reset it ");
-    /* plannerReset(); */
-    return;
-  }
-
-  balloon_planner::StartEstimation        req_;
-  balloon_planner::StartEstimationRequest rq_;
-
-  geometry_msgs::Point p_;
-  _estimate_vect_  = estimation_;
-  p_.x             = estimation_(0, 0);
-  p_.y             = estimation_(1, 0);
-  p_.z             = estimation_(2, 0);
-  rq_.inital_point = p_;
-  rq_.radius       = radius_;
-  req_.request     = rq_;
-  if (srv_planner_start_estimation_.call(req_)) {
-    if (req_.response.success) {
-      ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: Planner activated at point x %f. y %f. z %f", p_.x, p_.y, p_.z);
-      _planner_active_         = true;
-      time_last_planner_reset_ = ros::Time::now();
-    } else {
-      ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: Planner haven't been activated  at point x %f. y %f. z %f", p_.x, p_.y, p_.z);
-    }
-
-  } else {
-    ROS_ERROR_THROTTLE(0.5, "[BalloonCircleDestroy]: Failed at calling planner activation service  ");
-  }
+  double dist_a_ = (odom_vector_ - Eigen::Vector3d(a.x, a.y, a.z)).norm();
+  double dist_b_ = (odom_vector_ - Eigen::Vector3d(b.x, b.y, b.z)).norm();
+  return dist_a_ < dist_b_;
 }
 
 //}
@@ -1752,8 +1707,6 @@ void BalloonCircleDestroy::scanArena() {
   goToPoint(Eigen::Vector3d(_x_min_, _y_min_, _height_), _vel_, new_traj_);
 
 
-
-
   mrs_msgs::TrackerTrajectorySrv req_;
   ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: calling service to get closer ");
   req_.request.trajectory_msg = new_traj_;
@@ -1772,15 +1725,15 @@ void BalloonCircleDestroy::goToPoint(Eigen::Vector3d p_, double speed_, mrs_msgs
   double          dist_   = dir_vector_.norm();
   double          normed_ = (dist_ - _arena_offset_) / dist_;
   Eigen::Vector3d goal_   = normed_ * dir_vector_ + odom_vector_;
-  goal_(2,0) = p_(2,0);
+  goal_(2, 0)             = p_(2, 0);
 
   dir_vector_ = goal_ - odom_vector_;
 
   dist_       = dir_vector_.norm();
   dir_vector_ = (dir_vector_ / dist_) * sample_dist_;
 
-  Eigen::Vector3d             cur_pos_ = odom_vector_;
-  Eigen::Vector3d             diff_vector_;
+  Eigen::Vector3d cur_pos_ = odom_vector_;
+  Eigen::Vector3d diff_vector_;
 
   while (cur_pos_(0, 0) != goal_(0, 0) && cur_pos_(1, 0) != goal_(1, 0) && cur_pos_(2, 0) != goal_(2, 0)) {
 
