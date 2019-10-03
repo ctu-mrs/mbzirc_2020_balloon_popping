@@ -1194,7 +1194,7 @@ void BalloonCircleDestroy::goAroundArena(double angle_) {
     new_trj_.header.frame_id = world_frame_id_;
     new_trj_.header.stamp    = ros::Time::now();
     new_trj_.fly_now         = true;
-    new_trj_.loop            = false;
+    new_trj_.loop            = true;
     new_trj_.use_yaw         = true;
     new_trj_.points          = _arena_elipse_;
     new_trj_.start_index     = getElipseIndex(_arena_elipse_);
@@ -1330,6 +1330,42 @@ bool BalloonCircleDestroy::comparePoints(mrs_msgs::TrackerPoint a, mrs_msgs::Tra
 
 //}
 
+/* plannerActivate //{ */
+
+void BalloonCircleDestroy::plannerActivate(Eigen::Vector3d estimation_, double radius_) {
+  if (_planner_active_) {
+    ROS_WARN_THROTTLE(0.5, "[BalloonCircleDestroyi]: planner is already active, I'll reset it ");
+    /* plannerReset(); */
+    return;
+  }
+
+  balloon_planner::StartEstimation        req_;
+  balloon_planner::StartEstimationRequest rq_;
+
+  geometry_msgs::Point p_;
+  _estimate_vect_  = estimation_;
+  p_.x             = estimation_(0, 0);
+  p_.y             = estimation_(1, 0);
+  p_.z             = estimation_(2, 0);
+  rq_.inital_point = p_;
+  rq_.radius       = radius_;
+  req_.request     = rq_;
+  if (srv_planner_start_estimation_.call(req_)) {
+    if (req_.response.success) {
+      ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: Planner activated at point x %f. y %f. z %f", p_.x, p_.y, p_.z);
+      _planner_active_         = true;
+      time_last_planner_reset_ = ros::Time::now();
+    } else {
+      ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: Planner haven't been activated  at point x %f. y %f. z %f", p_.x, p_.y, p_.z);
+    }
+
+  } else {
+    ROS_ERROR_THROTTLE(0.5, "[BalloonCircleDestroy]: Failed at calling planner activation service  ");
+  }
+}
+
+//}
+
 /* getElipseIndex //{ */
 
 int BalloonCircleDestroy::getElipseIndex(std::vector<mrs_msgs::TrackerPoint> elipse_) {
@@ -1346,10 +1382,13 @@ int BalloonCircleDestroy::getElipseIndex(std::vector<mrs_msgs::TrackerPoint> eli
       best_dist = cur_dist;
     }
   }
+  ROS_INFO_THROTTLE(0.5, "[]: index %d out of %d",best_id,int(elipse_.size()));
   return best_id;
 }
 
-//}
+
+
+//}//}
 
 /* plannerStop //{ */
 
@@ -1779,6 +1818,32 @@ void BalloonCircleDestroy::goToPoint(Eigen::Vector3d p_, double speed_, mrs_msgs
 
 //}
 
+/* generateElipse //{ */
+
+std::vector<mrs_msgs::TrackerPoint> BalloonCircleDestroy::generateElipse() {
+
+  std::vector<mrs_msgs::TrackerPoint> new_trj_;
+
+  double mpc_speed_ = _traj_time_ / _traj_len_;
+
+  double arena_accuracy_ = _cur_arena_length_ * _cur_arena_width_ * 2 * M_PI;
+  arena_accuracy_        = arena_accuracy_ / _vel_arena_ * mpc_speed_;
+  double iterat_         = (M_PI) / (arena_accuracy_ / 2);
+  double angle           = 0;
+
+  for (int i = 0; i < arena_accuracy_; i++) {
+    mrs_msgs::TrackerPoint point;
+    point.x   = _arena_center_x_ + cos(angle) * _cur_arena_width_ / 2;
+    point.y   = _arena_center_y_ + sin(angle) * _cur_arena_length_ / 2;
+    point.z   = _height_;
+    point.yaw = angle + M_PI;
+    angle += iterat_;
+    new_trj_.push_back(point);
+  }
+  return new_trj_;
+}
+
+//}
 
 // | --------------------- transformations -------------------- |
 /* getTransform() method //{ */
