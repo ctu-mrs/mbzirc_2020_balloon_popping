@@ -1196,9 +1196,8 @@ void BalloonCircleDestroy::goAroundArena(double angle_) {
     new_trj_.fly_now         = true;
     new_trj_.loop            = false;
     new_trj_.use_yaw         = true;
-    new_trj_.start_index     = 0;
-
-    new_trj_.points = _arena_elipse_;
+    new_trj_.points          = _arena_elipse_;
+    new_trj_.start_index     = getElipseIndex(_arena_elipse_);
     mrs_msgs::TrackerTrajectorySrv req_;
     req_.request.trajectory_msg = new_trj_;
 
@@ -1327,6 +1326,27 @@ bool BalloonCircleDestroy::comparePoints(mrs_msgs::TrackerPoint a, mrs_msgs::Tra
   double dist_a_ = (odom_vector_ - Eigen::Vector3d(a.x, a.y, a.z)).norm();
   double dist_b_ = (odom_vector_ - Eigen::Vector3d(b.x, b.y, b.z)).norm();
   return dist_a_ < dist_b_;
+}
+
+//}
+
+/* getElipseIndex //{ */
+
+int BalloonCircleDestroy::getElipseIndex(std::vector<mrs_msgs::TrackerPoint> elipse_) {
+  double best_dist, cur_dist;
+  int    best_id;
+  best_dist = 999;
+
+
+  for (unsigned i = 0; i < elipse_.size(); i++) {
+
+    cur_dist = (odom_vector_ - Eigen::Vector3d(elipse_.at(i).x, elipse_.at(i).y, elipse_.at(i).z)).norm();
+    if (cur_dist < best_dist) {
+      best_id   = i;
+      best_dist = cur_dist;
+    }
+  }
+  return best_id;
 }
 
 //}

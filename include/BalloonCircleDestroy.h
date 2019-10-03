@@ -345,6 +345,7 @@ private:
   void                                goToPoint(Eigen::Vector3d p_, double speed_, mrs_msgs::TrackerTrajectory new_traj_);
   bool                                comparePoints(mrs_msgs::TrackerPoint a, mrs_msgs::TrackerPoint b);
   std::vector<mrs_msgs::TrackerPoint> generateElipse();
+  int                                 getElipseIndex(std::vector<mrs_msgs::TrackerPoint> elipse_);
   //}
 };
 //}
