@@ -46,6 +46,7 @@ void BalloonCircleDestroy::onInit() {
   param_loader.load_param("wait_for_ball", _wait_for_ball_);
 
   param_loader.load_param("simulation", _simulation_);
+  param_loader.load_param("yaw_offset", _yaw_offset_);
 
   param_loader.load_param("rate/check_subscribers", _rate_timer_check_subscribers_);
   param_loader.load_param("rate/check_balloons", _rate_timer_check_balloons_);
@@ -1115,6 +1116,9 @@ void BalloonCircleDestroy::getCloseToBalloon(Eigen::Vector3d dest_, double close
   mrs_msgs::TrackerTrajectory new_traj_;
   Eigen::Vector3d             diff_vector_;
   double                      angle_ = getBalloonHeading(dest_);
+  if(_state_==DESTROYING) {
+    angle_ += _yaw_offset_;
+  }
 
   while (cur_pos_(0, 0) != goal_(0, 0) && cur_pos_(1, 0) != goal_(1, 0) && cur_pos_(2, 0) != goal_(2, 0)) {
 

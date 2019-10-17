@@ -133,6 +133,7 @@ private:
   double _y_max_;
   double _z_min_;
   double _z_max_;
+  double _yaw_offset_;
 
 
   // | ------------------------- state machine params ------------------------- |
