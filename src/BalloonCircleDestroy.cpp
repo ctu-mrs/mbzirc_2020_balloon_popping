@@ -230,9 +230,9 @@ void BalloonCircleDestroy::callbackBalloonPointCloud(const sensor_msgs::PointClo
         ROS_WARN_THROTTLE(1, "[BalloonCircleDestroy]: No transform,skipping");
         continue;
       }
-      /* if (isPointInArena(p_)) { */
-      balloon_pcl_processed_.push_back(Eigen::Vector3d(p_.x, p_.y, p_.z));
-      /* } */
+      if (isPointInArena(p_)) {
+        balloon_pcl_processed_.push_back(Eigen::Vector3d(p_.x, p_.y, p_.z));
+      }
     }
   }
 
@@ -377,7 +377,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
           return;
         }
         is_idling_ = true;
-        _state_ = CHECKING_BALLOON;
+        _state_    = CHECKING_BALLOON;
         ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
         ros::NodeHandle nh("~");
         timer_idling_ = nh.createTimer(ros::Duration(_idle_time_), &BalloonCircleDestroy::callbackTimerIdling, this,
@@ -1116,7 +1116,7 @@ void BalloonCircleDestroy::getCloseToBalloon(Eigen::Vector3d dest_, double close
   mrs_msgs::TrackerTrajectory new_traj_;
   Eigen::Vector3d             diff_vector_;
   double                      angle_ = getBalloonHeading(dest_);
-  if(_state_==DESTROYING) {
+  if (_state_ == DESTROYING) {
     angle_ += _yaw_offset_;
   }
 
@@ -1618,11 +1618,19 @@ void BalloonCircleDestroy::callbackDynamicReconfigure([[maybe_unused]] Config& c
 bool BalloonCircleDestroy::droneStop() {
   std_srvs::Trigger srv_stop_call_;
   srv_client_stop_.call(srv_stop_call_);
-  _mpc_stop_ = srv_stop_call_.response.success;
-  if (_mpc_stop_) {
-    is_tracking_ = false;
+  if (srv_client_stop_.call(srv_stop_call_)) {
+    if (srv_stop_call_.response.success) {
+      ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: Drone stopped");
+      is_tracking_ = false;
+    } else {
+      ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: Drone haven't been stopped");
+    }
+
+  } else {
+    ROS_ERROR_THROTTLE(0.5, "[BalloonCircleDestroy]: Failed at calling drone stopping service");
   }
-  return _mpc_stop_;
+
+  return srv_stop_call_.response.success;
 }
 
 //}
