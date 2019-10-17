@@ -229,9 +229,9 @@ void BalloonCircleDestroy::callbackBalloonPointCloud(const sensor_msgs::PointClo
         ROS_WARN_THROTTLE(1, "[BalloonCircleDestroy]: No transform,skipping");
         continue;
       }
-      if (isPointInArena(p_)) {
-        balloon_pcl_processed_.push_back(Eigen::Vector3d(p_.x, p_.y, p_.z));
-      }
+      /* if (isPointInArena(p_)) { */
+      balloon_pcl_processed_.push_back(Eigen::Vector3d(p_.x, p_.y, p_.z));
+      /* } */
     }
   }
 
@@ -376,11 +376,11 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
           return;
         }
         is_idling_ = true;
+        _state_ = CHECKING_BALLOON;
+        ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
         ros::NodeHandle nh("~");
         timer_idling_ = nh.createTimer(ros::Duration(_idle_time_), &BalloonCircleDestroy::callbackTimerIdling, this,
                                        true);  // the last boolean argument makes the timer run only once
-        _state_       = CHECKING_BALLOON;
-        ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
       } else {
         if (ros::Time::now().toSec() - time_last_traj_published_.toSec() > _wait_for_ball_) {
           goAroundArena(0.5);
@@ -1382,10 +1382,9 @@ int BalloonCircleDestroy::getElipseIndex(std::vector<mrs_msgs::TrackerPoint> eli
       best_dist = cur_dist;
     }
   }
-  ROS_INFO_THROTTLE(0.5, "[]: index %d out of %d",best_id,int(elipse_.size()));
+  ROS_INFO_THROTTLE(0.5, "[]: index %d out of %d", best_id, int(elipse_.size()));
   return best_id;
 }
-
 
 
 //}//}
