@@ -47,6 +47,8 @@ void BalloonCircleDestroy::onInit() {
 
   param_loader.load_param("simulation", _simulation_);
   param_loader.load_param("yaw_offset", _yaw_offset_);
+  param_loader.load_param("jerk", _jerk_);
+  param_loader.load_param("acceleration", _acceleration_);
 
   param_loader.load_param("rate/check_subscribers", _rate_timer_check_subscribers_);
   param_loader.load_param("rate/check_balloons", _rate_timer_check_balloons_);
@@ -1092,6 +1094,10 @@ void BalloonCircleDestroy::circleAroundBalloon() {
 
 void BalloonCircleDestroy::getCloseToBalloon(Eigen::Vector3d dest_, double close_dist_, double speed_) {
 
+  double cur_speed    = 0.0;
+  double acceleration = 0.0;
+
+
   double          sample_dist_ = speed_ * (_traj_time_ / _traj_len_);
   Eigen::Vector3d dir_vector_  = dest_ - odom_vector_;
 
@@ -1122,10 +1128,22 @@ void BalloonCircleDestroy::getCloseToBalloon(Eigen::Vector3d dest_, double close
 
   while (cur_pos_(0, 0) != goal_(0, 0) && cur_pos_(1, 0) != goal_(1, 0) && cur_pos_(2, 0) != goal_(2, 0)) {
 
+    acceleration += (_jerk_*0.2);
+    if(acceleration > _acceleration_) {
+      acceleration = _acceleration_;
+    }
+    cur_speed +=(acceleration*0.2);
+    if (cur_speed > speed_ ) {
+       cur_speed = speed_; 
+    }
+    ROS_INFO( "[]: speed %f and acceleration %f", cur_speed, acceleration);
+
     for (int i = 0; i < _traj_len_; i++) {
       mrs_msgs::TrackerPoint p;
-      cur_pos_     = cur_pos_ + dir_vector_;
+      cur_pos_     = cur_pos_ + dir_vector_*(cur_speed*0.2);
+      /* cur_pos_     = cur_pos_ + dir_vector_; */
       diff_vector_ = cur_pos_ - odom_vector_;
+
 
       if (diff_vector_.norm() >= dist_) {
         cur_pos_ = goal_;
@@ -1622,6 +1640,7 @@ bool BalloonCircleDestroy::droneStop() {
     if (srv_stop_call_.response.success) {
       ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: Drone stopped");
       is_tracking_ = false;
+      _mpc_stop_   = true;
     } else {
       ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: Drone haven't been stopped");
     }
