@@ -134,9 +134,9 @@ void BalloonCircleDestroy::onInit() {
   srv_client_trajectory_        = nh.serviceClient<mrs_msgs::TrackerTrajectorySrv>("trajectory_srv");
   srv_planner_reset_estimation_ = nh.serviceClient<std_srvs::Trigger>("reset_estimation");
   srv_client_stop_              = nh.serviceClient<std_srvs::Trigger>("drone_stop");
-  srv_planner_start_estimation_ = nh.serviceClient<balloon_planner::StartEstimation>("start_estimation");
+  srv_planner_start_estimation_ = nh.serviceClient<balloon_filter::StartEstimation>("start_estimation");
   srv_planner_stop_estimation_  = nh.serviceClient<std_srvs::Trigger>("stop_estimation");
-  srv_planner_add_zone_         = nh.serviceClient<balloon_planner::AddExclusionZone>("add_zone");
+  srv_planner_add_zone_         = nh.serviceClient<balloon_filter::AddExclusionZone>("add_zone");
 
   time_last_planner_reset_ = ros::Time::now();
 
@@ -215,38 +215,40 @@ void BalloonCircleDestroy::callbackBalloonPoint(const geometry_msgs::PoseWithCov
     ROS_INFO("[%s]: got first balloon point", ros::this_node::getName().c_str());
   }
 }
-void BalloonCircleDestroy::callbackBalloonPointCloud(const sensor_msgs::PointCloudConstPtr& msg) {
+void BalloonCircleDestroy::callbackBalloonPointCloud(const sensor_msgs::PointCloud2ConstPtr& msg) {
   if (!is_initialized_) {
     return;
   }
 
   {
     std::scoped_lock lock(mutex_is_balloon_cloud_incoming_);
-    balloon_point_cloud_ = *msg;
     balloon_pcl_processed_.clear();
-    for (unsigned i = 0; i < balloon_point_cloud_.points.size(); i++) {
-      geometry_msgs::Point p_;
 
-      bool ts_res = transformPointFromWorld(balloon_point_cloud_.points.at(i), balloon_point_cloud_.header.frame_id, balloon_point_cloud_.header.stamp, p_);
-      if (!ts_res) {
-        ROS_WARN_THROTTLE(1, "[BalloonCircleDestroy]: No transform,skipping");
-        continue;
+    sensor_msgs::PointCloud2 pcl2_ = *msg;
+    PC cloud_out;
+    PC::Ptr cloud_in(new PC());
+    pcl::fromROSMsg(*msg, *cloud_in);
+    bool ts_res = transformPclFromWorld(cloud_in, msg->header.frame_id, msg->header.stamp, cloud_out);
+    if (!ts_res) {
+      ROS_WARN("[BalloonPclCallback]: skipping pcl, no tf");
+      return;
+    }
+
+    for ( unsigned i = 0 <cloud_out.points.size(); i++;) {
+     ROS_INFO("[]: pcl x %f",cloud_out.points.at(i).x );
+    }
+    
+
+
+    if (balloon_pcl_processed_.size() > 0) {
+      if (!got_balloon_point_cloud_) {
+        got_balloon_point_cloud_ = true;
+        ROS_INFO("[%s]: got first balloon point cloud", ros::this_node::getName().c_str());
       }
-      if (isPointInArena(p_)) {
-        balloon_pcl_processed_.push_back(Eigen::Vector3d(p_.x, p_.y, p_.z));
-      }
+      time_last_balloon_cloud_point_ = ros::Time::now();
     }
   }
-
-
-  if (balloon_pcl_processed_.size() > 0) {
-    if (!got_balloon_point_cloud_) {
-      got_balloon_point_cloud_ = true;
-      ROS_INFO("[%s]: got first balloon point cloud", ros::this_node::getName().c_str());
-    }
-    time_last_balloon_cloud_point_ = ros::Time::now();
-  }
-}
+}  // namespace balloon_circle_destroy
 
 
 //}
@@ -1128,20 +1130,20 @@ void BalloonCircleDestroy::getCloseToBalloon(Eigen::Vector3d dest_, double close
 
   while (cur_pos_(0, 0) != goal_(0, 0) && cur_pos_(1, 0) != goal_(1, 0) && cur_pos_(2, 0) != goal_(2, 0)) {
 
-    acceleration += (_jerk_*0.2);
-    if(acceleration > _acceleration_) {
-      acceleration = _acceleration_;
-    }
-    cur_speed +=(acceleration*0.2);
-    if (cur_speed > speed_ ) {
-       cur_speed = speed_; 
-    }
-    ROS_INFO( "[]: speed %f and acceleration %f", cur_speed, acceleration);
+    /* acceleration += (_jerk_ * 0.2); */
+    /* if (acceleration > _acceleration_) { */
+    /*   acceleration = _acceleration_; */
+    /* } */
+    /* cur_speed += (acceleration * 0.2); */
+    /* if (cur_speed > speed_) { */
+    /*   cur_speed = speed_; */
+    /* } */
+    ROS_INFO("[]: speed %f and acceleration %f", cur_speed, acceleration);
 
     for (int i = 0; i < _traj_len_; i++) {
       mrs_msgs::TrackerPoint p;
-      cur_pos_     = cur_pos_ + dir_vector_*(cur_speed*0.2);
-      /* cur_pos_     = cur_pos_ + dir_vector_; */
+      /* cur_pos_ = cur_pos_ + dir_vector_ * (cur_speed * 0.2); */
+      cur_pos_     = cur_pos_ + dir_vector_;
       diff_vector_ = cur_pos_ - odom_vector_;
 
 
@@ -1361,8 +1363,8 @@ void BalloonCircleDestroy::plannerActivate(Eigen::Vector3d estimation_, double r
     return;
   }
 
-  balloon_planner::StartEstimation        req_;
-  balloon_planner::StartEstimationRequest rq_;
+  balloon_filter::StartEstimation        req_;
+  balloon_filter::StartEstimationRequest rq_;
 
   geometry_msgs::Point p_;
   _estimate_vect_  = estimation_;
@@ -1490,8 +1492,8 @@ void BalloonCircleDestroy::addForbidden(Eigen::Vector3d forb_, double radius_) {
   forb_t_.r     = radius_;
   forb_t_.vect_ = forb_;
   _forb_vect_.push_back(forb_t_);
-  balloon_planner::AddExclusionZone        req_;
-  balloon_planner::AddExclusionZoneRequest rq_;
+  balloon_filter::AddExclusionZone        req_;
+  balloon_filter::AddExclusionZoneRequest rq_;
 
   geometry_msgs::Point p_;
   p_.x            = forb_(0, 0);
@@ -1770,10 +1772,10 @@ visualization_msgs::Marker BalloonCircleDestroy::fillArenaBounds(int id_) {
 
 /* isPointInArena //{ */
 
-bool BalloonCircleDestroy::isPointInArena(geometry_msgs::Point p_) {
-  bool is_x_ = p_.x > _x_min_ && p_.x < _x_max_;
-  bool is_y_ = p_.y > _y_min_ && p_.y < _y_max_;
-  bool is_z_ = p_.z > _z_min_ && p_.z < _z_max_;
+bool BalloonCircleDestroy::isPointInArena(float x, float y, float z) {
+  bool is_x_ = x > _x_min_ && x < _x_max_;
+  bool is_y_ = y > _y_min_ && y < _y_max_;
+  bool is_z_ = z > _z_min_ && z < _z_max_;
 
   return is_x_ && is_y_ && is_z_;
 }
@@ -1907,7 +1909,28 @@ bool BalloonCircleDestroy::transformPointFromWorld(const geometry_msgs::Point32&
   return true;
 }
 //}
-//
+
+/* transformPclFromWorld //{ */
+
+bool BalloonCircleDestroy::transformPclFromWorld(const PC::Ptr& pcl, const std::string& to_frame, const ros::Time& stamp,
+                                                 PC& pcl_out) {
+  geometry_msgs::TransformStamped transform;
+
+  if (!getTransform(to_frame, world_frame_id_, stamp, transform))
+    return false;
+
+  Eigen::Affine3d msg2odom_eigen_transform;
+  msg2odom_eigen_transform = tf2::transformToEigen(transform);
+  ROS_INFO("[]: tf got ");
+  pcl::transformPointCloud(*pcl, pcl_out, msg2odom_eigen_transform);
+  ROS_INFO("[]: transformed got ");
+ 
+  return true;
+}
+
+//}
+
+
 }  // namespace balloon_circle_destroy
 
 PLUGINLIB_EXPORT_CLASS(balloon_circle_destroy::BalloonCircleDestroy, nodelet::Nodelet);

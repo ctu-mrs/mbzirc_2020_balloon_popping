@@ -35,7 +35,7 @@
       <remap from="~tracker_diagnostics_in" to="control_manager/mpc_tracker/diagnostics" />
       <remap from="~odom_gt_in" to="ground_truth" />
       <remap from="~balloon_point_in" to="balloon_planner/balloon_chosen_out" />
-      <remap from="~balloon_point_cloud_in" to="object_detect/detected_objects_pcl" />
+      <remap from="~balloon_point_cloud_in" to="object_detect/detected_balls_pcl" />
 
       <!-- Publishers -->
 
