@@ -9,7 +9,7 @@ area:
   x_min: 0
   x_max: 40
   y_min: 0
-  y_max: 40
+  y_max: 80
   z_min: 1
   z_max: 8
   offset: 3
@@ -41,9 +41,9 @@ circling_radius: 3
 #circle accuracy - how many points should be in circle trajectory
 circle_accuracy: 100
 #velocity for goTo's
-vel: 1
+vel: 2
 #velocity for attack
-vel_attack: 0.5
+vel_attack: 2
 #velocity of going around arena
 vel_arena: 6
 #minimal velocity of going around arena
@@ -63,7 +63,7 @@ dist_acc: 0.5
 #time for waiting for KF reset
 wait_for_ball: 6
 #max time balloon not seen in PCL
-max_time_balloon: 3
+max_time_balloon: 6
 #how many time to reset the KF
 reset_tries: 2
 #time to land - max time of not observing any balloons at all 
@@ -77,3 +77,5 @@ forbidden_radius: 2
 # height tolerance
 height_tol: 0.5
 yaw_offset: -0.25
+acceleration: 3
+jerk: 10

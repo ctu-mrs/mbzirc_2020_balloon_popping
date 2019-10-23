@@ -31,6 +31,9 @@
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <sensor_msgs/PointCloud.h>
+#include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/point_cloud2_iterator.h>
+
 
 /* for storing information about the state of the uav (position, twist) + covariances */
 #include <nav_msgs/Odometry.h>
@@ -53,8 +56,8 @@
 #include <mrs_msgs/TrackerTrajectorySrv.h>
 /* Planner services headers */
 
-#include <balloon_planner/AddExclusionZone.h>
-#include <balloon_planner/StartEstimation.h>
+#include <balloon_filter/AddExclusionZone.h>
+#include <balloon_filter/StartEstimation.h>
 /* for operations with matrices */
 #include <Eigen/Dense>
 /* math  */
@@ -63,9 +66,15 @@
 // | ------------------- transfroms include ------------------- |
 #include <tf2_ros/transform_listener.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-
+#include <tf2_eigen/tf2_eigen.h>
+// | ----------------------- pcl is SHIT ---------------------- |
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <pcl_ros/point_cloud.h>
+#include <pcl/common/transforms.h>
 
 //}
+typedef pcl::PointCloud<pcl::PointXYZ> PC;
 
 namespace balloon_circle_destroy
 {
@@ -134,6 +143,8 @@ private:
   double _z_min_;
   double _z_max_;
   double _yaw_offset_;
+  double _jerk_;
+  double _acceleration_;
 
 
   // | ------------------------- state machine params ------------------------- |
@@ -186,6 +197,9 @@ private:
   bool transformPointFromWorld(const geometry_msgs::Point32& point, const std::string& to_frame, const ros::Time& stamp, geometry_msgs::Point& point_out);
   bool getTransform(const std::string& from_frame, const std::string& to_frame, const ros::Time& stamp, geometry_msgs::TransformStamped& transform_out);
 
+  bool transformPclFromWorld(const PC::Ptr& pcl, const std::string& to_frame, const ros::Time& stamp,
+                                                 PC& pcl_out);
+
   // | ---------------------- msg callbacks --------------------- |
 
   void               callbackOdomUav(const nav_msgs::OdometryConstPtr& msg);
@@ -221,9 +235,8 @@ private:
   std::mutex                               mutex_is_balloon_incoming_;
   ros::Time                                time_last_balloon_point_;
 
-  void                         callbackBalloonPointCloud(const sensor_msgs::PointCloudConstPtr& msg);
+  void                         callbackBalloonPointCloud(const sensor_msgs::PointCloud2ConstPtr& msg);
   ros::Subscriber              sub_balloon_point_cloud_;
-  sensor_msgs::PointCloud      balloon_point_cloud_;
   std::vector<Eigen::Vector3d> balloon_pcl_processed_;
   Eigen::Vector3d              balloon_closest_vector_;
   bool                         got_balloon_point_cloud_  = false;
@@ -341,7 +354,7 @@ private:
   bool                                isBalloonVisible(Eigen::Vector3d baloon_);
   bool                                droneStop();
   visualization_msgs::Marker          fillArenaBounds(int id_);
-  bool                                isPointInArena(geometry_msgs::Point p_);
+  bool                                isPointInArena(float x, float y, float z);
   void                                scanArena();
   void                                goToPoint(Eigen::Vector3d p_, double speed_, mrs_msgs::TrackerTrajectory new_traj_);
   bool                                comparePoints(mrs_msgs::TrackerPoint a, mrs_msgs::TrackerPoint b);
