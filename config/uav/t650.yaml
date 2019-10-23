@@ -9,10 +9,10 @@ area:
   x_min: -15
   x_max: 15
   y_min: -13
-  y_max: 7
+  y_max: -3
   z_min: 1
   z_max: 8
-  offset: 3
+  offset: 5
 # should the UAV land after destroying all balloons
 land_at_the_end: false
 #arena width
@@ -29,10 +29,10 @@ arena_center_x: 15
 arena_center_y: 20
 
 #height offset when killing the balloon
-height_offset: 0.2
+height_offset: 0.0
 #height where drone will operate ( up to this height )
-elips_height: 4
-height_min: 1
+elips_height: 3
+height_min: 0.5
 height_max: 30
 #idle_time
 idle_time: 3
@@ -45,11 +45,11 @@ vel: 1
 #velocity for attack
 vel_attack: 0.5
 #velocity of going around arena
-vel_arena: 2
+vel_arena: 1
 #minimal velocity of going around arena
 min_vel_arena: 0.5
 #distance to the balloon
-dist_to_balloon: 4
+dist_to_balloon: 2.5
 #distance to kill the balloon
 dist_to_overshoot: 2
 #trajectory length
