@@ -76,3 +76,4 @@ balloon_tries: 2
 forbidden_radius: 2
 # height tolerance
 height_tol: 0.5
+yaw_offset: -0.25
