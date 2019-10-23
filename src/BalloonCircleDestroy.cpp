@@ -240,7 +240,9 @@ void BalloonCircleDestroy::callbackBalloonPointCloud(const sensor_msgs::PointClo
       const auto z_ = cloud_out.points.at(i).z;
       if(isPointInArena(x_, y_, z_)) {
        balloon_pcl_processed_.push_back(Eigen::Vector3d(x_,y_,z_));
-      }
+      /* } else { */
+      /*   ROS_INFO("[]: out of arena: [%f, %f, %f]", x_, y_, z_); */
+      /* } */
     }
     
 
