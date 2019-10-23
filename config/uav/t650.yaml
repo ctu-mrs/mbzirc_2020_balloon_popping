@@ -6,6 +6,7 @@ rate:
   pub_rviz: 30
 # defines area for drone to operate
 area:
+<<<<<<< HEAD
   x_min: -15
   x_max: 15
   y_min: -13
@@ -29,7 +30,11 @@ arena_center_x: 15
 arena_center_y: 20
 
 #height offset when killing the balloon
+<<<<<<< HEAD
 height_offset: 0.0
+=======
+height_offset: -0.2
+>>>>>>> e446a0a5cc52939586b4851b45d40e78d0af7f34
 #height where drone will operate ( up to this height )
 elips_height: 3
 height_min: 0.5
@@ -41,9 +46,9 @@ circling_radius: 3
 #circle accuracy - how many points should be in circle trajectory
 circle_accuracy: 100
 #velocity for goTo's
-vel: 1
+vel: 2
 #velocity for attack
-vel_attack: 0.5
+vel_attack: 2
 #velocity of going around arena
 vel_arena: 1
 #minimal velocity of going around arena
@@ -76,3 +81,4 @@ balloon_tries: 2
 forbidden_radius: 2
 # height tolerance
 height_tol: 0.5
+yaw_offset: -0.25

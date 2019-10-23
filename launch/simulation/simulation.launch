@@ -31,11 +31,11 @@
       <rosparam file="$(find balloon_circle_destroy)/config/simulation/simulation_$(arg uav_name).yaml" />
 
       <!-- Subscribers -->
-      <remap from="~odom_uav_in" to="odometry/odom_main" />
+      <remap from="~odom_uav_in" to="control_manager/cmd_odom" />
       <remap from="~tracker_diagnostics_in" to="control_manager/mpc_tracker/diagnostics" />
       <remap from="~odom_gt_in" to="ground_truth" />
-      <remap from="~balloon_point_in" to="balloon_planner/balloon_chosen_out" />
-      <remap from="~balloon_point_cloud_in" to="object_detect/detected_objects_pcl" />
+      <remap from="~balloon_point_in" to="balloon_filter/balloon_chosen_out" />
+      <remap from="~balloon_point_cloud_in" to="object_detect/detected_balls_pcl" />
 
       <!-- Publishers -->
 
@@ -45,10 +45,10 @@
       <remap from="~trajectory_srv" to="control_manager/mpc_tracker/set_trajectory" />
       <remap from="~land_out" to="uav_manager/land" />
       <remap from="~drone_stop" to="control_manager/hover" />
-      <remap from="~reset_estimation" to="balloon_planner/reset_estimation" />
-      <remap from="~start_estimation" to="balloon_planner/start_estimation" />
-      <remap from="~stop_estimation" to="balloon_planner/stop_estimation" />
-      <remap from="~add_zone" to="balloon_planner/add_exclusion_zone" />
+      <remap from="~reset_estimation" to="balloon_filter/reset_estimation" />
+      <remap from="~start_estimation" to="balloon_filter/start_estimation" />
+      <remap from="~stop_estimation" to="balloon_filter/stop_estimation" />
+      <remap from="~add_zone" to="balloon_filter/add_exclusion_zone" />
 
     </node>
 
