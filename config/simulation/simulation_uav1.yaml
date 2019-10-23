@@ -63,7 +63,7 @@ dist_acc: 0.5
 #time for waiting for KF reset
 wait_for_ball: 6
 #max time balloon not seen in PCL
-max_time_balloon: 3
+max_time_balloon: 6
 #how many time to reset the KF
 reset_tries: 2
 #time to land - max time of not observing any balloons at all 

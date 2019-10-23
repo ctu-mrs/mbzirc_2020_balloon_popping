@@ -234,8 +234,13 @@ void BalloonCircleDestroy::callbackBalloonPointCloud(const sensor_msgs::PointClo
       return;
     }
 
-    for ( unsigned i = 0 <cloud_out.points.size(); i++;) {
-     ROS_INFO("[]: pcl x %f",cloud_out.points.at(i).x );
+    for (unsigned i = 0; i < cloud_out.points.size(); i++) {
+      const auto x_ = cloud_out.points.at(i).x;
+      const auto y_ = cloud_out.points.at(i).y;
+      const auto z_ = cloud_out.points.at(i).z;
+      if(isPointInArena(x_, y_, z_)) {
+       balloon_pcl_processed_.push_back(Eigen::Vector3d(x_,y_,z_));
+      }
     }
     
 
@@ -1138,7 +1143,6 @@ void BalloonCircleDestroy::getCloseToBalloon(Eigen::Vector3d dest_, double close
     /* if (cur_speed > speed_) { */
     /*   cur_speed = speed_; */
     /* } */
-    ROS_INFO("[]: speed %f and acceleration %f", cur_speed, acceleration);
 
     for (int i = 0; i < _traj_len_; i++) {
       mrs_msgs::TrackerPoint p;
@@ -1910,7 +1914,7 @@ bool BalloonCircleDestroy::transformPointFromWorld(const geometry_msgs::Point32&
 }
 //}
 
-/* transformPclFromWorld //{ */
+/* transform pcl from World //{ */
 
 bool BalloonCircleDestroy::transformPclFromWorld(const PC::Ptr& pcl, const std::string& to_frame, const ros::Time& stamp,
                                                  PC& pcl_out) {
@@ -1921,15 +1925,14 @@ bool BalloonCircleDestroy::transformPclFromWorld(const PC::Ptr& pcl, const std::
 
   Eigen::Affine3d msg2odom_eigen_transform;
   msg2odom_eigen_transform = tf2::transformToEigen(transform);
-  ROS_INFO("[]: tf got ");
   pcl::transformPointCloud(*pcl, pcl_out, msg2odom_eigen_transform);
-  ROS_INFO("[]: transformed got ");
  
   return true;
 }
 
-//}
 
+
+//}
 
 }  // namespace balloon_circle_destroy
 
