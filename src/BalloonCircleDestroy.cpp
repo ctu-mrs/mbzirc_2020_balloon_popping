@@ -430,7 +430,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
         }
 
       } else if (isBalloonVisible(balloon_vector_)) {
-        /* _state_                      = DESTROYING; */
+        _state_                      = DESTROYING;
         _time_destroy_overshoot_set_ = ros::Time::now();
         ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
       } else if (!isBalloonVisible(balloon_vector_)) {
@@ -471,7 +471,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
         }
       }
       if (isBalloonVisible(balloon_vector_)) {
-        /* getCloseToBalloon(balloon_vector_, -_dist_to_overshoot_, _vel_attack_); */
+        getCloseToBalloon(balloon_vector_, -_dist_to_overshoot_, _vel_attack_);
         return;
       } else {
         if (ros::Time::now().toSec() - time_last_balloon_point_.toSec() > _wait_for_ball_) {
@@ -1171,6 +1171,7 @@ void BalloonCircleDestroy::getCloseToBalloon(Eigen::Vector3d dest_, double close
   double                      angle_ = getBalloonHeading(dest_);
   if (_state_ == DESTROYING) {
     angle_ += _yaw_offset_;
+    goal_(2,0) += 0.5;
   }
 
   while (cur_pos_(0, 0) != goal_(0, 0) && cur_pos_(1, 0) != goal_(1, 0) && cur_pos_(2, 0) != goal_(2, 0)) {
