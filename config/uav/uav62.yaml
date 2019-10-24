@@ -10,7 +10,7 @@ area:
   x_max: 10
   y_min: -13
   y_max: -4
-  z_min: -2
+  z_min: 0.3
   z_max: 8
   offset: 3.5
 #
