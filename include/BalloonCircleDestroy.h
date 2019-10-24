@@ -145,6 +145,7 @@ private:
   double _yaw_offset_;
   double _jerk_;
   double _acceleration_;
+  double _state_reset_time_;
 
 
   // | ------------------------- state machine params ------------------------- |
@@ -184,6 +185,9 @@ private:
   ros::Time                           _last_time_balloon_seen_;
   double                              _arena_offset_;
   std::vector<mrs_msgs::TrackerPoint> _arena_elipse_;
+  ros::Time                           _time_destroy_overshoot_set_;
+
+
 
 
   // | ----------------------- transforms ----------------------- |

@@ -44,6 +44,7 @@ void BalloonCircleDestroy::onInit() {
   param_loader.load_param("min_vel_arena", _vel_arena_min_);
   param_loader.load_param("dist_error", _dist_error_);
   param_loader.load_param("wait_for_ball", _wait_for_ball_);
+  param_loader.load_param("state_reset_time", _state_reset_time_);
 
   param_loader.load_param("simulation", _simulation_);
   param_loader.load_param("yaw_offset", _yaw_offset_);
@@ -451,15 +452,21 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
         return;
       } else {
         _state_ = DESTROY_OVERSHOOT;
+        _time_destroy_overshoot_set_ = ros::Time::now();
         ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
         return;
       }
 
 
     } else if (_state_ == DESTROY_OVERSHOOT) {
+      
       if (!is_tracking_ && !is_idling_ && _last_goal_reached_) {
         _state_ = IDLE;
         ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s destroying ended", getStateName().c_str());
+      }
+      if( ros::Time::now().toSec() - _time_destroy_overshoot_set_.toSec() > _state_reset_time_  ) {
+       ROS_WARN_THROTTLE(1.0, "[StateMachine]: DESTROY OVERSHOOT TIMER, SETTING IDLE "); 
+        _state_ = IDLE;
       }
     }
   }
