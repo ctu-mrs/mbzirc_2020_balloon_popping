@@ -339,8 +339,9 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
     return;
   }
   {
+    
 
-    /* std::scoped_lock lock(mutex_odom_uav_,mutex_is_balloon_incoming_, mutex_is_balloon_cloud_incoming_, mutex_is_tracking_); */
+    /* std::scoped_lock lock(mutex_is_balloon_cloud_incoming_); */
 
     ROS_INFO_THROTTLE(0.5, "| ---------------- STATE MACHINE LOOP STATUS --------------- |");
     ROS_INFO_THROTTLE(0.5, "[State]: %s ", getStateName().c_str());
@@ -447,7 +448,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
           droneStop();
           return;
         }
-        /* _state_ = DESTROYING; */
+        _state_ = GOING_TO_BALLOON;
         ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
       }
 
