@@ -226,8 +226,8 @@ void BalloonCircleDestroy::callbackBalloonPointCloud(const sensor_msgs::PointClo
     balloon_pcl_processed_.clear();
 
     sensor_msgs::PointCloud2 pcl2_ = *msg;
-    PC cloud_out;
-    PC::Ptr cloud_in(new PC());
+    PC                       cloud_out;
+    PC::Ptr                  cloud_in(new PC());
     pcl::fromROSMsg(*msg, *cloud_in);
     bool ts_res = transformPclFromWorld(cloud_in, msg->header.frame_id, msg->header.stamp, cloud_out);
     if (!ts_res) {
@@ -239,14 +239,13 @@ void BalloonCircleDestroy::callbackBalloonPointCloud(const sensor_msgs::PointClo
       const auto x_ = cloud_out.points.at(i).x;
       const auto y_ = cloud_out.points.at(i).y;
       const auto z_ = cloud_out.points.at(i).z;
-      if(isPointInArena(x_, y_, z_)) {
-       balloon_pcl_processed_.push_back(Eigen::Vector3d(x_,y_,z_));
+      if (isPointInArena(x_, y_, z_)) {
+        balloon_pcl_processed_.push_back(Eigen::Vector3d(x_, y_, z_));
       }
       /* } else { */
       /*   ROS_INFO("[]: out of arena: [%f, %f, %f]", x_, y_, z_); */
       /* } */
     }
-    
 
 
     if (balloon_pcl_processed_.size() > 0) {
@@ -402,8 +401,8 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
       }
       return;
     } else if (_state_ == CHECKING_BALLOON) {
-      if (is_idling_ || is_tracking_) {
-        ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: idling");
+      if (_mpc_stop_ == false) {
+        droneStop();
         return;
       }
       balloon_closest_vector_ = getClosestBalloon();
@@ -430,28 +429,32 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
         }
 
       } else if (isBalloonVisible(balloon_vector_)) {
-        _state_ = DESTROYING;
+        _state_                      = DESTROYING;
         _time_destroy_overshoot_set_ = ros::Time::now();
         ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
-      } else if (isBalloonVisible(balloon_vector_)) {
+      } else if (!isBalloonVisible(balloon_vector_)) {
         _state_ = CIRCLE_AROUND;
         circleAroundBalloon();
         ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
       }
 
     } else if (_state_ == CIRCLE_AROUND) {
-          if(balloonOutdated()) {
-            _state_ = IDLE;
-            ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
-          } else {
-            droneStop();
-            _state_ = DESTROYING;
-            ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
-          }
-
-    }
-    } else if (_state_ == DESTROYING) {
       if (balloonOutdated()) {
+        _state_ = IDLE;
+        ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
+      } else {
+        if (_mpc_stop_ == false) {
+          droneStop();
+          return;
+        }
+        _state_ = DESTROYING;
+        ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
+      }
+
+    } else if (_state_ == DESTROYING) {
+
+      if (balloonOutdated()) {
+        _state_ = GOING_TO_BALLOON;
         if (ros::Time::now().toSec() - time_last_planner_reset_.toSec() < _wait_for_ball_) {
           return;
         }
@@ -465,31 +468,39 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
           ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
           _reset_count_ = 0;
         }
-        return;
       }
       if (isBalloonVisible(balloon_vector_)) {
         getCloseToBalloon(balloon_vector_, -_dist_to_overshoot_, _vel_attack_);
         return;
       } else {
-        _state_ = DESTROY_OVERSHOOT;
-        _time_destroy_overshoot_set_ = ros::Time::now();
-        ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
-        return;
+        if (ros::Time::now().toSec() - time_last_balloon_point_.toSec() > _wait_for_ball_) {
+          _state_ = GOING_TO_BALLOON;
+          ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
+
+        } else {
+          _state_                      = DESTROY_OVERSHOOT;
+          _time_destroy_overshoot_set_ = ros::Time::now();
+          ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
+          return;
+        }
       }
 
 
     } else if (_state_ == DESTROY_OVERSHOOT) {
-      
+
+      if (isBalloonVisible(balloon_vector_)) {
+        _state_ = DESTROYING;
+        ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
+      }
       if (!is_tracking_ && !is_idling_ && _last_goal_reached_) {
         _state_ = IDLE;
         ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s destroying ended", getStateName().c_str());
       }
-    if( ros::Time::now().toSec() - _time_destroy_overshoot_set_.toSec() > _state_reset_time_  ) {
-       ROS_WARN_THROTTLE(1.0, "[StateMachine]: DESTROY OVERSHOOT TIMER, SETTING IDLE "); 
+      if (ros::Time::now().toSec() - _time_destroy_overshoot_set_.toSec() > _state_reset_time_) {
+        ROS_WARN_THROTTLE(1.0, "[StateMachine]: DESTROY OVERSHOOT TIMER, SETTING IDLE ");
         _state_ = IDLE;
       }
     }
-
   }
 }
 
@@ -1459,7 +1470,7 @@ void BalloonCircleDestroy::plannerStop() {
     if (req_.response.success) {
       ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: Planner stopped");
       _planner_active_ = false;
-      
+
     } else {
       ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: Planner haven't been stopped");
     }
@@ -1945,8 +1956,7 @@ bool BalloonCircleDestroy::transformPointFromWorld(const geometry_msgs::Point32&
 
 /* transform pcl from World //{ */
 
-bool BalloonCircleDestroy::transformPclFromWorld(const PC::Ptr& pcl, const std::string& to_frame, const ros::Time& stamp,
-                                                 PC& pcl_out) {
+bool BalloonCircleDestroy::transformPclFromWorld(const PC::Ptr& pcl, const std::string& to_frame, const ros::Time& stamp, PC& pcl_out) {
   geometry_msgs::TransformStamped transform;
 
   if (!getTransform(to_frame, world_frame_id_, stamp, transform))
@@ -1955,10 +1965,9 @@ bool BalloonCircleDestroy::transformPclFromWorld(const PC::Ptr& pcl, const std::
   Eigen::Affine3d msg2odom_eigen_transform;
   msg2odom_eigen_transform = tf2::transformToEigen(transform);
   pcl::transformPointCloud(*pcl, pcl_out, msg2odom_eigen_transform);
- 
+
   return true;
 }
-
 
 
 //}

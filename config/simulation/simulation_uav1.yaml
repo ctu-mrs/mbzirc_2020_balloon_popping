@@ -41,9 +41,9 @@ circling_radius: 3
 #circle accuracy - how many points should be in circle trajectory
 circle_accuracy: 100
 #velocity for goTo's
-vel: 2
+vel: 1
 #velocity for attack
-vel_attack: 2
+vel_attack: 1
 #velocity of going around arena
 vel_arena: 1
 #minimal velocity of going around arena
