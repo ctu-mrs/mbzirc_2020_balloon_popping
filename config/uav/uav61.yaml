@@ -41,7 +41,7 @@ arena_center_y: 20
 #height offset when killing the balloon
 height_offset: 0.2
 #height where drone will operate ( up to this height )
-elips_height: 2
+elips_height: 3.5
 height_min: 1
 height_max: 30
 #idle_time

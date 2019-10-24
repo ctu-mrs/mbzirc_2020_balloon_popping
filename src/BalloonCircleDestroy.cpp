@@ -429,10 +429,27 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
                                          true);  // the last boolean argument makes the timer run only once
         }
 
-      } else {
+      } else if (isBalloonVisible(balloon_vector_)) {
         _state_ = DESTROYING;
+        _time_destroy_overshoot_set_ = ros::Time::now();
+        ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
+      } else if (isBalloonVisible(balloon_vector_)) {
+        _state_ = CIRCLE_AROUND;
+        circleAroundBalloon();
         ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
       }
+
+    } else if (_state_ == CIRCLE_AROUND) {
+          if(balloonOutdated()) {
+            _state_ = IDLE;
+            ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
+          } else {
+            droneStop();
+            _state_ = DESTROYING;
+            ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
+          }
+
+    }
     } else if (_state_ == DESTROYING) {
       if (balloonOutdated()) {
         if (ros::Time::now().toSec() - time_last_planner_reset_.toSec() < _wait_for_ball_) {
@@ -467,11 +484,12 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
         _state_ = IDLE;
         ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s destroying ended", getStateName().c_str());
       }
-      if( ros::Time::now().toSec() - _time_destroy_overshoot_set_.toSec() > _state_reset_time_  ) {
+    if( ros::Time::now().toSec() - _time_destroy_overshoot_set_.toSec() > _state_reset_time_  ) {
        ROS_WARN_THROTTLE(1.0, "[StateMachine]: DESTROY OVERSHOOT TIMER, SETTING IDLE "); 
         _state_ = IDLE;
       }
     }
+
   }
 }
 
@@ -1080,13 +1098,13 @@ void BalloonCircleDestroy::circleAroundBalloon() {
   new_trj_.use_yaw         = true;
   new_trj_.start_index     = 0;
   double iterat            = M_PI / (_circle_accuracy_ / 2);
-  double angle             = getBalloonHeading(balloon_vector_) + M_PI;
+  double angle             = getBalloonHeading(balloon_closest_vector_) + M_PI;
 
   for (int i = 0; i < _circle_accuracy_; i++) {
     mrs_msgs::TrackerPoint point;
-    point.x   = balloon_vector_(0, 0) + cos(angle) * _circle_radius_;
-    point.y   = balloon_vector_(1, 0) + sin(angle) * _circle_radius_;
-    point.z   = balloon_vector_(2, 0);
+    point.x   = balloon_closest_vector_(0, 0) + cos(angle) * _circle_radius_;
+    point.y   = balloon_closest_vector_(1, 0) + sin(angle) * _circle_radius_;
+    point.z   = balloon_closest_vector_(2, 0);
     point.yaw = angle + M_PI;
     angle += iterat;
 
@@ -1441,6 +1459,7 @@ void BalloonCircleDestroy::plannerStop() {
     if (req_.response.success) {
       ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: Planner stopped");
       _planner_active_ = false;
+      
     } else {
       ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: Planner haven't been stopped");
     }
