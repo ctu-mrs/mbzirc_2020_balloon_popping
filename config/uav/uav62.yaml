@@ -1,0 +1,92 @@
+# rates of timers in Hz
+rate:
+  check_subscribers: 1 # [Hz]
+  check_balloons: 20
+  state_machine: 30
+  pub_rviz: 30
+# defines area for drone to operate
+area:
+  x_min: -24
+  x_max: 10
+  y_min: -13
+  y_max: -4
+  z_min: -2
+  z_max: 8
+  offset: 3.5
+#
+# area:
+#   x_min: 0
+#   x_max: 100
+#   y_min: -100
+#   y_max: 100
+#   z_min: 0.5
+#   z_max: 8
+#   offset: 0
+#
+# should the UAV land after destroying all balloons
+land_at_the_end: false
+#arena width
+arena_width: 30
+min_arena_width: 12
+#arena length
+arena_length: 40
+min_arena_length: 12
+#arena  accuracy - how many points should be in arena trajectory
+arena_accuracy: 300
+min_arena_accuracy: 30
+#arena_center_x
+arena_center_x: 15
+arena_center_y: 20
+
+#height offset when killing the balloon
+height_offset: 0.2
+#height where drone will operate ( up to this height )
+elips_height: 2
+height_min: 1
+height_max: 30
+#idle_time
+idle_time: 3
+#circling radius - define width from the balloon to circle around
+circling_radius: 3
+#circle accuracy - how many points should be in circle trajectory
+circle_accuracy: 100
+#velocity for goTo's
+vel: 2
+#velocity for attack
+vel_attack: 2
+#velocity of going around arena
+vel_arena: 1
+#minimal velocity of going around arena
+min_vel_arena: 0.5
+#distance to the balloon
+dist_to_balloon: 5
+#distance to kill the balloon
+dist_to_overshoot: 2
+#trajectory length
+traj_len: 40
+#traj time
+traj_time: 8
+#distance error to target the closest balloon so, it will be compared to current chosen via KF + dist_error 
+dist_error: 4.5
+#dist accurace to be as close to the balloon
+dist_acc: 0.5
+#time for waiting for KF reset
+wait_for_ball: 10
+#max time balloon not seen in PCL
+max_time_balloon: 8
+#how many time to reset the KF
+reset_tries: 2
+#time to land - max time of not observing any balloons at all 
+time_to_land: 120 # seconds 
+#world frame, all points are tran
+world_frame_id: "local_origin"
+# number of trying to hit the same balloon
+balloon_tries: 2
+#forbidden area radius
+forbidden_radius: 2
+# height tolerance
+height_tol: 0.5
+yaw_offset: -0.25
+acceleration: 3
+jerk: 10
+state_reset_time: 30
