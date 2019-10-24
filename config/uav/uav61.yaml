@@ -6,13 +6,13 @@ rate:
   pub_rviz: 30
 # defines area for drone to operate
 area:
-  x_min: -20
-  x_max: 5
-  y_min: -13
+  x_min: -24
+  x_max: 10
+  y_min: -4
   y_max: 5
   z_min: -2
   z_max: 8
-  offset: 0
+  offset: 3.5
 #
 # area:
 #   x_min: 0
@@ -59,7 +59,7 @@ vel_arena: 1
 #minimal velocity of going around arena
 min_vel_arena: 0.5
 #distance to the balloon
-dist_to_balloon: 4
+dist_to_balloon: 5
 #distance to kill the balloon
 dist_to_overshoot: 2
 #trajectory length
@@ -89,3 +89,4 @@ height_tol: 0.5
 yaw_offset: -0.25
 acceleration: 3
 jerk: 10
+state_reset_time: 30
