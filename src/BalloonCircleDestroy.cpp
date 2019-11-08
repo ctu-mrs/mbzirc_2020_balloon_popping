@@ -339,7 +339,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
     return;
   }
   {
-    
+
 
     /* std::scoped_lock lock(mutex_is_balloon_cloud_incoming_); */
 
@@ -418,7 +418,9 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
       if ((odom_vector_ - balloon_closest_vector_).norm() > _dist_to_balloon_ + _dist_acc_) {
 
         if (isBalloonVisible(balloon_closest_vector_)) {
-          getCloseToBalloon(balloon_closest_vector_, _dist_to_balloon_, _vel_);
+          if (!balloon_closest_vector_.isZero()) {
+            getCloseToBalloon(balloon_closest_vector_, _dist_to_balloon_, _vel_);
+          }
         } else {
           _state_ = IDLE;
           ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: baloon is not visible, stop");
@@ -460,7 +462,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
           return;
         }
         if (_reset_tries_ > _reset_count_ && ros::Time::now().toSec() - time_last_planner_reset_.toSec() > _wait_for_ball_) {
-          plannerReset();
+          plannerActivate(balloon_closest_vector_, _dist_error_);
           ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: reseting kf");
           _reset_count_++;
         } else {
@@ -471,13 +473,18 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
         }
       }
       if (isBalloonVisible(balloon_vector_)) {
-        getCloseToBalloon(balloon_vector_, -_dist_to_overshoot_, _vel_attack_);
+          if (!balloon_closest_vector_.isZero()) {
+            getCloseToBalloon(balloon_vector_, -_dist_to_overshoot_, _vel_attack_);
+          }
         return;
       } else {
         if (ros::Time::now().toSec() - time_last_balloon_point_.toSec() > _wait_for_ball_) {
-          _state_ = GOING_TO_BALLOON;
+          _state_ = IDLE;
           ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
-
+          if (_mpc_stop_ == false) {
+            droneStop();
+            return;
+          }
         } else {
           _state_                      = DESTROY_OVERSHOOT;
           _time_destroy_overshoot_set_ = ros::Time::now();
@@ -1141,10 +1148,9 @@ void BalloonCircleDestroy::circleAroundBalloon() {
 
 void BalloonCircleDestroy::getCloseToBalloon(Eigen::Vector3d dest_, double close_dist_, double speed_) {
 
-  double cur_speed    = 0.0;
-  double acceleration = 0.0;
 
 
+  
   double          sample_dist_ = speed_ * (_traj_time_ / _traj_len_);
   Eigen::Vector3d dir_vector_  = dest_ - odom_vector_;
 
@@ -1170,9 +1176,9 @@ void BalloonCircleDestroy::getCloseToBalloon(Eigen::Vector3d dest_, double close
   Eigen::Vector3d             diff_vector_;
   double                      angle_ = getBalloonHeading(dest_);
   if (_state_ == DESTROYING) {
-    angle_ += _yaw_offset_;
-    goal_(2,0) += 0.5;
+    goal_(2,0) +=0.5;
   }
+
 
   while (cur_pos_(0, 0) != goal_(0, 0) && cur_pos_(1, 0) != goal_(1, 0) && cur_pos_(2, 0) != goal_(2, 0)) {
 
@@ -1642,7 +1648,6 @@ Eigen::Vector3d BalloonCircleDestroy::getClosestBalloon() {
 
       ball_vect_ = balloon_pcl_processed_.at(i);
 
-      ROS_INFO_THROTTLE(1.0, "[StateMachine]: closest ball %f, %f, %f ", ball_vect_(0, 0), ball_vect_(1, 0), ball_vect_(2, 0));
       dist_ = (odom_vector_ - ball_vect_).norm();
       if (dist_ < best_dist_) {
 
