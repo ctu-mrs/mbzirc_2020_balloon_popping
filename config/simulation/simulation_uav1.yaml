@@ -52,6 +52,7 @@ min_vel_arena: 0.5
 dist_to_balloon: 5
 #distance to kill the balloon
 dist_to_overshoot: 2
+overhoot_offset: 0.3
 #trajectory length
 traj_len: 40
 #traj time
@@ -69,7 +70,7 @@ reset_tries: 2
 #time to land - max time of not observing any balloons at all 
 time_to_land: 120 # seconds 
 #world frame, all points are tran
-world_frame_id: "local_origin"
+world_frame_id: "uav1/local_origin"
 # number of trying to hit the same balloon
 balloon_tries: 2
 #forbidden area radius

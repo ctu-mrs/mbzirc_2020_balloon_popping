@@ -43,7 +43,6 @@
 /* custom msgs of MRS group */
 #include <mrs_msgs/TrackerTrajectory.h>
 #include <mrs_msgs/TrackerPoint.h>
-#include <mrs_msgs/TrackerPointStamped.h>
 #include <mrs_msgs/MpcTrackerDiagnostics.h>
 #include <mrs_msgs/Float64Stamped.h>
 /* custom helper functions from our library */
@@ -146,6 +145,7 @@ private:
   double _jerk_;
   double _acceleration_;
   double _state_reset_time_;
+  double _overshoot_offset_;
 
 
   // | ------------------------- state machine params ------------------------- |
@@ -198,7 +198,7 @@ private:
   std::unique_ptr<tf2_ros::TransformListener> tf_listener_ptr_;
 
 
-  bool transformPointFromWorld(const geometry_msgs::Point32& point, const std::string& to_frame, const ros::Time& stamp, geometry_msgs::Point& point_out);
+  bool transformPointFromWorld(const geometry_msgs::Point& point, const std::string& to_frame, const ros::Time& stamp, geometry_msgs::Point& point_out);
   bool getTransform(const std::string& from_frame, const std::string& to_frame, const ros::Time& stamp, geometry_msgs::TransformStamped& transform_out);
 
   bool transformPclFromWorld(const PC::Ptr& pcl, const std::string& to_frame, const ros::Time& stamp,
