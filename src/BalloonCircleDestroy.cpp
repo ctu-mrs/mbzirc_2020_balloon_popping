@@ -459,6 +459,9 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
 
     } else if (_state_ == DESTROYING) {
 
+      if(!_is_destroy_enabled_) {
+        return;
+      }
       if (balloonOutdated()) {
         _state_ = GOING_TO_BALLOON;
         if (ros::Time::now().toSec() - time_last_planner_reset_.toSec() < _wait_for_ball_) {
