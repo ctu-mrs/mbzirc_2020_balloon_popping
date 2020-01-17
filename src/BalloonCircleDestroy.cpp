@@ -1850,7 +1850,7 @@ void BalloonCircleDestroy::scanArena() {
   new_traj_.fly_now         = true;
   new_traj_.use_yaw         = true;
   new_traj_.loop            = false;
-  int fov                   = 10;
+  int fov                   = 5;
   int step                  = (_x_max_ - _x_min_-_arena_offset_) / fov;
   ROS_INFO("[]: step size %d", step);
   Eigen::Vector3d cur_odom_ = odom_vector_;
@@ -1861,37 +1861,17 @@ void BalloonCircleDestroy::scanArena() {
     ROS_INFO("[]: hui");
 
     nxt =Eigen::Vector3d(cur_odom_(0,0), _y_max_-_arena_offset_, 2);
-    /* if(!isPointInArena(nxt(0,0),nxt(1,0),nxt(2,0))) { */
-    /*   ROS_INFO("[]: pizdec 0 x %f y %f z %f", nxt(0,0),nxt(1,0),nxt(2,0)); */
-    /*   break; */
-    /* } */
     goToPoint(cur_odom_,nxt,10,new_traj_);
-    break;
-    /* cur_odom_(1,0) = _y_max_-_arena_offset_; */
-    /* nxt(0,0) +=fov; */
-    /* if(!isPointInArena(nxt(0,0),nxt(1,0),nxt(2,0))) { */
-    /*   ROS_INFO("[]: pizdec"); */
-    /*   ROS_INFO("[]: pizdec 0 x %f y %f z %f", nxt(0,0),nxt(1,0),nxt(2,0)); */
-    /*   break; */
-    /* } */
-    /* goToPoint(cur_odom_,nxt,_vel_,new_traj_); */
-    /* cur_odom_(0,0) += fov; */
-    /* nxt(1,0) = _y_min_+_arena_offset_; */
-    /* if(!isPointInArena(nxt(0,0),nxt(1,0),nxt(2,0))) { */
-    /*   ROS_INFO("[]: pizdec 2"); */
-    /*   ROS_INFO("[]: pizdec 0 x %f y %f z %f", nxt(0,0),nxt(1,0),nxt(2,0)); */
-    /*   break; */
-    /* } */
-    /* goToPoint(cur_odom_,nxt,_vel_,new_traj_); */
-
-    /* cur_odom_(1,0) = _y_min_+_arena_offset_; */
-    /* nxt(0,0) +=fov; */
-    
-    /* if(!isPointInArena(nxt(0,0),nxt(1,0),nxt(2,0))) { */
-    /*   ROS_INFO("[]: pizdec 3"); */
-    /*   ROS_INFO("[]: pizdec 0 x %f y %f z %f", nxt(0,0),nxt(1,0),nxt(2,0)); */
-    /* } */
-    /* goToPoint(cur_odom_,nxt,_vel_,new_traj_); */
+    cur_odom_(1,0) = _y_max_-_arena_offset_;
+    nxt(0,0) +=fov;
+    goToPoint(cur_odom_,nxt,10,new_traj_);
+    cur_odom_(0,0) += fov;
+    nxt(1,0) = _y_min_+_arena_offset_;
+    goToPoint(cur_odom_,nxt,10,new_traj_);
+    cur_odom_(1,0) = _y_min_+_arena_offset_;
+    nxt(0,0) +=fov;
+    goToPoint(cur_odom_,nxt,10,new_traj_);
+    cur_odom_(0,0) +=fov;
   }
 
 
