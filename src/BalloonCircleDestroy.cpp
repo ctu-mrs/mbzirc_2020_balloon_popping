@@ -1850,30 +1850,49 @@ void BalloonCircleDestroy::scanArena() {
   new_traj_.fly_now         = true;
   new_traj_.use_yaw         = true;
   new_traj_.loop            = false;
-  int fov                   = 5;
-  int step                  = (_x_max_ - _x_min_-_arena_offset_) / fov;
+  int    fov                = 5;
+  int    step               = (_x_max_ - _x_min_ - _arena_offset_) / fov;
+  double left              = _x_max_- _arena_offset_;
+  double right              = _x_min_+ _arena_offset_;
+  double top                = _y_max_ - _arena_offset_;
+  double bot                = _y_min_ + _arena_offset_;
   ROS_INFO("[]: step size %d", step);
   Eigen::Vector3d cur_odom_ = odom_vector_;
   Eigen::Vector3d nxt;
 
-  
+
   for (int i = 0; i < step; i++) {
     ROS_INFO("[]: hui");
 
-    nxt =Eigen::Vector3d(cur_odom_(0,0), _y_max_-_arena_offset_, 2);
-    goToPoint(cur_odom_,nxt,10,new_traj_);
-    cur_odom_(1,0) = _y_max_-_arena_offset_;
-    nxt(0,0) +=fov;
-    goToPoint(cur_odom_,nxt,10,new_traj_);
-    cur_odom_(0,0) += fov;
-    nxt(1,0) = _y_min_+_arena_offset_;
-    goToPoint(cur_odom_,nxt,10,new_traj_);
-    cur_odom_(1,0) = _y_min_+_arena_offset_;
-    nxt(0,0) +=fov;
-    goToPoint(cur_odom_,nxt,10,new_traj_);
-    cur_odom_(0,0) +=fov;
-  }
+    // going from left to right
+    /* nxt = Eigen::Vector3d(cur_odom_(0, 0), top, 2); */
+    /* goToPoint(cur_odom_, nxt, 4, new_traj_); */
+    /* cur_odom_(1, 0) = top; */
+    /* nxt(0, 0) += fov; */
+    /* goToPoint(cur_odom_, nxt, 4, new_traj_); */
+    /* cur_odom_(0, 0) += fov; */
+    /* nxt(1, 0) = bot; */
+    /* goToPoint(cur_odom_, nxt, 4, new_traj_); */
+    /* cur_odom_(1, 0) = bot; */
+    /* nxt(0, 0) += fov; */
+    /* goToPoint(cur_odom_, nxt, 4, new_traj_); */
+    /* cur_odom_(0, 0) += fov; */
+    /* break; */
+    // going from right to left
+    nxt = Eigen::Vector3d(cur_odom_(0, 0), top, 2);
+    goToPoint(cur_odom_, nxt, 4, new_traj_);
+    cur_odom_(1, 0) = top;
+    nxt(0, 0) -= fov;
+    goToPoint(cur_odom_, nxt, 4, new_traj_);
+    cur_odom_(0, 0) -= fov;
+    nxt(1, 0) = bot;
+    goToPoint(cur_odom_, nxt, 4, new_traj_);
+    cur_odom_(1, 0) = bot;
+    nxt(0, 0) -= fov;
+    goToPoint(cur_odom_, nxt, 4, new_traj_);
+    cur_odom_(0, 0) -= fov;
 
+  }
 
 
   mrs_msgs::TrackerTrajectorySrv req_;
@@ -1888,13 +1907,13 @@ void BalloonCircleDestroy::scanArena() {
 /* goToPoint //{ */
 
 void BalloonCircleDestroy::goToPoint(Eigen::Vector3d p_, Eigen::Vector3d goal, double speed_, mrs_msgs::TrackerTrajectory& new_traj_) {
-  ROS_INFO("[]: pizdec 0 x %f y %f z %f", p_(0,0),p_(1,0),p_(2,0));
-  ROS_INFO("[]: pizdec goal 0 x %f y %f z %f", goal(0,0),goal(1,0),goal(2,0));
+  ROS_INFO("[]: pizdec 0 x %f y %f z %f", p_(0, 0), p_(1, 0), p_(2, 0));
+  ROS_INFO("[]: pizdec goal 0 x %f y %f z %f", goal(0, 0), goal(1, 0), goal(2, 0));
   double          sample_dist_ = speed_ * (_traj_time_ / _traj_len_);
   Eigen::Vector3d dir_vector_  = goal - p_;
 
-  double          dist_   = dir_vector_.norm();
-  double          normed_ = (dist_ - _arena_offset_) / dist_;
+  double dist_   = dir_vector_.norm();
+  double normed_ = (dist_ - _arena_offset_) / dist_;
   /* Eigen::Vector3d goal_   = normed_ * dir_vector_ + goal; */
   /* /1* goal_(2, 0)             = p_(2, 0); *1/ */
 
@@ -1911,34 +1930,33 @@ void BalloonCircleDestroy::goToPoint(Eigen::Vector3d p_, Eigen::Vector3d goal, d
 
     for (int i = 0; i < _traj_len_; i++) {
       mrs_msgs::TrackerPoint p;
-      cur_pos_     = cur_pos_ + dir_vector_;
-     
+      cur_pos_ = cur_pos_ + dir_vector_;
+
       diff_vector_ = cur_pos_ - goal;
 
-      
+      if ((int)diff_vector_.norm() <= 0) {
+        ROS_INFO("[BalloonCircleDestroy]: goToPoint returned %d ", (int)new_traj_.points.size());
+        ROS_WARN("[]: pizdec cur_pos_ 0 x %f y %f z %f", cur_pos_(0, 0), cur_pos_(1, 0), cur_pos_(2, 0));
+        cur_pos_ = goal;
+        break;
+      }
+      ROS_INFO("[]: dist is %f diff in dist is %f", dist_, diff_vector_.norm());
 
 
       p.x   = cur_pos_(0, 0);
       p.y   = cur_pos_(1, 0);
       p.z   = cur_pos_(2, 0);
       p.yaw = getArenaHeading(cur_pos_);
-      if(!isPointInArena(p)) {
-        ROS_INFO("[]: pizdeeec");
+      if (!isPointInArena(p)) {
+        ROS_INFO("[]: pizdeeec cur_pos_ 0 x %f y %f z %f", cur_pos_(0, 0), cur_pos_(1, 0), cur_pos_(2, 0));
         return;
       }
 
 
       new_traj_.points.push_back(p);
-      if (diff_vector_.norm() >= dist_) {
-        ROS_INFO("[BalloonCircleDestroy]: goToPoint returned %d ", (int)new_traj_.points.size());
-        ROS_INFO("[]: pizdec cur_pos_ 0 x %f y %f z %f", cur_pos_(0,0),cur_pos_(1,0),cur_pos_(2,0));
-        cur_pos_ = goal;
-        break;
-      }
     }
   }
   ROS_INFO("[BalloonCircleDestroy]: goToPoint returned %d ", (int)new_traj_.points.size());
-  
 }
 
 //}
