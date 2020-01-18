@@ -409,8 +409,8 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
         timer_idling_ = nh.createTimer(ros::Duration(_idle_time_), &BalloonCircleDestroy::callbackTimerIdling, this,
                                        true);  // the last boolean argument makes the timer run only once
       } else {
-        if (ros::Time::now().toSec() - time_last_traj_published_.toSec() > _wait_for_ball_) {
-          /* scanArena(); */
+        if (!is_tracking_ && !is_idling_) {
+          scanArena();
         }
       }
       return;
@@ -418,6 +418,10 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
       if (_mpc_stop_ == false) {
         droneStop();
         return;
+      }
+      if (!is_ballon_incoming_) {
+        _state_ = IDLE;
+        ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
       }
       balloon_closest_vector_ = getClosestBalloon();
       if (balloon_closest_vector_(2, 0) < _z_min_) {
@@ -604,10 +608,10 @@ void BalloonCircleDestroy::callbackTimerCheckBalloonPoints([[maybe_unused]] cons
 
   if (_is_state_machine_active_) {
     if (got_balloon_point_cloud_) {
-      if (ros::Time::now().toSec() - time_last_balloon_cloud_point_.toSec() > _time_to_land_) {
-        ROS_WARN_THROTTLE(0.5, "[BalloonCircleDestroy]: State machine finished, landing");
-        /* landAndEnd(); */
-      }
+      /* if (ros::Time::now().toSec() - time_last_balloon_cloud_point_.toSec() > _time_to_land_) { */
+      /*   ROS_WARN_THROTTLE(0.5, "[BalloonCircleDestroy]: State machine finished, landing"); */
+      /*   /1* landAndEnd(); *1/ */
+      /* } */
     }
   }
   /* ROS_INFO_THROTTLE(1.0, "[%s]: Got balloon point at x %f ", ros::this_node::getName().c_str(), balloon_point_.pose.pose.position.x); */
@@ -1833,8 +1837,8 @@ bool BalloonCircleDestroy::isPointInArena(float x, float y, float z) {
   return is_x_ && is_y_ && is_z_;
 }
 bool BalloonCircleDestroy::isPointInArena(mrs_msgs::TrackerPoint p_) {
-  bool is_x_ = p_.x > _x_min_ && p_.x < _x_max_;
-  bool is_y_ = p_.y > _y_min_ && p_.y < _y_max_;
+  bool is_x_ = p_.x > _x_min_ + _arena_offset_ && p_.x < _x_max_ - _arena_offset_;
+  bool is_y_ = p_.y > _y_min_ + _arena_offset_ && p_.y < _y_max_ - _arena_offset_;
   bool is_z_ = p_.z > _z_min_ && p_.z < _z_max_;
 
   return is_x_ && is_y_ && is_z_;
@@ -1852,46 +1856,68 @@ void BalloonCircleDestroy::scanArena() {
   new_traj_.loop            = false;
   int    fov                = 5;
   int    step               = (_x_max_ - _x_min_ - _arena_offset_) / fov;
-  double left              = _x_max_- _arena_offset_;
-  double right              = _x_min_+ _arena_offset_;
+  double left               = _x_max_ - _arena_offset_;
+  double right              = _x_min_ + _arena_offset_;
   double top                = _y_max_ - _arena_offset_;
   double bot                = _y_min_ + _arena_offset_;
   ROS_INFO("[]: step size %d", step);
   Eigen::Vector3d cur_odom_ = odom_vector_;
+  cur_odom_(2,0) = _height_;
   Eigen::Vector3d nxt;
+  ROS_INFO("[]: to left %f to right %f bool %d", cur_odom_(0, 0) - left, cur_odom_(0, 0) - right,
+           std::abs(cur_odom_(0, 0) - left) > std::abs(cur_odom_(0, 0) - right));
 
+  bool dir = std::abs(cur_odom_(0, 0) - left) > std::abs(cur_odom_(0, 0) - right);
+  if(!isPointInArena(cur_odom_(0,0),cur_odom_(1,0),cur_odom_(2,0))) {
+    if(cur_odom_(0,0) > left && cur_odom_(0,0) < right) {
+      ROS_INFO("[]: is outside from the left side x %f y %f z %f", cur_odom_(0, 0), cur_odom_(1, 0), cur_odom_(2, 0));
+    } else if (cur_odom_(0,0) >right && cur_odom_(0,0) < left)  {
+      ROS_INFO("[]: is outside from the right side x %f y %f z %f", cur_odom_(0, 0), cur_odom_(1, 0), cur_odom_(2, 0));
+    } else {
+      ROS_WARN("[]: kurwa");
+    }
 
+  }
+
+  double yaw = 0;
+  
   for (int i = 0; i < step; i++) {
-    ROS_INFO("[]: hui");
 
-    // going from left to right
-    /* nxt = Eigen::Vector3d(cur_odom_(0, 0), top, 2); */
-    /* goToPoint(cur_odom_, nxt, 4, new_traj_); */
-    /* cur_odom_(1, 0) = top; */
-    /* nxt(0, 0) += fov; */
-    /* goToPoint(cur_odom_, nxt, 4, new_traj_); */
-    /* cur_odom_(0, 0) += fov; */
-    /* nxt(1, 0) = bot; */
-    /* goToPoint(cur_odom_, nxt, 4, new_traj_); */
-    /* cur_odom_(1, 0) = bot; */
-    /* nxt(0, 0) += fov; */
-    /* goToPoint(cur_odom_, nxt, 4, new_traj_); */
-    /* cur_odom_(0, 0) += fov; */
-    /* break; */
-    // going from right to left
-    nxt = Eigen::Vector3d(cur_odom_(0, 0), top, 2);
-    goToPoint(cur_odom_, nxt, 4, new_traj_);
-    cur_odom_(1, 0) = top;
-    nxt(0, 0) -= fov;
-    goToPoint(cur_odom_, nxt, 4, new_traj_);
-    cur_odom_(0, 0) -= fov;
-    nxt(1, 0) = bot;
-    goToPoint(cur_odom_, nxt, 4, new_traj_);
-    cur_odom_(1, 0) = bot;
-    nxt(0, 0) -= fov;
-    goToPoint(cur_odom_, nxt, 4, new_traj_);
-    cur_odom_(0, 0) -= fov;
+    if (dir) {
+      Eigen::Vector3d angle_vector_ = Eigen::Vector3d(_x_max_, _y_min_,0) - Eigen::Vector3d(_x_min_, _y_min_,0);
+      yaw = atan2(angle_vector_(1), angle_vector_(0));
 
+      // going from left to right
+      nxt = Eigen::Vector3d(cur_odom_(0, 0), top, _height_);
+      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_,yaw);
+      cur_odom_(1, 0) = top;
+      nxt(0, 0) += fov;
+      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_,yaw);
+      cur_odom_(0, 0) += fov;
+      nxt(1, 0) = bot;
+      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_,yaw);
+      cur_odom_(1, 0) = bot;
+      nxt(0, 0) += fov;
+      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_,yaw);
+      cur_odom_(0, 0) += fov;
+      /* break; */
+    } else {
+      // going from right to left
+      Eigen::Vector3d angle_vector_ = Eigen::Vector3d(_x_min_, _y_min_,0) - Eigen::Vector3d(_x_max_, _y_min_,0);
+      yaw = atan2(angle_vector_(1), angle_vector_(0));
+      nxt = Eigen::Vector3d(cur_odom_(0, 0), top, _height_);
+      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_,yaw);
+      cur_odom_(1, 0) = top;
+      nxt(0, 0) -= fov;
+      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_,yaw);
+      cur_odom_(0, 0) -= fov;
+      nxt(1, 0) = bot;
+      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_,yaw);
+      cur_odom_(1, 0) = bot;
+      nxt(0, 0) -= fov;
+      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_,yaw);
+      cur_odom_(0, 0) -= fov;
+    }
   }
 
 
@@ -1906,7 +1932,7 @@ void BalloonCircleDestroy::scanArena() {
 
 /* goToPoint //{ */
 
-void BalloonCircleDestroy::goToPoint(Eigen::Vector3d p_, Eigen::Vector3d goal, double speed_, mrs_msgs::TrackerTrajectory& new_traj_) {
+void BalloonCircleDestroy::goToPoint(Eigen::Vector3d p_, Eigen::Vector3d goal, double speed_, mrs_msgs::TrackerTrajectory& new_traj_, double yaw) {
   ROS_INFO("[]: pizdec 0 x %f y %f z %f", p_(0, 0), p_(1, 0), p_(2, 0));
   ROS_INFO("[]: pizdec goal 0 x %f y %f z %f", goal(0, 0), goal(1, 0), goal(2, 0));
   double          sample_dist_ = speed_ * (_traj_time_ / _traj_len_);
@@ -1935,20 +1961,19 @@ void BalloonCircleDestroy::goToPoint(Eigen::Vector3d p_, Eigen::Vector3d goal, d
       diff_vector_ = cur_pos_ - goal;
 
       if ((int)diff_vector_.norm() <= 0) {
-        ROS_INFO("[BalloonCircleDestroy]: goToPoint returned %d ", (int)new_traj_.points.size());
-        ROS_WARN("[]: pizdec cur_pos_ 0 x %f y %f z %f", cur_pos_(0, 0), cur_pos_(1, 0), cur_pos_(2, 0));
+        /* ROS_INFO("[BalloonCircleDestroy]: goToPoint returned %d ", (int)new_traj_.points.size()); */
+        /* ROS_WARN("[]: pizdec cur_pos_ 0 x %f y %f z %f", cur_pos_(0, 0), cur_pos_(1, 0), cur_pos_(2, 0)); */
         cur_pos_ = goal;
         break;
       }
-      ROS_INFO("[]: dist is %f diff in dist is %f", dist_, diff_vector_.norm());
 
 
       p.x   = cur_pos_(0, 0);
       p.y   = cur_pos_(1, 0);
       p.z   = cur_pos_(2, 0);
-      p.yaw = getArenaHeading(cur_pos_);
+      p.yaw = yaw;
       if (!isPointInArena(p)) {
-        ROS_INFO("[]: pizdeeec cur_pos_ 0 x %f y %f z %f", cur_pos_(0, 0), cur_pos_(1, 0), cur_pos_(2, 0));
+        /* ROS_INFO("[]: pizdeeec cur_pos_ 0 x %f y %f z %f", cur_pos_(0, 0), cur_pos_(1, 0), cur_pos_(2, 0)); */
         return;
       }
 

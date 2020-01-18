@@ -361,7 +361,7 @@ private:
   bool                                isPointInArena(float x, float y, float z);
   bool                                isPointInArena(mrs_msgs::TrackerPoint p_);
   void                                scanArena();
-  void                                goToPoint(Eigen::Vector3d p_,Eigen::Vector3d goal, double speed_, mrs_msgs::TrackerTrajectory& new_traj_);
+  void                                goToPoint(Eigen::Vector3d p_,Eigen::Vector3d goal, double speed_, mrs_msgs::TrackerTrajectory& new_traj_, double yaw);
   bool                                comparePoints(mrs_msgs::TrackerPoint a, mrs_msgs::TrackerPoint b);
   std::vector<mrs_msgs::TrackerPoint> generateElipse();
   int                                 getElipseIndex(std::vector<mrs_msgs::TrackerPoint> elipse_);
