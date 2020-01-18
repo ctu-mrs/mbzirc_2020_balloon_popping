@@ -358,26 +358,20 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
 
     ROS_INFO_THROTTLE(0.5, "| ---------------- STATE MACHINE LOOP STATUS --------------- |");
     ROS_INFO_THROTTLE(0.5, "[State]: %s ", getStateName().c_str());
-    ROS_INFO_THROTTLE(0.5, "[IsTracking]: %d", is_tracking_);
-    ROS_INFO_THROTTLE(0.5, "[Planner Status]: %d", _planner_active_);
-    ROS_INFO_THROTTLE(0.5, "[Balloon cloud incoming]: %d", is_ballon_cloud_incoming_);
+    std::string tracker_status_ = is_tracking_ ? "active" : "not active";
+    ROS_INFO_THROTTLE(0.5, "[IsTracking]: %s", tracker_status_.c_str());
+    std::string planner_status_ = _planner_active_ ? "active" : "not active";
+    ROS_INFO_THROTTLE(0.5, "[Planner Status]: %s", planner_status_.c_str());
+    std::string balloon_status_ = is_ballon_cloud_incoming_ ? "incoming" : "not incoming";
+    ROS_INFO_THROTTLE(0.5, "[Balloon cloud incoming]: %s", balloon_status_.c_str());
     ROS_INFO_THROTTLE(0.5, "[Current Dist To ball]: %f ", (odom_vector_ - balloon_vector_).norm());
+    ROS_INFO_THROTTLE(0.5, "[Closest ball (PointCloud)]: x %f y %f z %f", balloon_closest_vector_(0, 0), balloon_closest_vector_(1, 0),
+                      balloon_closest_vector_(2, 0));
+    ROS_INFO_THROTTLE(0.5, "[Closest ball (KF)]: x %f  y %f z %f", balloon_vector_(0, 0), balloon_vector_(1, 0), balloon_vector_(2, 0));
     ROS_INFO_THROTTLE(0.5, "[Dist between KF and PCL vectors]: %f ", (balloon_vector_ - balloon_closest_vector_).norm());
-    /* ROS_INFO_THROTTLE(0.5, "[Is closest in forbidden]: %d ", pointInForbidden(balloon_closest_vector_)); */
-    ROS_INFO_THROTTLE(0.5, "[Closest ball (PointCloud)]: x %f ", balloon_closest_vector_(0, 0));
-    ROS_INFO_THROTTLE(0.5, "[Closest ball (PointCloud)]: y %f ", balloon_closest_vector_(1, 0));
-    ROS_INFO_THROTTLE(0.5, "[Closest ball (PointCloud)]: z %f ", balloon_closest_vector_(2, 0));
-    /* ROS_INFO_THROTTLE(0.5, "[Prev ball (PointCloud)]: x %f ", _prev_closest_(0, 0)); */
-    /* ROS_INFO_THROTTLE(0.5, "[Prev ball (PointCloud)]: y %f ", _prev_closest_(1, 0)); */
-    /* ROS_INFO_THROTTLE(0.5, "[Prev ball (PointCloud)]: z %f ", _prev_closest_(2, 0)); */
-    ROS_INFO_THROTTLE(0.5, "[Closest ball (KF)]: x %f ", balloon_vector_(0, 0));
-    ROS_INFO_THROTTLE(0.5, "[Closest ball (KF)]: y %f ", balloon_vector_(1, 0));
-    ROS_INFO_THROTTLE(0.5, "[Closest ball (KF)]: z %f ", balloon_vector_(2, 0));
 
     ROS_INFO_THROTTLE(0.5, "[KF reset tries]  %d ", _reset_count_);
     /* ROS_INFO_THROTTLE(0.5, "[Same balloon tries]  %d ", _balloon_try_count_); */
-    ROS_INFO_THROTTLE(0.5, "[MIN HEIGHT]: %f ", _min_height_);
-    ROS_INFO_THROTTLE(0.5, "[MAX HEIGHT]: %f ", _max_height_);
     ROS_INFO_THROTTLE(0.5, "[CUR HEIGHT]: %f ", odom_vector_(2, 0));
     ROS_INFO_THROTTLE(0.5, "[Cloud size]: %d ", int(balloon_pcl_processed_.size()));
 
@@ -1677,6 +1671,7 @@ void BalloonCircleDestroy::callbackDynamicReconfigure([[maybe_unused]] Config& c
     _dist_to_balloon_  = config.dist_to_balloon;
     _wait_for_ball_    = config.wait_for_ball;
     _vel_              = config.vel;
+    _vel_arena_        = config.arena_vel;
     _overshoot_offset_ = config.overshoot_offset;
     /* _x_min_ = config._x_min_; */
     /* _x_max_ = config._x_min_; */
@@ -1862,60 +1857,59 @@ void BalloonCircleDestroy::scanArena() {
   double bot                = _y_min_ + _arena_offset_;
   ROS_INFO("[]: step size %d", step);
   Eigen::Vector3d cur_odom_ = odom_vector_;
-  cur_odom_(2,0) = _height_;
+  cur_odom_(2, 0)           = _height_;
   Eigen::Vector3d nxt;
   ROS_INFO("[]: to left %f to right %f bool %d", cur_odom_(0, 0) - left, cur_odom_(0, 0) - right,
            std::abs(cur_odom_(0, 0) - left) > std::abs(cur_odom_(0, 0) - right));
 
   bool dir = std::abs(cur_odom_(0, 0) - left) > std::abs(cur_odom_(0, 0) - right);
-  if(!isPointInArena(cur_odom_(0,0),cur_odom_(1,0),cur_odom_(2,0))) {
-    if(cur_odom_(0,0) > left && cur_odom_(0,0) < right) {
+  if (!isPointInArena(cur_odom_(0, 0), cur_odom_(1, 0), cur_odom_(2, 0))) {
+    if (cur_odom_(0, 0) > left && cur_odom_(0, 0) < right) {
       ROS_INFO("[]: is outside from the left side x %f y %f z %f", cur_odom_(0, 0), cur_odom_(1, 0), cur_odom_(2, 0));
-    } else if (cur_odom_(0,0) >right && cur_odom_(0,0) < left)  {
+    } else if (cur_odom_(0, 0) > right && cur_odom_(0, 0) < left) {
       ROS_INFO("[]: is outside from the right side x %f y %f z %f", cur_odom_(0, 0), cur_odom_(1, 0), cur_odom_(2, 0));
     } else {
       ROS_WARN("[]: kurwa");
     }
-
   }
 
   double yaw = 0;
-  
+
   for (int i = 0; i < step; i++) {
 
     if (dir) {
-      Eigen::Vector3d angle_vector_ = Eigen::Vector3d(_x_max_, _y_min_,0) - Eigen::Vector3d(_x_min_, _y_min_,0);
-      yaw = atan2(angle_vector_(1), angle_vector_(0));
+      Eigen::Vector3d angle_vector_ = Eigen::Vector3d(_x_max_, _y_min_, 0) - Eigen::Vector3d(_x_min_, _y_min_, 0);
+      yaw                           = atan2(angle_vector_(1), angle_vector_(0));
 
       // going from left to right
       nxt = Eigen::Vector3d(cur_odom_(0, 0), top, _height_);
-      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_,yaw);
+      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, yaw);
       cur_odom_(1, 0) = top;
       nxt(0, 0) += fov;
-      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_,yaw);
+      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, yaw);
       cur_odom_(0, 0) += fov;
       nxt(1, 0) = bot;
-      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_,yaw);
+      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, yaw);
       cur_odom_(1, 0) = bot;
       nxt(0, 0) += fov;
-      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_,yaw);
+      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, yaw);
       cur_odom_(0, 0) += fov;
       /* break; */
     } else {
       // going from right to left
-      Eigen::Vector3d angle_vector_ = Eigen::Vector3d(_x_min_, _y_min_,0) - Eigen::Vector3d(_x_max_, _y_min_,0);
-      yaw = atan2(angle_vector_(1), angle_vector_(0));
-      nxt = Eigen::Vector3d(cur_odom_(0, 0), top, _height_);
-      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_,yaw);
+      Eigen::Vector3d angle_vector_ = Eigen::Vector3d(_x_min_, _y_min_, 0) - Eigen::Vector3d(_x_max_, _y_min_, 0);
+      yaw                           = atan2(angle_vector_(1), angle_vector_(0));
+      nxt                           = Eigen::Vector3d(cur_odom_(0, 0), top, _height_);
+      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, yaw);
       cur_odom_(1, 0) = top;
       nxt(0, 0) -= fov;
-      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_,yaw);
+      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, yaw);
       cur_odom_(0, 0) -= fov;
       nxt(1, 0) = bot;
-      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_,yaw);
+      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, yaw);
       cur_odom_(1, 0) = bot;
       nxt(0, 0) -= fov;
-      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_,yaw);
+      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, yaw);
       cur_odom_(0, 0) -= fov;
     }
   }
