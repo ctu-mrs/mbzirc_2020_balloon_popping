@@ -451,6 +451,8 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
           _state_                      = DESTROYING;
           _time_destroy_overshoot_set_ = ros::Time::now();
           ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
+        } else {
+            getCloseToBalloon(balloon_vector_, _dist_to_balloon_, _vel_);
         }
 
       } else if (!isBalloonVisible(balloon_vector_)) {
