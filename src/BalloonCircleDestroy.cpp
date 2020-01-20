@@ -381,9 +381,9 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
       if (is_ballon_cloud_incoming_) {
         _state_ = CHECKING_BALLOON;
       } else {
-        _state_    = GOING_AROUND;
-        _mpc_stop_ = false;
-        scanArena();
+        /* _state_    = GOING_AROUND; */
+        /* _mpc_stop_ = false; */
+        /* scanArena(); */
       }
       ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
       plannerStop();
