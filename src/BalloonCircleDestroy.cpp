@@ -446,9 +446,13 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
         }
 
       } else if (isBalloonVisible(balloon_vector_)) {
-        _state_                      = DESTROYING;
-        _time_destroy_overshoot_set_ = ros::Time::now();
-        ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
+
+        if (_is_destroy_enabled_) {
+          _state_                      = DESTROYING;
+          _time_destroy_overshoot_set_ = ros::Time::now();
+          ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
+        }
+
       } else if (!isBalloonVisible(balloon_vector_)) {
         _state_ = CHECKING_BALLOON;
         /* circleAroundBalloon(); */
@@ -456,10 +460,6 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
       }
 
     } else if (_state_ == DESTROYING) {
-
-      if (!_is_destroy_enabled_) {
-        return;
-      }
       if (balloonOutdated()) {
         _state_ = GOING_TO_BALLOON;
         if (ros::Time::now().toSec() - time_last_planner_reset_.toSec() < _wait_for_ball_) {
