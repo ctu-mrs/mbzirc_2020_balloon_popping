@@ -47,7 +47,6 @@ void BalloonCircleDestroy::onInit() {
   param_loader.load_param("wait_for_ball", _wait_for_ball_);
   param_loader.load_param("state_reset_time", _state_reset_time_);
 
-  param_loader.load_param("simulation", _simulation_);
   param_loader.load_param("yaw_offset", _yaw_offset_);
   param_loader.load_param("jerk", _jerk_);
   param_loader.load_param("acceleration", _acceleration_);
@@ -56,6 +55,7 @@ void BalloonCircleDestroy::onInit() {
   param_loader.load_param("rate/check_balloons", _rate_timer_check_balloons_);
   param_loader.load_param("rate/state_machine", _rate_timer_state_machine_);
   param_loader.load_param("rate/pub_rviz", _rate_time_publish_rviz_);
+  param_loader.load_param("rate/pub_status", _rate_time_publish_status_);
 
   param_loader.load_param("world_frame_id", world_frame_id_);
   param_loader.load_param("reset_tries", _reset_tries_);
@@ -98,9 +98,6 @@ void BalloonCircleDestroy::onInit() {
   // --------------------------------------------------------------
   /* subscribers //{ */
 
-  if (_simulation_) {
-    sub_odom_gt_ = nh.subscribe("odom_gt_in", 1, &BalloonCircleDestroy::callbackOdomGt, this, ros::TransportHints().tcpNoDelay());
-  }
   sub_odom_uav_     = nh.subscribe("odom_uav_in", 1, &BalloonCircleDestroy::callbackOdomUav, this, ros::TransportHints().tcpNoDelay());
   sub_tracker_diag_ = nh.subscribe("tracker_diagnostics_in", 1, &BalloonCircleDestroy::callbackTrackerDiag, this, ros::TransportHints().tcpNoDelay());
 
@@ -115,6 +112,7 @@ void BalloonCircleDestroy::onInit() {
   // | ----------------------- Publishers ----------------------- |
 
   rviz_pub_             = nh.advertise<visualization_msgs::MarkerArray>("rviz_out", 1);
+  status_pub_           = nh.advertise<std_msgs::String>("status_out", 1);
   publish_debug_points_ = nh.advertise<sensor_msgs::PointCloud>("balloon_points_out", 1);
 
   // | --------------- initialize service servers --------------- |
@@ -164,6 +162,7 @@ void BalloonCircleDestroy::onInit() {
   timer_state_machine_  = nh.createTimer(ros::Rate(_rate_timer_state_machine_), &BalloonCircleDestroy::callbackTimerStateMachine, this, false, true);
   timer_check_balloons_ = nh.createTimer(ros::Rate(_rate_timer_check_balloons_), &BalloonCircleDestroy::callbackTimerCheckBalloonPoints, this, false, true);
   timer_publish_rviz_   = nh.createTimer(ros::Rate(_rate_time_publish_rviz_), &BalloonCircleDestroy::callbackTimerPublishRviz, this, false, true);
+  timer_publish_status_ = nh.createTimer(ros::Rate(_rate_time_publish_status_), &BalloonCircleDestroy::callbackTimerPublishStatus, this, false, true);
 
 
   //}
@@ -452,7 +451,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
           _time_destroy_overshoot_set_ = ros::Time::now();
           ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
         } else {
-            getCloseToBalloon(balloon_vector_, _dist_to_balloon_, _vel_);
+          getCloseToBalloon(balloon_vector_, _dist_to_balloon_, _vel_);
         }
 
       } else if (!isBalloonVisible(balloon_vector_)) {
@@ -546,17 +545,6 @@ void BalloonCircleDestroy::callbackTimerCheckSubscribers([[maybe_unused]] const 
     }
   }
 
-  /* check whether ground truth pose msgs are coming */
-  if (_simulation_) {
-    if (!got_odom_gt_) {
-      ROS_WARN_THROTTLE(0.5, "Not received ground truth odom msg since node launch.");
-    } else {
-      if ((time_now - time_last_odom_gt_).toSec() > 1.0) {
-        ROS_WARN_THROTTLE(0.5, "Not received ground truth odom msg for %f sec.", (time_now - time_last_odom_gt_).toSec());
-      }
-    }
-  }
-
   /* check whether balloons msgs are coming */
   if (_planner_active_) {
     if (!got_balloon_point_) {
@@ -614,6 +602,31 @@ void BalloonCircleDestroy::callbackTimerCheckBalloonPoints([[maybe_unused]] cons
 }
 
 //}
+
+/* callbackTimerPublishStatus //{ */
+
+
+void BalloonCircleDestroy::callbackTimerPublishStatus([[maybe_unused]] const ros::TimerEvent& te) {
+
+  if (!is_initialized_) {
+    return;
+  }
+
+  std_msgs::String status_;
+
+  if (!_is_state_machine_active_) {
+
+    status_.data = "Not activated";
+    status_pub_.publish(status_);
+    return;
+  }
+
+  status_.data = getStateName().c_str();
+  status_pub_.publish(status_);
+}
+
+//}
+
 
 /* callbackTimerPublishRviz //{ */
 

@@ -4,16 +4,16 @@ rate:
   check_balloons: 20
   state_machine: 30
   pub_rviz: 30
+  pub_status: 15
 # defines area for drone to operate
 area:
-<<<<<<< HEAD
-  x_min: -15
-  x_max: 15
-  y_min: -13
-  y_max: -3
+  x_min: -10
+  x_max: 40
+  y_min: -10
+  y_max: 40
   z_min: 1
   z_max: 8
-  offset: 5
+  offset: 2
 # should the UAV land after destroying all balloons
 land_at_the_end: false
 #arena width
@@ -30,14 +30,10 @@ arena_center_x: 15
 arena_center_y: 20
 
 #height offset when killing the balloon
-<<<<<<< HEAD
-height_offset: 0.0
-=======
-height_offset: -0.2
->>>>>>> e446a0a5cc52939586b4851b45d40e78d0af7f34
+height_offset: 0.2
 #height where drone will operate ( up to this height )
 elips_height: 3
-height_min: 0.5
+height_min: 1
 height_max: 30
 #idle_time
 idle_time: 3
@@ -48,15 +44,16 @@ circle_accuracy: 100
 #velocity for goTo's
 vel: 2
 #velocity for attack
-vel_attack: 2
+vel_attack: 4
 #velocity of going around arena
-vel_arena: 1
+vel_arena: 4
 #minimal velocity of going around arena
 min_vel_arena: 0.5
 #distance to the balloon
-dist_to_balloon: 2.5
+dist_to_balloon: 2
 #distance to kill the balloon
 dist_to_overshoot: 2
+overshoot_offset: 0.3
 #trajectory length
 traj_len: 40
 #traj time
@@ -68,13 +65,13 @@ dist_acc: 0.5
 #time for waiting for KF reset
 wait_for_ball: 6
 #max time balloon not seen in PCL
-max_time_balloon: 3
+max_time_balloon: 6
 #how many time to reset the KF
 reset_tries: 2
 #time to land - max time of not observing any balloons at all 
 time_to_land: 120 # seconds 
 #world frame, all points are tran
-world_frame_id: "local_origin"
+world_frame_id: "uav60/local_origin"
 # number of trying to hit the same balloon
 balloon_tries: 2
 #forbidden area radius
@@ -82,3 +79,6 @@ forbidden_radius: 2
 # height tolerance
 height_tol: 0.5
 yaw_offset: -0.25
+acceleration: 3
+jerk: 10
+state_reset_time: 30

@@ -45,6 +45,8 @@
 #include <mrs_msgs/TrackerPoint.h>
 #include <mrs_msgs/MpcTrackerDiagnostics.h>
 #include <mrs_msgs/Float64Stamped.h>
+#include <std_msgs/String.h>
+
 /* custom helper functions from our library */
 #include <mrs_lib/ParamLoader.h>
 
@@ -271,6 +273,13 @@ private:
   ros::Publisher rviz_pub_;
   std::mutex     mutex_rviz_;
   int            _rate_time_publish_rviz_;
+// | ------------------ mrs status published ------------------ |
+  void           callbackTimerPublishStatus(const ros::TimerEvent& te);
+  ros::Timer     timer_publish_status_;
+  ros::Publisher status_pub_;
+  std::mutex     mutex_status_;
+  int            _rate_time_publish_status_;
+
 
   // | --------------------- service clients -------------------- |
 
