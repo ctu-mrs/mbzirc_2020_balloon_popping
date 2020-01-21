@@ -380,9 +380,9 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
       if (is_ballon_cloud_incoming_) {
         _state_ = CHECKING_BALLOON;
       } else {
-        /* _state_    = GOING_AROUND; */
-        /* _mpc_stop_ = false; */
-        /* scanArena(); */
+        _state_    = GOING_AROUND;
+        _mpc_stop_ = false;
+        scanArena();
       }
       ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
       plannerStop();
@@ -446,13 +446,14 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
 
       } else if (isBalloonVisible(balloon_vector_)) {
 
-        if (_is_destroy_enabled_) {
+        /* if (_is_destroy_enabled_) { */
           _state_                      = DESTROYING;
           _time_destroy_overshoot_set_ = ros::Time::now();
           ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
-        } else {
-          getCloseToBalloon(balloon_vector_, _dist_to_balloon_, _vel_);
-        }
+        /* } else { */
+        /*   ROS_WARN_THROTTLE(0.5,"[]: Flying by KF"); */
+        /*   getCloseToBalloon(balloon_closest_vector_, _dist_to_balloon_, _vel_); */
+        /* } */
 
       } else if (!isBalloonVisible(balloon_vector_)) {
         _state_ = CHECKING_BALLOON;
@@ -479,7 +480,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
       }
       if (isBalloonVisible(balloon_vector_)) {
         if (!balloon_closest_vector_.isZero()) {
-          getCloseToBalloon(balloon_vector_, -_dist_to_overshoot_, _vel_attack_);
+          getCloseToBalloon(balloon_vector_, _dist_to_balloon_, _vel_attack_);
         }
         return;
       } else {
@@ -626,7 +627,6 @@ void BalloonCircleDestroy::callbackTimerPublishStatus([[maybe_unused]] const ros
 }
 
 //}
-
 
 /* callbackTimerPublishRviz //{ */
 
@@ -1196,6 +1196,12 @@ void BalloonCircleDestroy::getCloseToBalloon(Eigen::Vector3d dest_, double close
   Eigen::Vector3d             diff_vector_;
   double                      angle_ = getBalloonHeading(dest_);
 
+  mrs_msgs::TrackerPoint p;
+  p.x   = cur_pos_(0, 0);
+  p.y   = cur_pos_(1, 0);
+  p.z   = cur_pos_(2, 0);
+  p.yaw = angle_;
+  new_traj_.points.push_back(p);
 
   while (cur_pos_(0, 0) != goal_(0, 0) && cur_pos_(1, 0) != goal_(1, 0) && cur_pos_(2, 0) != goal_(2, 0)) {
 

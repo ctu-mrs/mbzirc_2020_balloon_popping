@@ -28,7 +28,7 @@
       <!-- ROS parameters config file -->
       <rosparam file="$(find balloon_circle_destroy)/config/uav.yaml" />
 
-      <param name="world_frame_id" type="string" value="$(arg uav_name)/local_origin" />
+      <param name="world_frame_id" type="string" value="$(arg uav_name)/gps_origin" />
       <!-- Subscribers -->
       <remap from="~odom_uav_in" to="control_manager/cmd_odom" />
       <remap from="~tracker_diagnostics_in" to="control_manager/mpc_tracker/diagnostics" />

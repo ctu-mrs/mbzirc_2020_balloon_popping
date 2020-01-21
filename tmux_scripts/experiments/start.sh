@@ -28,11 +28,11 @@ input=(
   'Sensors' 'waitForRos; roslaunch mrs_general sensors.launch
 '
   'Tersus' 'waitForRos; roslaunch tersus_gps_driver test.launch'
-  'Control' 'waitForRos; roslaunch mrs_general core.launch config_uav_manager:=./custom_configs/uav_manager.yaml
+  'Control' 'waitForRos; roslaunch mrs_general core.launch config_uav_manager:=./custom_configs/uav_manager.yaml DEBUG:=true
 '
   'Vision' 'waitForRos; roslaunch balloon_filter localization_pipeline.launch
 '
-  'Destroy' 'waitForRos; roslaunch balloon_circle_destroy uav60.launch
+  'Destroy' 'waitForRos; roslaunch balloon_circle_destroy uav.launch
 '
   'MotorsOn' 'rosservice call /'"$UAV_NAME"'/control_manager/motors 1'
   'Takeoff' 'rosservice call /'"$UAV_NAME"'/uav_manager/takeoff'

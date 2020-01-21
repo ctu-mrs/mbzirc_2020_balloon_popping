@@ -7,13 +7,13 @@ rate:
   pub_status: 15
 # defines area for drone to operate
 area:
-  x_min: -10
-  x_max: 40
-  y_min: -10
-  y_max: 40
+  x_min: -20
+  x_max: 20
+  y_min: -15
+  y_max: 15
   z_min: 1
   z_max: 8
-  offset: 2
+  offset: 1
 # should the UAV land after destroying all balloons
 land_at_the_end: false
 #arena width
@@ -32,7 +32,7 @@ arena_center_y: 20
 #height offset when killing the balloon
 height_offset: 0.2
 #height where drone will operate ( up to this height )
-elips_height: 3
+elips_height: 5
 height_min: 1
 height_max: 30
 #idle_time
@@ -46,7 +46,7 @@ vel: 2
 #velocity for attack
 vel_attack: 4
 #velocity of going around arena
-vel_arena: 4
+vel_arena: 3
 #minimal velocity of going around arena
 min_vel_arena: 0.5
 #distance to the balloon
@@ -71,7 +71,7 @@ reset_tries: 2
 #time to land - max time of not observing any balloons at all 
 time_to_land: 120 # seconds 
 #world frame, all points are tran
-world_frame_id: "uav60/local_origin"
+world_frame_id: "uav60/gps_origin"
 # number of trying to hit the same balloon
 balloon_tries: 2
 #forbidden area radius
