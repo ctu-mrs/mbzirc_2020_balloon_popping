@@ -446,14 +446,9 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
 
       } else if (isBalloonVisible(balloon_vector_)) {
 
-        /* if (_is_destroy_enabled_) { */
           _state_                      = DESTROYING;
           _time_destroy_overshoot_set_ = ros::Time::now();
           ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
-        /* } else { */
-        /*   ROS_WARN_THROTTLE(0.5,"[]: Flying by KF"); */
-        /*   getCloseToBalloon(balloon_closest_vector_, _dist_to_balloon_, _vel_); */
-        /* } */
 
       } else if (!isBalloonVisible(balloon_vector_)) {
         _state_ = CHECKING_BALLOON;
@@ -1436,6 +1431,7 @@ void BalloonCircleDestroy::plannerActivate(Eigen::Vector3d estimation_, double r
 
   balloon_filter::StartEstimation        req_;
   balloon_filter::StartEstimationRequest rq_;
+  rq_.header.frame_id = world_frame_id_;
 
   geometry_msgs::Point p_;
   _estimate_vect_  = estimation_;
@@ -1445,6 +1441,7 @@ void BalloonCircleDestroy::plannerActivate(Eigen::Vector3d estimation_, double r
   rq_.inital_point = p_;
   rq_.radius       = radius_;
   req_.request     = rq_;
+  
   if (srv_planner_start_estimation_.call(req_)) {
     if (req_.response.success) {
       ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: Planner activated at point x %f. y %f. z %f", p_.x, p_.y, p_.z);
