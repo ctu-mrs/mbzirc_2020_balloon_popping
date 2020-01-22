@@ -75,7 +75,7 @@
 #include <pcl/common/transforms.h>
 
 //}
-/* typedef pcl::PointCloud<pcl::PointXYZ> PC; */
+typedef pcl::PointCloud<pcl::PointXYZ> PC;
 
 namespace balloon_circle_destroy
 {
@@ -148,6 +148,7 @@ private:
   double _acceleration_;
   double _state_reset_time_;
   double _overshoot_offset_;
+  double _dead_band_dist_;
 
 
   // | ------------------------- state machine params ------------------------- |
