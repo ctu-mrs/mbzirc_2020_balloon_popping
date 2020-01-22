@@ -75,7 +75,7 @@
 #include <pcl/common/transforms.h>
 
 //}
-typedef pcl::PointCloud<pcl::PointXYZ> PC;
+/* typedef pcl::PointCloud<pcl::PointXYZ> PC; */
 
 namespace balloon_circle_destroy
 {
@@ -186,7 +186,6 @@ private:
   bool                                _is_going_around_;
   ros::Time                           _last_time_balloon_seen_;
   double                              _arena_offset_;
-  std::vector<mrs_msgs::TrackerPoint> _arena_elipse_;
   ros::Time                           _time_destroy_overshoot_set_;
 
 
@@ -350,11 +349,6 @@ private:
   /* Support Functions //{ */
 
   void                                getCloseToBalloon(Eigen::Vector3d dest_, double dist, double speed_);
-  void                                circleAroundBalloon();
-  void                                getAngleToBalloon();
-  void                                generateTrajectory();
-  void                                goAroundArena(double angle_);
-  void                                goToChosenBalloon();
   double                              getBalloonHeading(Eigen::Vector3d dest_);
   double                              getArenaHeading(Eigen::Vector3d p_);
   std::string                         getStateName();
@@ -371,9 +365,6 @@ private:
   bool                                isPointInArena(mrs_msgs::TrackerPoint p_);
   void                                scanArena();
   void                                goToPoint(Eigen::Vector3d p_,Eigen::Vector3d goal, double speed_, mrs_msgs::TrackerTrajectory& new_traj_, double yaw);
-  bool                                comparePoints(mrs_msgs::TrackerPoint a, mrs_msgs::TrackerPoint b);
-  std::vector<mrs_msgs::TrackerPoint> generateElipse();
-  int                                 getElipseIndex(std::vector<mrs_msgs::TrackerPoint> elipse_);
   //}
 };
 //}
