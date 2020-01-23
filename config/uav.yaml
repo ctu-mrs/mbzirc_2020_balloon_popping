@@ -7,10 +7,10 @@ rate:
   pub_status: 15
 # defines area for drone to operate
 area:
-  x_min: -20
-  x_max: 20
-  y_min: -15
-  y_max: 15
+  x_min: 0
+  x_max: 40
+  y_min: 0
+  y_max: 80
   z_min: 1
   z_max: 8
   offset: 1
@@ -30,7 +30,7 @@ arena_center_x: 15
 arena_center_y: 20
 
 #height offset when killing the balloon
-height_offset: 0.2
+height_offset: 0.0
 #height where drone will operate ( up to this height )
 elips_height: 5
 height_min: 1
@@ -53,7 +53,7 @@ min_vel_arena: 0.5
 dist_to_balloon: 2
 #distance to kill the balloon
 dist_to_overshoot: 2
-overshoot_offset: 0.3
+overshoot_offset: 0.0
 #trajectory length
 traj_len: 40
 #traj time
@@ -71,14 +71,13 @@ reset_tries: 2
 #time to land - max time of not observing any balloons at all 
 time_to_land: 120 # seconds 
 #world frame, all points are tran
-world_frame_id: "uav60/gps_origin"
 # number of trying to hit the same balloon
 balloon_tries: 2
 #forbidden area radius
 forbidden_radius: 2
 # height tolerance
 height_tol: 0.5
-yaw_offset: -0.25
+yaw_offset: 0
 acceleration: 3
 jerk: 10
 state_reset_time: 30

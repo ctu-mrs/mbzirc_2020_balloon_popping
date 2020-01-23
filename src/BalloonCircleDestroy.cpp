@@ -392,12 +392,14 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
         ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
       }
       balloon_closest_vector_ = getClosestBalloon();
-      if (balloon_closest_vector_(2, 0) < _z_min_) {
-        return;
+      if(!isBalloonVisible(balloon_closest_vector_)) {
+          ROS_WARN_THROTTLE(1.0, "[]: balloon is not visible, search again");
+          return;
+      } else {
+        _state_ = GOING_TO_BALLOON;
+        plannerActivate(balloon_closest_vector_, _dist_error_);
+        ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
       }
-      _state_ = GOING_TO_BALLOON;
-      plannerActivate(balloon_closest_vector_, _dist_error_);
-      ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
     } else if (_state_ == GOING_TO_BALLOON) {
       if (is_idling_) {
         return;
@@ -419,11 +421,11 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
                                          true);  // the last boolean argument makes the timer run only once
         }
 
-      } else if (isBalloonVisible(balloon_vector_)) {
+      } else if (isBalloonVisible(balloon_vector_) && _planner_active_) {
 
-          _state_                      = DESTROYING;
-          _time_destroy_overshoot_set_ = ros::Time::now();
-          ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
+        _state_                      = DESTROYING;
+        _time_destroy_overshoot_set_ = ros::Time::now();
+        ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
 
       } else if (!isBalloonVisible(balloon_vector_)) {
         _state_ = CHECKING_BALLOON;
@@ -432,7 +434,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
 
     } else if (_state_ == DESTROYING) {
       if (balloonOutdated()) {
-        _state_ = GOING_TO_BALLOON;
+        _state_ = CHECKING_BALLOON;
         if (ros::Time::now().toSec() - time_last_planner_reset_.toSec() < _wait_for_ball_) {
           return;
         }
@@ -1215,7 +1217,7 @@ void BalloonCircleDestroy::plannerActivate(Eigen::Vector3d estimation_, double r
   rq_.inital_point = p_;
   rq_.radius       = radius_;
   req_.request     = rq_;
-  
+
   if (srv_planner_start_estimation_.call(req_)) {
     if (req_.response.success) {
       ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: Planner activated at point x %f. y %f. z %f", p_.x, p_.y, p_.z);
@@ -1477,9 +1479,9 @@ bool BalloonCircleDestroy::droneStop() {
 
 //}
 
-/* isBaloonVisible //{ */
+/* isBalloonVisible //{ */
 
-bool BalloonCircleDestroy::isBalloonVisible(Eigen::Vector3d baloon_) {
+bool BalloonCircleDestroy::isBalloonVisible(Eigen::Vector3d balloon_) {
 
   double          dist_;
   Eigen::Vector3d ball_vect_;
@@ -1493,7 +1495,7 @@ bool BalloonCircleDestroy::isBalloonVisible(Eigen::Vector3d baloon_) {
 
       ball_vect_ = balloon_pcl_processed_.at(i);
 
-      dist_ = (baloon_ - ball_vect_).norm();
+      dist_ = (balloon_ - ball_vect_).norm();
       if (dist_ < _dist_error_ + _dist_acc_) {
         res_                     = true;
         _last_time_balloon_seen_ = ros::Time::now();
@@ -1502,6 +1504,8 @@ bool BalloonCircleDestroy::isBalloonVisible(Eigen::Vector3d baloon_) {
         }
       }
     }
+    std::string res_s = res_ ? "visible" : "not visible";
+    ROS_INFO_THROTTLE(1.0,"[]: balloon at x %f y %f z %f is %s",balloon_(0,0), balloon_(1,0), balloon_(2,0), res_s.c_str()  );
     if (_state_ == GOING_TO_BALLOON && res_ == false && ros::Time::now().toSec() - _last_time_balloon_seen_.toSec() < _max_time_balloon_) {
       res_ = true;
     }
