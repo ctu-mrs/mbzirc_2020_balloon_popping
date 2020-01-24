@@ -209,7 +209,18 @@ void BalloonCircleDestroy::callbackBalloonPoint(const geometry_msgs::PoseWithCov
     std::scoped_lock lock(mutex_is_balloon_incoming_);
 
     balloon_point_  = *msg;
-    balloon_vector_ = eigen_vect(balloon_point_.pose.pose.position.x, balloon_point_.pose.pose.position.y, balloon_point_.pose.pose.position.z);
+    geometry_msgs::Point p_;
+    /* const std::string& to_frame, const ros::Time& stamp, */
+    /*                                               geometry_msgs::Point& point_out */
+    try {
+
+      if (transformPointFromWorld(balloon_point_.pose.pose.position, balloon_point_.header.frame_id, msg->header.stamp, p_)) {
+        balloon_vector_ = eigen_vect(p_.x, p_.y, p_.z);
+      }
+    }
+    catch (tf2::ExtrapolationException e) {
+      return;
+    }
   }
 
   time_last_balloon_point_ = ros::Time::now();
