@@ -76,6 +76,7 @@
 
 //}
 typedef pcl::PointCloud<pcl::PointXYZ> PC;
+typedef Eigen::Vector3d                eigen_vect;
 
 namespace balloon_circle_destroy
 {
@@ -84,8 +85,8 @@ namespace balloon_circle_destroy
 
 struct Forbidden_t
 {
-  Eigen::Vector3d vect_;
-  double          r;
+  eigen_vect vect_;
+  double     r;
 };
 //}
 
@@ -104,7 +105,6 @@ private:
   ros::Timer timer_idling_;
   /* ros parameters */
   double _idle_time_;
-  void   callbackTimerIdling(const ros::TimerEvent& te);
   bool   _simulation_;
   float  _height_;
   float  _min_height_;
@@ -131,14 +131,13 @@ private:
   double _y_max_;
   double _z_min_;
   double _z_max_;
-  double _arena_center_x_;  
-  double _arena_center_y_;  
+  double _arena_center_x_;
+  double _arena_center_y_;
   double _jerk_;
   double _acceleration_;
   double _state_reset_time_;
   double _overshoot_offset_;
-  double _dead_band_dist_;
-
+  double _dead_band_factor_;
 
 
   // | ------------------------- state machine params ------------------------- |
@@ -169,9 +168,9 @@ private:
   int                      _cur_arena_width_;
   int                      _cur_arena_length_;
   std::vector<Forbidden_t> _forb_vect_;
-  Eigen::Vector3d          _estimate_vect_;
-  Eigen::Vector3d          _prev_closest_;
-  Eigen::Vector3d          _last_goal_;
+  eigen_vect               _estimate_vect_;
+  eigen_vect               _prev_closest_;
+  eigen_vect               _last_goal_;
   bool                     _last_goal_reached_;
   int                      _balloon_try_count_;
   bool                     _is_going_around_;
@@ -198,7 +197,7 @@ private:
   void               callbackOdomUav(const nav_msgs::OdometryConstPtr& msg);
   ros::Subscriber    sub_odom_uav_;
   nav_msgs::Odometry odom_uav_;
-  Eigen::Vector3d    odom_vector_;
+  eigen_vect         odom_vector_;
   bool               got_odom_uav_ = false;
   std::mutex         mutex_odom_uav_;
   ros::Time          time_last_odom_uav_;
@@ -222,32 +221,34 @@ private:
   void                                     callbackBalloonPoint(const geometry_msgs::PoseWithCovarianceStampedConstPtr& msg);
   ros::Subscriber                          sub_balloon_point_;
   geometry_msgs::PoseWithCovarianceStamped balloon_point_;
-  Eigen::Vector3d                          balloon_vector_;
+  eigen_vect                               balloon_vector_;
   bool                                     got_balloon_point_  = false;
   bool                                     is_ballon_incoming_ = false;
   std::mutex                               mutex_is_balloon_incoming_;
   ros::Time                                time_last_balloon_point_;
 
-  void                         callbackBalloonPointCloud(const sensor_msgs::PointCloud2ConstPtr& msg);
-  ros::Subscriber              sub_balloon_point_cloud_;
-  std::vector<Eigen::Vector3d> balloon_pcl_processed_;
-  Eigen::Vector3d              balloon_closest_vector_;
-  bool                         got_balloon_point_cloud_  = false;
-  bool                         is_ballon_cloud_incoming_ = false;
-  std::mutex                   mutex_is_balloon_cloud_incoming_;
-  ros::Time                    time_last_balloon_cloud_point_;
+  void                    callbackBalloonPointCloud(const sensor_msgs::PointCloud2ConstPtr& msg);
+  ros::Subscriber         sub_balloon_point_cloud_;
+  std::vector<eigen_vect> balloon_pcl_processed_;
+  eigen_vect              balloon_closest_vector_;
+  bool                    got_balloon_point_cloud_  = false;
+  bool                    is_ballon_cloud_incoming_ = false;
+  std::mutex              mutex_is_balloon_cloud_incoming_;
+  ros::Time               time_last_balloon_cloud_point_;
 
 
   // | --------------------- timer callbacks -------------------- |
+
+  void callbackTimerIdling(const ros::TimerEvent& te);
 
   void       callbackTimerCheckSubscribers(const ros::TimerEvent& te);
   ros::Timer timer_check_subscribers_;
   int        _rate_timer_check_subscribers_;
 
 
-  void           callbackTimerCheckBalloonPoints(const ros::TimerEvent& te);
-  ros::Timer     timer_check_balloons_;
-  int            _rate_timer_check_balloons_;
+  void       callbackTimerCheckBalloonPoints(const ros::TimerEvent& te);
+  ros::Timer timer_check_balloons_;
+  int        _rate_timer_check_balloons_;
 
   void       callbackTimerStateMachine(const ros::TimerEvent& te);
   ros::Timer timer_state_machine_;
@@ -295,11 +296,11 @@ private:
 
   // | -------------------- Planner functions ------------------- |
 
-  void plannerActivate(Eigen::Vector3d estimation, double radius_);
+  void plannerActivate(eigen_vect estimation, double radius_);
   void plannerStop();
   bool plannerReset();
-  void addForbidden(Eigen::Vector3d forb, double radius);
-  bool checkIfForbidden(Eigen::Vector3d forb, double raidus);
+  void addForbidden(eigen_vect forb, double radius);
+  bool checkIfForbidden(eigen_vect forb, double raidus);
 
 
   // | ---------------- service server callbacks ---------------- |
@@ -335,25 +336,25 @@ private:
 
   /* Support Functions //{ */
 
-  void                       getCloseToBalloon(Eigen::Vector3d dest_, double dist, double speed_);
-  double                     getBalloonHeading(Eigen::Vector3d dest_);
-  double                     getArenaHeading(Eigen::Vector3d p_);
+  void                       getCloseToBalloon(eigen_vect dest_, double dist, double speed_);
+  double                     getBalloonHeading(eigen_vect dest_);
+  double                     getArenaHeading(eigen_vect p_);
   std::string                getStateName();
-  bool                       pointInForbidden(Eigen::Vector3d vect_);
+  bool                       pointInForbidden(eigen_vect vect_);
   void                       checkForbidden();
-  void                       addToForbidden(Eigen::Vector3d dest_);
+  void                       addToForbidden(eigen_vect dest_);
   bool                       balloonOutdated();
   void                       landAndEnd();
-  Eigen::Vector3d            getClosestBalloon();
-  bool                       isBalloonVisible(Eigen::Vector3d balloon_);
+  eigen_vect                 getClosestBalloon();
+  bool                       isBalloonVisible(eigen_vect balloon_);
   bool                       droneStop();
   visualization_msgs::Marker fillArenaBounds(int id_);
   bool                       isPointInArena(float x, float y, float z);
   bool                       isPointInArena(mrs_msgs::TrackerPoint p_);
   void                       scanArena();
-  void                       goToPoint(Eigen::Vector3d p_, Eigen::Vector3d goal, double speed_, mrs_msgs::TrackerTrajectory& new_traj_, double yaw);
+  void                       goToPoint(eigen_vect p_, eigen_vect goal, double speed_, mrs_msgs::TrackerTrajectory& new_traj_, double yaw);
   void                       goToHeight(double height_, double speed_);
-  Eigen::Vector3d            deadBand(Eigen::Vector3d referecnce_);
+  eigen_vect                 deadBand(eigen_vect target_,eigen_vect reference_);
   //}
 };
 //}

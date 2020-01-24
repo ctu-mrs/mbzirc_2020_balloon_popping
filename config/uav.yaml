@@ -55,8 +55,13 @@ time_to_land: 120 # seconds
 balloon_tries: 2
 #forbidden area radius
 forbidden_radius: 2
-# height tolerance
+# height tolerance of the arena
 height_tol: 0.5
-acceleration: 3
-jerk: 10
-state_reset_time: 30
+# not used
+# acceleration: 3
+# jerk: 10
+# state_reset_time: 30
+# dead band distance factor
+dead_band_factor: 1.5
+
+

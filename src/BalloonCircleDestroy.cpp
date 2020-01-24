@@ -44,9 +44,6 @@ void BalloonCircleDestroy::onInit() {
   param_loader.load_param("wait_for_ball", _wait_for_ball_);
   param_loader.load_param("state_reset_time", _state_reset_time_);
 
-  param_loader.load_param("jerk", _jerk_);
-  param_loader.load_param("acceleration", _acceleration_);
-
   param_loader.load_param("rate/check_subscribers", _rate_timer_check_subscribers_);
   param_loader.load_param("rate/check_balloons", _rate_timer_check_balloons_);
   param_loader.load_param("rate/state_machine", _rate_timer_state_machine_);
@@ -67,6 +64,7 @@ void BalloonCircleDestroy::onInit() {
   param_loader.load_param("area/z_min", _z_min_);
   param_loader.load_param("area/z_max", _z_max_);
   param_loader.load_param("area/offset", _arena_offset_);
+  param_loader.load_param("dead_band_factor", _dead_band_factor_);
 
   ROS_INFO_STREAM_ONCE("[BalloonCircleDestroy]: params loaded");
   _cur_arena_width_ = std::abs(_x_max_ - _x_min_) - _arena_offset_;
@@ -185,7 +183,7 @@ void BalloonCircleDestroy::callbackOdomUav(const nav_msgs::OdometryConstPtr& msg
 
       if (transformPointFromWorld(odom_uav_.pose.pose.position, odom_uav_.header.frame_id, msg->header.stamp, p_)) {
 
-        odom_vector_ = Eigen::Vector3d(p_.x, p_.y, p_.z);
+        odom_vector_ = eigen_vect(p_.x, p_.y, p_.z);
       }
     }
     catch (tf2::ExtrapolationException e) {
@@ -211,7 +209,7 @@ void BalloonCircleDestroy::callbackBalloonPoint(const geometry_msgs::PoseWithCov
     std::scoped_lock lock(mutex_is_balloon_incoming_);
 
     balloon_point_  = *msg;
-    balloon_vector_ = Eigen::Vector3d(balloon_point_.pose.pose.position.x, balloon_point_.pose.pose.position.y, balloon_point_.pose.pose.position.z);
+    balloon_vector_ = eigen_vect(balloon_point_.pose.pose.position.x, balloon_point_.pose.pose.position.y, balloon_point_.pose.pose.position.z);
   }
 
   time_last_balloon_point_ = ros::Time::now();
@@ -244,7 +242,7 @@ void BalloonCircleDestroy::callbackBalloonPointCloud(const sensor_msgs::PointClo
       const auto y_ = cloud_out.points.at(i).y;
       const auto z_ = cloud_out.points.at(i).z;
       if (isPointInArena(x_, y_, z_)) {
-        balloon_pcl_processed_.push_back(Eigen::Vector3d(x_, y_, z_));
+        balloon_pcl_processed_.push_back(eigen_vect(x_, y_, z_));
       }
       /* } else { */
       /*   ROS_INFO("[]: out of arena: [%f, %f, %f]", x_, y_, z_); */
@@ -355,7 +353,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
       }
       ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
       plannerStop();
-      balloon_vector_ = Eigen::Vector3d();
+      balloon_vector_ = eigen_vect();
       _reset_count_   = 0;
       return;
     } else if (_state_ == GOING_AROUND) {
@@ -1011,27 +1009,30 @@ bool BalloonCircleDestroy::callbackToggleDestroy([[maybe_unused]] std_srvs::Trig
 
 /* getCloseToBalloon //{ */
 
-void BalloonCircleDestroy::getCloseToBalloon(Eigen::Vector3d dest_, double close_dist_, double speed_) {
+void BalloonCircleDestroy::getCloseToBalloon(eigen_vect dest_, double close_dist_, double speed_) {
 
   if (_state_ == DESTROYING) {
     dest_(2, 0) += _overshoot_offset_;
   }
+  
 
   double          sample_dist_ = speed_ * (_traj_time_ / _traj_len_);
-  Eigen::Vector3d dir_vector_  = dest_ - odom_vector_;
 
+  // getting new reference
+  eigen_vect dir_vector_  = dest_ - odom_vector_;
   double          dist_   = dir_vector_.norm();
   double          normed_ = (dist_ - close_dist_) / dist_;
-  Eigen::Vector3d goal_   = normed_ * dir_vector_ + odom_vector_;
+  eigen_vect goal_   = normed_ * dir_vector_ + odom_vector_;
 
+  goal_ = deadBand(dest_, goal_); 
   dir_vector_ = goal_ - odom_vector_;
 
   dist_       = dir_vector_.norm();
   dir_vector_ = (dir_vector_ / dist_) * sample_dist_;
 
-  Eigen::Vector3d             cur_pos_ = odom_vector_;
+  eigen_vect             cur_pos_ = odom_vector_;
   mrs_msgs::TrackerTrajectory new_traj_;
-  Eigen::Vector3d             diff_vector_;
+  eigen_vect             diff_vector_;
   double                      angle_ = getBalloonHeading(dest_);
 
   mrs_msgs::TrackerPoint p;
@@ -1041,8 +1042,8 @@ void BalloonCircleDestroy::getCloseToBalloon(Eigen::Vector3d dest_, double close
   p.yaw = angle_;
   new_traj_.points.push_back(p);
 
-  ROS_INFO("[]: cur_pos_ 0 x %f y %f z %f", cur_pos_(0, 0), cur_pos_(1, 0), cur_pos_(2, 0));
-  ROS_INFO("[]: goal_ 0 x %f y %f z %f", goal_(0, 0), goal_(1, 0), goal_(2, 0));
+  /* ROS_INFO("[]: cur_pos_ 0 x %f y %f z %f", cur_pos_(0, 0), cur_pos_(1, 0), cur_pos_(2, 0)); */
+  /* ROS_INFO("[]: goal_ 0 x %f y %f z %f", goal_(0, 0), goal_(1, 0), goal_(2, 0)); */
   while (cur_pos_(0, 0) != goal_(0, 0) && cur_pos_(1, 0) != goal_(1, 0) && cur_pos_(2, 0) != goal_(2, 0)) {
 
     for (int i = 0; i < _traj_len_; i++) {
@@ -1061,7 +1062,7 @@ void BalloonCircleDestroy::getCloseToBalloon(Eigen::Vector3d dest_, double close
       p.yaw = angle_;
 
 
-      ROS_INFO("[]: cur_pos_ 0 x %f y %f z %f", cur_pos_(0, 0), cur_pos_(1, 0), cur_pos_(2, 0));
+      /* ROS_INFO("[]: cur_pos_ 0 x %f y %f z %f", cur_pos_(0, 0), cur_pos_(1, 0), cur_pos_(2, 0)); */
       new_traj_.points.push_back(p);
     }
   }
@@ -1084,9 +1085,9 @@ void BalloonCircleDestroy::getCloseToBalloon(Eigen::Vector3d dest_, double close
 
 /* getBalloonHeading //{ */
 
-double BalloonCircleDestroy::getBalloonHeading(Eigen::Vector3d dest_) {
+double BalloonCircleDestroy::getBalloonHeading(eigen_vect dest_) {
 
-  Eigen::Vector3d angle_vector_ = dest_ - odom_vector_;
+  eigen_vect angle_vector_ = dest_ - odom_vector_;
 
   return atan2(angle_vector_(1), angle_vector_(0));
 }
@@ -1097,9 +1098,9 @@ double BalloonCircleDestroy::getBalloonHeading(Eigen::Vector3d dest_) {
 /* getArenaHeading //{ */
 
 
-double BalloonCircleDestroy::getArenaHeading(Eigen::Vector3d p_) {
+double BalloonCircleDestroy::getArenaHeading(eigen_vect p_) {
 
-  Eigen::Vector3d angle_vector_ = Eigen::Vector3d(_arena_center_x_, _arena_center_y_, _height_) - p_;
+  eigen_vect angle_vector_ = eigen_vect(_arena_center_x_, _arena_center_y_, _height_) - p_;
   double          theta_        = atan2(angle_vector_(1), angle_vector_(0)) + M_PI;
   return theta_;
 }
@@ -1138,7 +1139,7 @@ std::string BalloonCircleDestroy::getStateName() {
 
 /* plannerActivate //{ */
 
-void BalloonCircleDestroy::plannerActivate(Eigen::Vector3d estimation_, double radius_) {
+void BalloonCircleDestroy::plannerActivate(eigen_vect estimation_, double radius_) {
   if (_planner_active_) {
     ROS_WARN_THROTTLE(0.5, "[BalloonCircleDestroyi]: planner is already active, I'll reset it ");
     /* plannerReset(); */
@@ -1240,7 +1241,7 @@ bool BalloonCircleDestroy::plannerReset() {
 
 /* addForbidden //{ */
 
-void BalloonCircleDestroy::addForbidden(Eigen::Vector3d forb_, double radius_) {
+void BalloonCircleDestroy::addForbidden(eigen_vect forb_, double radius_) {
 
   bool is_in_rad_ = false;
   for (int i = 0; i < int(_forb_vect_.size()); i++) {
@@ -1282,7 +1283,7 @@ void BalloonCircleDestroy::addForbidden(Eigen::Vector3d forb_, double radius_) {
 
 /* pointInForbidden //{ */
 
-bool BalloonCircleDestroy::pointInForbidden(Eigen::Vector3d vect_) {
+bool BalloonCircleDestroy::pointInForbidden(eigen_vect vect_) {
   for (uint i = 0; i < _forb_vect_.size(); i++) {
     if ((vect_ - _forb_vect_[i].vect_).norm() < _forb_vect_[i].r) {
       return true;
@@ -1312,7 +1313,7 @@ void BalloonCircleDestroy::checkForbidden() {
 
 /* addToForbidden //{ */
 
-void BalloonCircleDestroy::addToForbidden(Eigen::Vector3d dest_) {
+void BalloonCircleDestroy::addToForbidden(eigen_vect dest_) {
   Forbidden_t forb_;
   forb_.vect_ = dest_;
   forb_.r     = _forbidden_radius_;
@@ -1344,12 +1345,12 @@ void BalloonCircleDestroy::landAndEnd() {
 
 /* getClosestBalloon //{ */
 
-Eigen::Vector3d BalloonCircleDestroy::getClosestBalloon() {
+eigen_vect BalloonCircleDestroy::getClosestBalloon() {
 
   double          dist_;
   double          best_dist_ = 999;
-  Eigen::Vector3d ball_vect_;
-  Eigen::Vector3d ball_vect_best_;
+  eigen_vect ball_vect_;
+  eigen_vect ball_vect_best_;
   {
     std::scoped_lock lock_uav(mutex_odom_uav_);
     std::scoped_lock lock_balloon(mutex_is_balloon_cloud_incoming_);
@@ -1421,10 +1422,10 @@ bool BalloonCircleDestroy::droneStop() {
 
 /* isBalloonVisible //{ */
 
-bool BalloonCircleDestroy::isBalloonVisible(Eigen::Vector3d balloon_) {
+bool BalloonCircleDestroy::isBalloonVisible(eigen_vect balloon_) {
 
   double          dist_;
-  Eigen::Vector3d ball_vect_;
+  eigen_vect ball_vect_;
   bool            res_ = false;
   {
     std::scoped_lock lock_uav(mutex_odom_uav_);
@@ -1569,9 +1570,9 @@ void BalloonCircleDestroy::scanArena() {
   double top                = _y_max_ - _arena_offset_;
   double bot                = _y_min_ + _arena_offset_;
   ROS_INFO("[]: step size %d", step);
-  Eigen::Vector3d cur_odom_ = odom_vector_;
+  eigen_vect cur_odom_ = odom_vector_;
   cur_odom_(2, 0)           = _height_;
-  Eigen::Vector3d nxt;
+  eigen_vect nxt;
   ROS_INFO("[]: to left %f to right %f bool %d", cur_odom_(0, 0) - left, cur_odom_(0, 0) - right,
            std::abs(cur_odom_(0, 0) - left) > std::abs(cur_odom_(0, 0) - right));
 
@@ -1591,11 +1592,11 @@ void BalloonCircleDestroy::scanArena() {
   for (int i = 0; i < step; i++) {
 
     if (dir) {
-      Eigen::Vector3d angle_vector_ = Eigen::Vector3d(_x_max_, _y_min_, 0) - Eigen::Vector3d(_x_min_, _y_min_, 0);
+      eigen_vect angle_vector_ = eigen_vect(_x_max_, _y_min_, 0) - eigen_vect(_x_min_, _y_min_, 0);
       yaw                           = atan2(angle_vector_(1), angle_vector_(0));
 
       // going from left to right
-      nxt = Eigen::Vector3d(cur_odom_(0, 0), top, _height_);
+      nxt = eigen_vect(cur_odom_(0, 0), top, _height_);
       goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, yaw);
       cur_odom_(1, 0) = top;
       nxt(0, 0) += fov;
@@ -1610,9 +1611,9 @@ void BalloonCircleDestroy::scanArena() {
       /* break; */
     } else {
       // going from right to left
-      Eigen::Vector3d angle_vector_ = Eigen::Vector3d(_x_min_, _y_min_, 0) - Eigen::Vector3d(_x_max_, _y_min_, 0);
+      eigen_vect angle_vector_ = eigen_vect(_x_min_, _y_min_, 0) - eigen_vect(_x_max_, _y_min_, 0);
       yaw                           = atan2(angle_vector_(1), angle_vector_(0));
-      nxt                           = Eigen::Vector3d(cur_odom_(0, 0), top, _height_);
+      nxt                           = eigen_vect(cur_odom_(0, 0), top, _height_);
       goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, yaw);
       cur_odom_(1, 0) = top;
       nxt(0, 0) -= fov;
@@ -1639,15 +1640,15 @@ void BalloonCircleDestroy::scanArena() {
 
 /* goToPoint //{ */
 
-void BalloonCircleDestroy::goToPoint(Eigen::Vector3d p_, Eigen::Vector3d goal, double speed_, mrs_msgs::TrackerTrajectory& new_traj_, double yaw) {
+void BalloonCircleDestroy::goToPoint(eigen_vect p_, eigen_vect goal, double speed_, mrs_msgs::TrackerTrajectory& new_traj_, double yaw) {
   ROS_INFO("[]: pizdec 0 x %f y %f z %f", p_(0, 0), p_(1, 0), p_(2, 0));
   ROS_INFO("[]: pizdec goal 0 x %f y %f z %f", goal(0, 0), goal(1, 0), goal(2, 0));
   double          sample_dist_ = speed_ * (_traj_time_ / _traj_len_);
-  Eigen::Vector3d dir_vector_  = goal - p_;
+  eigen_vect dir_vector_  = goal - p_;
 
   double dist_   = dir_vector_.norm();
   double normed_ = (dist_) / dist_;
-  /* Eigen::Vector3d goal_   = normed_ * dir_vector_ + goal; */
+  /* eigen_vect goal_   = normed_ * dir_vector_ + goal; */
   /* /1* goal_(2, 0)             = p_(2, 0); *1/ */
 
   /* dir_vector_ = p_ - goal; */
@@ -1655,8 +1656,8 @@ void BalloonCircleDestroy::goToPoint(Eigen::Vector3d p_, Eigen::Vector3d goal, d
   /* dist_       = dir_vector_.norm(); */
   dir_vector_ = (dir_vector_ / dist_) * sample_dist_;
 
-  Eigen::Vector3d cur_pos_ = p_;
-  Eigen::Vector3d diff_vector_;
+  eigen_vect cur_pos_ = p_;
+  eigen_vect diff_vector_;
   mrs_msgs::TrackerPoint p;
 
   while (cur_pos_(0, 0) != goal(0, 0) || cur_pos_(1, 0) != goal(1, 0)) {
@@ -1698,19 +1699,19 @@ void BalloonCircleDestroy::goToPoint(Eigen::Vector3d p_, Eigen::Vector3d goal, d
 
 void BalloonCircleDestroy::goToHeight(double height_, double speed_) {
   double          sample_dist_ = speed_ * (_traj_time_ / _traj_len_);
-  Eigen::Vector3d goal = odom_vector_;
+  eigen_vect goal = odom_vector_;
   goal(2,0) = height_;
 
   ROS_INFO("[]: height 0 x %f y %f z %f", odom_vector_(0, 0), odom_vector_(1, 0), odom_vector_(2, 0));
   ROS_INFO("[]: height goal 0 x %f y %f z %f", goal(0, 0), goal(1, 0), goal(2, 0));
-  Eigen::Vector3d dir_vector_  = goal - odom_vector_;
+  eigen_vect dir_vector_  = goal - odom_vector_;
 
   double dist_   = dir_vector_.norm();
   dir_vector_ = (dir_vector_) / dist_;
   dir_vector_(2,0) = 0.1;
 
-  Eigen::Vector3d cur_pos_ = odom_vector_;
-  Eigen::Vector3d diff_vector_;
+  eigen_vect cur_pos_ = odom_vector_;
+  eigen_vect diff_vector_;
   mrs_msgs::TrackerTrajectory new_traj_;
 
   mrs_msgs::TrackerPoint p;
@@ -1765,6 +1766,29 @@ void BalloonCircleDestroy::goToHeight(double height_, double speed_) {
 }
 
 //}
+
+eigen_vect BalloonCircleDestroy::deadBand(eigen_vect target_,eigen_vect reference_) {
+  eigen_vect dir_vector_ = target_ - odom_vector_;
+  dir_vector_ = dir_vector_/dir_vector_.norm();
+  
+  // project the reference onto the plane between the target and the drone
+  Eigen::Matrix3Xd projector = dir_vector_ * dir_vector_.transpose();
+  eigen_vect  projection = projector * (reference_ - odom_vector_);
+
+  double factor_ = projection.norm();
+  ROS_INFO("[]:  factor of dead band is %f ref factor is %f",_dead_band_factor_, factor_ );
+  ROS_INFO("[]: odom  x %f y %f z %f", odom_vector_(0, 0), odom_vector_(1, 0), odom_vector_(2, 0));
+  ROS_INFO("[]: reference  x %f y %f z %f", reference_(0, 0), reference_(1, 0), reference_(2, 0));
+
+  if (std::abs(factor_) < _dead_band_factor_) {
+    Eigen::Matrix3Xd eye;
+    eye.setIdentity(3,3);
+    Eigen::Matrix3Xd plane_projector = eye  - projector;
+    reference_ = plane_projector * (reference_ - odom_vector_) + odom_vector_;
+    ROS_INFO("[]: DEAD BAND");
+  }
+  return reference_;
+}
 
 // | --------------------- transformations -------------------- |
 /* getTransform() method //{ */
