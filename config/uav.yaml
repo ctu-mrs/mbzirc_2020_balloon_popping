@@ -2,6 +2,7 @@
 rate:
   check_subscribers: 1 # [Hz]
   check_balloons: 20
+  check_emulation: 10
   state_machine: 30
   pub_rviz: 30
   pub_status: 15
@@ -56,7 +57,7 @@ time_to_land: 120 # seconds
 # number of trying to hit the same balloon
 balloon_tries: 2
 #forbidden area radius
-forbidden_radius: 2
+forbidden_radius: 4.5
 # height tolerance of the arena
 height_tol: 0.5
 # not used
@@ -65,5 +66,8 @@ height_tol: 0.5
 # state_reset_time: 30
 # dead band distance factor
 dead_band_factor: 1.5
+# timer to count the balloon as popped - for emulation
+time_to_emulate: 4
+
 
 

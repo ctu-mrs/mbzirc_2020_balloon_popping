@@ -139,6 +139,7 @@ private:
   double _state_reset_time_;
   double _overshoot_offset_;
   double _dead_band_factor_;
+  double _time_to_emulate_;
 
 
   // | ------------------------- state machine params ------------------------- |
@@ -246,7 +247,6 @@ private:
   ros::Timer timer_check_subscribers_;
   int        _rate_timer_check_subscribers_;
 
-
   void       callbackTimerCheckBalloonPoints(const ros::TimerEvent& te);
   ros::Timer timer_check_balloons_;
   int        _rate_timer_check_balloons_;
@@ -254,6 +254,12 @@ private:
   void       callbackTimerStateMachine(const ros::TimerEvent& te);
   ros::Timer timer_state_machine_;
   int        _rate_timer_state_machine_;
+
+  void       callbackTimerCheckEmulation(const ros::TimerEvent& te);
+  ros::Timer timer_check_emulation_;
+  int        _rate_timer_check_emulation_;
+  ros::Time  destroy_start_time_;
+  bool       timer_set_ = false;
 
   // | ------------------ visulization markers ------------------ |
   void           callbackTimerPublishRviz(const ros::TimerEvent& te);
@@ -337,25 +343,24 @@ private:
 
   /* Support Functions //{ */
 
-  void                       getCloseToBalloon(eigen_vect dest_, double dist, double speed_);
-  double                     getBalloonHeading(eigen_vect dest_);
-  double                     getArenaHeading(eigen_vect p_);
-  std::string                getStateName();
-  bool                       pointInForbidden(eigen_vect vect_);
-  void                       checkForbidden();
-  void                       addToForbidden(eigen_vect dest_);
-  bool                       balloonOutdated();
-  void                       landAndEnd();
-  eigen_vect                 getClosestBalloon();
-  bool                       isBalloonVisible(eigen_vect balloon_);
-  bool                       droneStop();
-  visualization_msgs::Marker fillArenaBounds(int id_);
-  bool                       isPointInArena(float x, float y, float z);
-  bool                       isPointInArena(mrs_msgs::TrackerPoint p_);
-  void                       scanArena();
-  void                       goToPoint(eigen_vect p_, eigen_vect goal, double speed_, mrs_msgs::TrackerTrajectory& new_traj_, double yaw);
-  void                       goToHeight(double height_, double speed_);
-  eigen_vect                 deadBand(eigen_vect target_,eigen_vect reference_);
+  void        getCloseToBalloon(eigen_vect dest_, double dist, double speed_);
+  double      getBalloonHeading(eigen_vect dest_);
+  double      getArenaHeading(eigen_vect p_);
+  std::string getStateName();
+  bool        pointInForbidden(eigen_vect vect_);
+  void        checkForbidden();
+  void        addToForbidden(eigen_vect dest_);
+  bool        balloonOutdated();
+  void        landAndEnd();
+  eigen_vect  getClosestBalloon();
+  bool        isBalloonVisible(eigen_vect balloon_);
+  bool        droneStop();
+  bool        isPointInArena(float x, float y, float z);
+  bool        isPointInArena(mrs_msgs::TrackerPoint p_);
+  void        scanArena();
+  void        goToPoint(eigen_vect p_, eigen_vect goal, double speed_, mrs_msgs::TrackerTrajectory& new_traj_, double yaw);
+  void        goToHeight(double height_, double speed_);
+  eigen_vect  deadBand(eigen_vect target_, eigen_vect reference_);
   //}
 };
 //}
