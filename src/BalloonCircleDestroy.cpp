@@ -476,7 +476,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
       }
       if (isBalloonVisible(balloon_vector_)) {
         if (!balloon_closest_vector_.isZero()) {
-          getCloseToBalloon(balloon_vector_, -_dist_to_overshoot_, _vel_attack_);
+          getCloseToBalloon(balloon_vector_, _dist_to_balloon_, _vel_attack_);
         }
         return;
       } else {

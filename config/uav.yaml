@@ -21,7 +21,7 @@ height_offset: 0.0
 #height where drone will operate ( up to this height )
 elips_height: 5
 #idle_time
-idle_time: 3
+idle_time: 1.5
 #velocity for goTo's
 vel: 2
 #velocity for attack
