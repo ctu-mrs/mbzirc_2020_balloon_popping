@@ -404,6 +404,16 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
       if (is_idling_) {
         return;
       }
+      if(!_planner_active_){
+        plannerActivate(balloon_closest_vector_, _dist_error_);
+      }
+      if (isBalloonVisible(balloon_vector_) && _planner_active_) {
+
+        _state_                      = DESTROYING;
+        _time_destroy_overshoot_set_ = ros::Time::now();
+        ROS_WARN_THROTTLE(0.5, "[StateMachine]: KF works, STATE RESET TO %s", getStateName().c_str());
+
+      }
 
       if ((odom_vector_ - balloon_closest_vector_).norm() > _dist_to_balloon_ + _dist_acc_) {
 
@@ -421,13 +431,8 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
                                          true);  // the last boolean argument makes the timer run only once
         }
 
-      } else if (isBalloonVisible(balloon_vector_) && _planner_active_) {
-
-        _state_                      = DESTROYING;
-        _time_destroy_overshoot_set_ = ros::Time::now();
-        ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
-
       } else if (!isBalloonVisible(balloon_vector_)) {
+
         _state_ = CHECKING_BALLOON;
         ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
       }
@@ -1767,6 +1772,8 @@ void BalloonCircleDestroy::goToHeight(double height_, double speed_) {
 
 //}
 
+/* deadBand //{ */
+
 eigen_vect BalloonCircleDestroy::deadBand(eigen_vect target_,eigen_vect reference_) {
   eigen_vect dir_vector_ = target_ - odom_vector_;
   dir_vector_ = dir_vector_/dir_vector_.norm();
@@ -1789,6 +1796,8 @@ eigen_vect BalloonCircleDestroy::deadBand(eigen_vect target_,eigen_vect referenc
   }
   return reference_;
 }
+
+//}
 
 // | --------------------- transformations -------------------- |
 /* getTransform() method //{ */
