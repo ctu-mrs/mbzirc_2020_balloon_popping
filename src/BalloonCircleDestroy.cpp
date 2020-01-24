@@ -1794,16 +1794,16 @@ eigen_vect BalloonCircleDestroy::deadBand(eigen_vect target_,eigen_vect referenc
   eigen_vect  projection = projector * (reference_ - odom_vector_);
 
   double factor_ = projection.norm();
-  ROS_INFO("[]:  factor of dead band is %f ref factor is %f",_dead_band_factor_, factor_ );
-  ROS_INFO("[]: odom  x %f y %f z %f", odom_vector_(0, 0), odom_vector_(1, 0), odom_vector_(2, 0));
-  ROS_INFO("[]: reference  x %f y %f z %f", reference_(0, 0), reference_(1, 0), reference_(2, 0));
+  /* ROS_INFO("[]:  factor of dead band is %f ref factor is %f",_dead_band_factor_, factor_ ); */
+  /* ROS_INFO("[]: odom  x %f y %f z %f", odom_vector_(0, 0), odom_vector_(1, 0), odom_vector_(2, 0)); */
+  /* ROS_INFO("[]: reference  x %f y %f z %f", reference_(0, 0), reference_(1, 0), reference_(2, 0)); */
 
   if (std::abs(factor_) < _dead_band_factor_) {
     Eigen::Matrix3Xd eye;
     eye.setIdentity(3,3);
     Eigen::Matrix3Xd plane_projector = eye  - projector;
     reference_ = plane_projector * (reference_ - odom_vector_) + odom_vector_;
-    ROS_INFO("[]: DEAD BAND");
+    /* ROS_INFO("[]: DEAD BAND"); */
   }
   return reference_;
 }
