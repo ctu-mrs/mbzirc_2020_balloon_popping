@@ -106,25 +106,13 @@ private:
   double _idle_time_;
   void   callbackTimerIdling(const ros::TimerEvent& te);
   bool   _simulation_;
-  int    _arena_width_;
-  int    _min_arena_width_;
-  int    _arena_length_;
-  int    _min_arena_length_;
-  int    _arena_accuracy_;
-  int    _min_arena_accuracy_;
-  int    _arena_area_;
-  double _arena_center_x_;
-  double _arena_center_y_;
   float  _height_;
   float  _min_height_;
   float  _max_height_;
   float  _height_tol_;
-  double _circle_radius_;
-  int    _circle_accuracy_;
   double _vel_;
   double _vel_attack_;
   double _vel_arena_;
-  double _vel_arena_min_;
   double _dist_to_balloon_;
   double _dist_acc_;
   double _dist_to_overshoot_;
@@ -143,12 +131,14 @@ private:
   double _y_max_;
   double _z_min_;
   double _z_max_;
-  double _yaw_offset_;
+  double _arena_center_x_;  
+  double _arena_center_y_;  
   double _jerk_;
   double _acceleration_;
   double _state_reset_time_;
   double _overshoot_offset_;
   double _dead_band_dist_;
+
 
 
   // | ------------------------- state machine params ------------------------- |
@@ -257,7 +247,6 @@ private:
 
   void           callbackTimerCheckBalloonPoints(const ros::TimerEvent& te);
   ros::Timer     timer_check_balloons_;
-  ros::Publisher publish_debug_points_;
   int            _rate_timer_check_balloons_;
 
   void       callbackTimerStateMachine(const ros::TimerEvent& te);
@@ -363,6 +352,7 @@ private:
   bool                       isPointInArena(mrs_msgs::TrackerPoint p_);
   void                       scanArena();
   void                       goToPoint(Eigen::Vector3d p_, Eigen::Vector3d goal, double speed_, mrs_msgs::TrackerTrajectory& new_traj_, double yaw);
+  void                       goToHeight(double height_, double speed_);
   Eigen::Vector3d            deadBand(Eigen::Vector3d referecnce_);
   //}
 };

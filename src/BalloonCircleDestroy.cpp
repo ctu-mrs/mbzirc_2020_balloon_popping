@@ -32,8 +32,6 @@ void BalloonCircleDestroy::onInit() {
   param_loader.load_param("height_max", _max_height_);
   param_loader.load_param("height_tol", _height_tol_);
   param_loader.load_param("idle_time", _idle_time_);
-  param_loader.load_param("circling_radius", _circle_radius_);
-  param_loader.load_param("circle_accuracy", _circle_accuracy_);
   param_loader.load_param("traj_time", _traj_time_);
   param_loader.load_param("traj_len", _traj_len_);
   param_loader.load_param("dist_to_balloon", _dist_to_balloon_);
@@ -42,12 +40,10 @@ void BalloonCircleDestroy::onInit() {
   param_loader.load_param("vel", _vel_);
   param_loader.load_param("vel_attack", _vel_attack_);
   param_loader.load_param("vel_arena", _vel_arena_);
-  param_loader.load_param("min_vel_arena", _vel_arena_min_);
   param_loader.load_param("dist_error", _dist_error_);
   param_loader.load_param("wait_for_ball", _wait_for_ball_);
   param_loader.load_param("state_reset_time", _state_reset_time_);
 
-  param_loader.load_param("yaw_offset", _yaw_offset_);
   param_loader.load_param("jerk", _jerk_);
   param_loader.load_param("acceleration", _acceleration_);
 
@@ -112,12 +108,10 @@ void BalloonCircleDestroy::onInit() {
 
   rviz_pub_             = nh.advertise<visualization_msgs::MarkerArray>("rviz_out", 1);
   status_pub_           = nh.advertise<std_msgs::String>("status_out", 1);
-  publish_debug_points_ = nh.advertise<sensor_msgs::PointCloud>("balloon_points_out", 1);
 
   // | --------------- initialize service servers --------------- |
   /*  server services //{ */
 
-  srv_server_circle_around_       = nh.advertiseService("circle_around", &BalloonCircleDestroy::callbackCircleAround, this);
   srv_server_start_state_machine_ = nh.advertiseService("start_state_machine", &BalloonCircleDestroy::callbackStartStateMachine, this);
   srv_server_stop_state_machine_  = nh.advertiseService("stop_state_machine", &BalloonCircleDestroy::callbackStartStateMachine, this);
   srv_server_toggle_destroy_      = nh.advertiseService("toggle_destroy", &BalloonCircleDestroy::callbackToggleDestroy, this);
@@ -322,6 +316,7 @@ void BalloonCircleDestroy::callbackTimerIdling([[maybe_unused]] const ros::Timer
 //* callbackTimerStateMachine //{ */
 
 void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros::TimerEvent& te) {
+
   if (!_is_state_machine_active_) {
     return;
   }
@@ -357,7 +352,6 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
       } else {
         _state_    = GOING_AROUND;
         _mpc_stop_ = false;
-        scanArena();
       }
       ROS_WARN_THROTTLE(0.5, "[StateMachine]: STATE RESET TO %s", getStateName().c_str());
       plannerStop();
@@ -377,8 +371,16 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
         timer_idling_ = nh.createTimer(ros::Duration(_idle_time_), &BalloonCircleDestroy::callbackTimerIdling, this,
                                        true);  // the last boolean argument makes the timer run only once
       } else {
+
         if (!is_tracking_ && !is_idling_) {
-          scanArena();
+
+          if (odom_vector_(2,0) < _height_ - _height_tol_) {
+              ROS_INFO("[]: Height is %f  compared to %f",odom_vector_(2,0),_height_ - _height_tol_  );
+              ROS_WARN_THROTTLE(0.5, "[StateMachine]: height is not correct, ascend");
+              goToHeight(_height_, _vel_);
+          } else {
+            scanArena();
+          }
         }
       }
       return;
@@ -952,58 +954,6 @@ void BalloonCircleDestroy::callbackTimerPublishRviz([[maybe_unused]] const ros::
 
 //}
 
-/* callbackCircleAround //{ */
-
-bool BalloonCircleDestroy::callbackCircleAround([[maybe_unused]] std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res) {
-  if (!is_initialized_) {
-    res.success = false;
-    res.message = "Circle Destroyer isn't initialized";
-
-    ROS_WARN("[BalloonCircleDestroy]: couldn't start circling, I am not initialized ");
-
-    return true;
-  }
-  ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: Start circling, circle radius %f", _circle_radius_);
-  getCloseToBalloon(balloon_vector_, _dist_to_balloon_, _vel_);
-
-
-  mrs_msgs::TrackerTrajectory new_trj_;
-  new_trj_.header.frame_id = world_frame_id_;
-  new_trj_.header.stamp    = ros::Time::now();
-  new_trj_.fly_now         = true;
-  new_trj_.loop            = false;
-  new_trj_.use_yaw         = true;
-  double iterat            = M_PI / (_circle_accuracy_ / 2);
-  double angle             = 0;
-
-  for (int i = 0; i < _circle_accuracy_; i++) {
-    mrs_msgs::TrackerPoint point;
-    point.x   = balloon_vector_(0, 0) + cos(angle) * _circle_radius_;
-    point.y   = balloon_vector_(1, 0) + sin(angle) * _circle_radius_;
-    point.z   = balloon_vector_(2, 0);
-    point.yaw = angle + M_PI;
-    angle += iterat;
-
-    new_trj_.points.push_back(point);
-  }
-
-
-  ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroyer]: publishing trajectory ");
-  mrs_msgs::TrackerTrajectorySrv req_;
-  req_.request.trajectory_msg = new_trj_;
-
-  srv_client_trajectory_.call(req_);
-
-
-  res.success = req_.response.success;
-  res.message = req_.response.message;
-  ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: Result of circle service %d ", res.success);
-  is_tracking_ = true;
-  return res.success;
-}
-
-//}
-
 /* callbackStartStateMachine //{ */
 
 
@@ -1012,7 +962,7 @@ bool BalloonCircleDestroy::callbackStartStateMachine([[maybe_unused]] std_srvs::
   if (!is_initialized_) {
     res.success = false;
     res.message = "Can't trigger service, not initialized";
-    ROS_WARN_THROTTLE(0.5, "[BalloonCircleDestroy]: Could'nt call the service, not inited yet");
+    ROS_WARN_THROTTLE(0.5, "[BalloonCircleDestroy]: Couldn't call the service, not inited yet");
 
     return false;
   }
@@ -1040,7 +990,7 @@ bool BalloonCircleDestroy::callbackToggleDestroy([[maybe_unused]] std_srvs::Trig
   if (!is_initialized_) {
     res.success = false;
     res.message = "Can't trigger service, not initialized";
-    ROS_WARN_THROTTLE(0.5, "[BalloonCircleDestroy]: Could'nt call the service, not inited yet");
+    ROS_WARN_THROTTLE(0.5, "[BalloonCircleDestroy]: Couldn't call the service, not inited yet");
 
     return false;
   }
@@ -1156,11 +1106,6 @@ double BalloonCircleDestroy::getArenaHeading(Eigen::Vector3d p_) {
 
   Eigen::Vector3d angle_vector_ = Eigen::Vector3d(_arena_center_x_, _arena_center_y_, _height_) - p_;
   double          theta_        = atan2(angle_vector_(1), angle_vector_(0)) + M_PI;
-
-  /* ROS_INFO_THROTTLE(0.5, "[]: theta_ %f", theta_); */
-  /* if(theta_ < 0) { */
-  /*   theta_+=2*M_PI; */
-  /* } */
   return theta_;
 }
 
@@ -1706,7 +1651,7 @@ void BalloonCircleDestroy::goToPoint(Eigen::Vector3d p_, Eigen::Vector3d goal, d
   Eigen::Vector3d dir_vector_  = goal - p_;
 
   double dist_   = dir_vector_.norm();
-  double normed_ = (dist_ - _arena_offset_) / dist_;
+  double normed_ = (dist_) / dist_;
   /* Eigen::Vector3d goal_   = normed_ * dir_vector_ + goal; */
   /* /1* goal_(2, 0)             = p_(2, 0); *1/ */
 
@@ -1717,6 +1662,7 @@ void BalloonCircleDestroy::goToPoint(Eigen::Vector3d p_, Eigen::Vector3d goal, d
 
   Eigen::Vector3d cur_pos_ = p_;
   Eigen::Vector3d diff_vector_;
+  mrs_msgs::TrackerPoint p;
 
   while (cur_pos_(0, 0) != goal(0, 0) || cur_pos_(1, 0) != goal(1, 0)) {
 
@@ -1749,6 +1695,78 @@ void BalloonCircleDestroy::goToPoint(Eigen::Vector3d p_, Eigen::Vector3d goal, d
     }
   }
   ROS_INFO("[BalloonCircleDestroy]: goToPoint returned %d ", (int)new_traj_.points.size());
+}
+
+//}
+
+/* goToHeight //{ */
+
+void BalloonCircleDestroy::goToHeight(double height_, double speed_) {
+  double          sample_dist_ = speed_ * (_traj_time_ / _traj_len_);
+  Eigen::Vector3d goal = odom_vector_;
+  goal(2,0) = height_;
+
+  ROS_INFO("[]: height 0 x %f y %f z %f", odom_vector_(0, 0), odom_vector_(1, 0), odom_vector_(2, 0));
+  ROS_INFO("[]: height goal 0 x %f y %f z %f", goal(0, 0), goal(1, 0), goal(2, 0));
+  Eigen::Vector3d dir_vector_  = goal - odom_vector_;
+
+  double dist_   = dir_vector_.norm();
+  dir_vector_ = (dir_vector_) / dist_;
+  dir_vector_(2,0) = 0.1;
+
+  Eigen::Vector3d cur_pos_ = odom_vector_;
+  Eigen::Vector3d diff_vector_;
+  mrs_msgs::TrackerTrajectory new_traj_;
+
+  mrs_msgs::TrackerPoint p;
+  p.x   = cur_pos_(0, 0);
+  p.y   = cur_pos_(1, 0);
+  p.z   = cur_pos_(2, 0);
+  new_traj_.points.push_back(p);
+  bool end_ = false;
+  while (cur_pos_(2,0) != goal(2, 0)) {
+
+    if(end_) {
+      break;
+    }
+
+    for (int i = 0; i < _traj_len_; i++) {
+      mrs_msgs::TrackerPoint p;
+      cur_pos_ = cur_pos_ + dir_vector_;
+
+      diff_vector_ = cur_pos_ - goal;
+
+      if (diff_vector_.norm() >= dist_) {
+        cur_pos_ = goal;
+        break;
+      } 
+
+      p.x   = cur_pos_(0, 0);
+      p.y   = cur_pos_(1, 0);
+      p.z   = cur_pos_(2, 0);
+      /* if (!isPointInArena(p)) { */
+      /*   break; */
+      /* } */
+
+
+      new_traj_.points.push_back(p);
+      if(cur_pos_(2,0) > height_) { 
+        end_ = true;
+        break;
+      }
+    }
+  }
+  ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: Ascend  trajectory ready size: %d ", (int)new_traj_.points.size());
+  new_traj_.header.frame_id = world_frame_id_;
+  new_traj_.header.stamp    = ros::Time::now();
+  new_traj_.fly_now         = true;
+  new_traj_.use_yaw         = false;
+  new_traj_.loop            = false;
+  mrs_msgs::TrackerTrajectorySrv req_;
+  ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: calling service to get higher");
+  req_.request.trajectory_msg = new_traj_;
+  srv_client_trajectory_.call(req_);
+  is_tracking_ = true;
 }
 
 //}
