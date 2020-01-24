@@ -41,7 +41,9 @@ traj_time: 8
 #distance error to target the closest balloon so, it will be compared to current chosen via KF + dist_error 
 dist_error: 4.5
 #dist accurace to be as close to the balloon
-dist_acc: 0.5
+dist_acc: 2.5
+# distance to activate KF flying
+dist_kf_activation: 3.5
 #time for waiting for KF reset
 wait_for_ball: 6
 #max time balloon not seen in PCL

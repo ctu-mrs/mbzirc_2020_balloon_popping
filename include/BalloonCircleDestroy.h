@@ -116,6 +116,7 @@ private:
   double _dist_to_balloon_;
   double _dist_acc_;
   double _dist_to_overshoot_;
+  double _dist_kf_activation_;
   double _traj_len_;
   double _traj_time_;
   double _dist_error_;
