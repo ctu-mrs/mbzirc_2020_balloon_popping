@@ -1023,14 +1023,6 @@ void BalloonCircleDestroy::getCloseToBalloon(Eigen::Vector3d dest_, double close
   double          dist_   = dir_vector_.norm();
   double          normed_ = (dist_ - close_dist_) / dist_;
   Eigen::Vector3d goal_   = normed_ * dir_vector_ + odom_vector_;
-  if (dest_(2, 0) < _min_height_) {
-    goal_(2, 0) = _min_height_ + _height_offset_;
-  }
-  if (dest_(2, 0) > _max_height_) {
-    goal_(2, 0) = _max_height_ + _height_offset_;
-  } else {
-    goal_(2, 0) = dest_(2, 0);
-  }
 
   dir_vector_ = goal_ - odom_vector_;
 
@@ -1049,6 +1041,8 @@ void BalloonCircleDestroy::getCloseToBalloon(Eigen::Vector3d dest_, double close
   p.yaw = angle_;
   new_traj_.points.push_back(p);
 
+  ROS_INFO("[]: cur_pos_ 0 x %f y %f z %f", cur_pos_(0, 0), cur_pos_(1, 0), cur_pos_(2, 0));
+  ROS_INFO("[]: goal_ 0 x %f y %f z %f", goal_(0, 0), goal_(1, 0), goal_(2, 0));
   while (cur_pos_(0, 0) != goal_(0, 0) && cur_pos_(1, 0) != goal_(1, 0) && cur_pos_(2, 0) != goal_(2, 0)) {
 
     for (int i = 0; i < _traj_len_; i++) {
@@ -1067,6 +1061,7 @@ void BalloonCircleDestroy::getCloseToBalloon(Eigen::Vector3d dest_, double close
       p.yaw = angle_;
 
 
+      ROS_INFO("[]: cur_pos_ 0 x %f y %f z %f", cur_pos_(0, 0), cur_pos_(1, 0), cur_pos_(2, 0));
       new_traj_.points.push_back(p);
     }
   }
