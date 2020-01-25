@@ -298,6 +298,8 @@ private:
   ros::ServiceClient srv_planner_add_zone_;
   bool               _planner_zone_added_;
 
+  ros::ServiceClient srv_planner_reset_zones_;
+  bool               _planner_reset_zones_;
 
   ros::Time time_last_planner_reset_;
 
@@ -323,6 +325,10 @@ private:
 
   bool               callbackToggleDestroy(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res);
   ros::ServiceServer srv_server_toggle_destroy_;
+
+  bool               callbackResetZones(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res);
+  ros::ServiceServer srv_server_reset_zones_;
+
 
   // | ------------------- dynamic reconfigure ------------------ |
   /* dynamic server //{ */

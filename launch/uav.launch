@@ -39,6 +39,7 @@
 
       <!-- Service servers -->
       <remap from="~circle_around" to="~circle_around" />
+      <remap from="~reset_forbidden_zones" to="~reset_forbidden_zones" />
       <!-- Service clients -->
       <remap from="~trajectory_srv" to="control_manager/mpc_tracker/set_trajectory" />
       <remap from="~land_out" to="uav_manager/land" />
@@ -47,6 +48,7 @@
       <remap from="~start_estimation" to="balloon_filter/start_estimation" />
       <remap from="~stop_estimation" to="balloon_filter/stop_estimation" />
       <remap from="~add_zone" to="balloon_filter/add_exclusion_zone" />
+      <remap from="~reset_zones" to="balloon_filter/reset_exclusion_zones" />
 
     </node>
 

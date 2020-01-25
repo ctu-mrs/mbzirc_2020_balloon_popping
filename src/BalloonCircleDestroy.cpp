@@ -116,6 +116,7 @@ void BalloonCircleDestroy::onInit() {
   srv_server_start_state_machine_ = nh.advertiseService("start_state_machine", &BalloonCircleDestroy::callbackStartStateMachine, this);
   srv_server_stop_state_machine_  = nh.advertiseService("stop_state_machine", &BalloonCircleDestroy::callbackStartStateMachine, this);
   srv_server_toggle_destroy_      = nh.advertiseService("toggle_destroy", &BalloonCircleDestroy::callbackToggleDestroy, this);
+  srv_server_reset_zones_         = nh.advertiseService("reset_forbidden_zones", &BalloonCircleDestroy::callbackResetZones, this);
 
 
   //}
@@ -130,6 +131,7 @@ void BalloonCircleDestroy::onInit() {
   srv_planner_start_estimation_ = nh.serviceClient<balloon_filter::StartEstimation>("start_estimation");
   srv_planner_stop_estimation_  = nh.serviceClient<std_srvs::Trigger>("stop_estimation");
   srv_planner_add_zone_         = nh.serviceClient<balloon_filter::AddExclusionZone>("add_zone");
+  srv_planner_reset_zones_      = nh.serviceClient<std_srvs::Trigger>("reset_zones");
 
   time_last_planner_reset_ = ros::Time::now();
 
@@ -383,16 +385,14 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
         timer_idling_ = nh.createTimer(ros::Duration(_idle_time_), &BalloonCircleDestroy::callbackTimerIdling, this,
                                        true);  // the last boolean argument makes the timer run only once
       } else {
-
+        if (odom_vector_(2, 0) < _height_ - _height_tol_) {
+          ROS_INFO("[]: Height is %f  compared to %f", odom_vector_(2, 0), _height_ - _height_tol_);
+          ROS_WARN_THROTTLE(0.5, "[StateMachine]: height is not correct, ascend");
+          goToHeight(_height_, _vel_);
+        }
         if (!is_tracking_ && !is_idling_) {
 
-          if (odom_vector_(2, 0) < _height_ - _height_tol_) {
-            ROS_INFO("[]: Height is %f  compared to %f", odom_vector_(2, 0), _height_ - _height_tol_);
-            ROS_WARN_THROTTLE(0.5, "[StateMachine]: height is not correct, ascend");
-            goToHeight(_height_, _vel_);
-          } else {
-            scanArena();
-          }
+          scanArena();
         }
       }
       return;
@@ -400,6 +400,15 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
       if (_mpc_stop_ == false) {
         droneStop();
         return;
+      }
+
+      if (!is_tracking_ && !is_idling_) {
+        if (odom_vector_(2, 0) < _height_ - _height_tol_) {
+          ROS_INFO("[]: Height is %f  compared to %f", odom_vector_(2, 0), _height_ - _height_tol_);
+          ROS_WARN_THROTTLE(0.5, "[StateMachine]: height is not correct, ascend");
+          goToHeight(_height_, _vel_);
+          return;
+        }
       }
       if (!is_ballon_cloud_incoming_) {
         _state_ = IDLE;
@@ -475,7 +484,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
           if (!timer_set_) {
             ros::NodeHandle nh("~");
             timer_check_emulation_ = nh.createTimer(ros::Duration(_time_to_emulate_), &BalloonCircleDestroy::callbackTimerCheckEmulation, this, true);
-            timer_set_ = true;
+            timer_set_             = true;
           }
         }
         return;
@@ -580,7 +589,7 @@ void BalloonCircleDestroy::callbackTimerCheckEmulation([[maybe_unused]] const ro
   if (_state_ = DESTROYING) {
     ROS_INFO("[EmulationTimer]: This balloon was shot, adding to forbidden list");
     addForbidden(balloon_vector_, _forbidden_radius_);
-    _state_ = IDLE;
+    _state_    = IDLE;
     timer_set_ = false;
     ROS_WARN_THROTTLE(0.5, "[StateMachine]: State changed to %s ", getStateName().c_str());
   } else {
@@ -637,7 +646,9 @@ void BalloonCircleDestroy::callbackTimerPublishStatus([[maybe_unused]] const ros
     return;
   }
 
-  status_.data = getStateName().c_str();
+  std::stringstream strstr;
+  strstr << getStateName().c_str() << "\n Popped count " << _forb_vect_.size() << ".";
+  status_.data = strstr.str().c_str();
   status_pub_.publish(status_);
 }
 
@@ -1051,6 +1062,41 @@ bool BalloonCircleDestroy::callbackToggleDestroy([[maybe_unused]] std_srvs::Trig
 
 //}
 
+/* callbackResetZones //{ */
+
+
+bool BalloonCircleDestroy::callbackResetZones([[maybe_unused]] std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res) {
+
+  if (!is_initialized_) {
+    res.success = false;
+    res.message = "Can't trigger service, not initialized";
+    ROS_WARN_THROTTLE(0.5, "[BalloonCircleDestroy]: Couldn't call the service, not inited yet");
+
+    return false;
+  }
+  std_srvs::Trigger srv_;
+
+
+  if (srv_planner_reset_zones_.call(srv_)) {
+    if (srv_.response.success) {
+      _forb_vect_.clear();
+      res.success = true;
+      res.message = "Zones are reset for planner and for the destroyer, free to continue";
+      ROS_INFO_THROTTLE(0.5, "[ResetZonesSrv]: zones have benn reset, number of forb zones %d, free to proceed ", (int)_forb_vect_.size());
+      return true;
+    } else {
+      ROS_INFO_THROTTLE(0.5, "[ResetZonesSrv]: zones couldn't be reset for planner, don't turn me into a dummy, I need the planner buddy ");
+    }
+
+  } else {
+    ROS_ERROR_THROTTLE(0.5, "[ResetZonesSrv]: Failed at calling planner reset exculsive zones service  ");
+  }
+  res.success = false;
+  return false;
+}
+
+//}
+
 /* getCloseToBalloon //{ */
 
 void BalloonCircleDestroy::getCloseToBalloon(eigen_vect dest_, double close_dist_, double speed_) {
@@ -1300,7 +1346,7 @@ void BalloonCircleDestroy::addForbidden(eigen_vect forb_, double radius_) {
       ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: Couldn't add forbidden zone, already in the zone of another ");
     }
   }
-  if(is_in_rad_) {
+  if (is_in_rad_) {
     return;
   }
 
