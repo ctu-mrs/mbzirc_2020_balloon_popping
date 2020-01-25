@@ -147,13 +147,9 @@ private:
   {
     IDLE,
     GOING_AROUND,
-    GOING_TO_ANGLE,
     CHECKING_BALLOON,
-    CHOOSING_BALLOON,
     GOING_TO_BALLOON,
     AT_BALLOON,
-    CIRCLE_AROUND,
-    READY_TO_DESTROY,
     DESTROYING,
     DESTROY_OVERSHOOT,
 
@@ -362,6 +358,7 @@ private:
   bool        isBalloonVisible(eigen_vect balloon_);
   bool        droneStop();
   bool        isPointInArena(float x, float y, float z);
+  bool        isPointInArena(eigen_vect p_);
   bool        isPointInArena(mrs_msgs::TrackerPoint p_);
   void        scanArena();
   void        goToPoint(eigen_vect p_, eigen_vect goal, double speed_, mrs_msgs::TrackerTrajectory& new_traj_, double yaw);
