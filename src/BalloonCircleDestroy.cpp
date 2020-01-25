@@ -385,14 +385,15 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
         timer_idling_ = nh.createTimer(ros::Duration(_idle_time_), &BalloonCircleDestroy::callbackTimerIdling, this,
                                        true);  // the last boolean argument makes the timer run only once
       } else {
-        if (odom_vector_(2, 0) < _height_ - _height_tol_) {
-          ROS_INFO("[]: Height is %f  compared to %f", odom_vector_(2, 0), _height_ - _height_tol_);
-          ROS_WARN_THROTTLE(0.5, "[StateMachine]: height is not correct, ascend");
-          goToHeight(_height_, _vel_);
-        }
+        
         if (!is_tracking_ && !is_idling_) {
-
-          scanArena();
+          if (odom_vector_(2, 0) < _height_ - _height_tol_) {
+            ROS_INFO("[]: Height is %f  compared to %f", odom_vector_(2, 0), _height_ - _height_tol_);
+            ROS_WARN_THROTTLE(0.5, "[StateMachine]: height is not correct, ascend");
+            goToHeight(_height_, _vel_);
+          } else {
+            scanArena();
+          }
         }
       }
       return;
@@ -1705,8 +1706,8 @@ void BalloonCircleDestroy::goToHeight(double height_, double speed_) {
   eigen_vect goal         = odom_vector_;
   goal(2, 0)              = height_;
 
-  ROS_INFO("[]: height 0 x %f y %f z %f", odom_vector_(0, 0), odom_vector_(1, 0), odom_vector_(2, 0));
-  ROS_INFO("[]: height goal 0 x %f y %f z %f", goal(0, 0), goal(1, 0), goal(2, 0));
+  /* ROS_INFO("[]: height 0 x %f y %f z %f", odom_vector_(0, 0), odom_vector_(1, 0), odom_vector_(2, 0)); */
+  /* ROS_INFO("[]: height goal 0 x %f y %f z %f", goal(0, 0), goal(1, 0), goal(2, 0)); */
   eigen_vect dir_vector_ = goal - odom_vector_;
 
   double dist_      = dir_vector_.norm();
