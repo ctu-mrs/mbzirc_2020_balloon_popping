@@ -434,8 +434,10 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
               ROS_INFO("[]: Height is %f  compared to %f", odom_vector_(2, 0), _height_ - _height_tol_);
               ROS_WARN_THROTTLE(0.5, "[StateMachine]: height is not correct, ascend");
               goToHeight(_height_, _vel_);
-              return;
+              break;
             }
+          } else {
+            break;
           }
           if (!is_ballon_cloud_incoming_) {
             _state_ = IDLE;
@@ -501,8 +503,8 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
 
       //}
         break;
-      /* case State::AT_BALLOON: */
       /*   /1* AT_BALLOON state //{ *1/ */
+      /* case State::AT_BALLOON: */
 
       /*   { */
       /*     if (isBalloonVisible(balloon_vector_) && isPointInArena(balloon_vector_)) { */
@@ -519,6 +521,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
 
         {
           if(balloon_vector_(2,0) == 0) {
+            _state_ = GOING_TO_BALLOON;
             break;
           }
           if (balloonOutdated()) {
@@ -714,9 +717,9 @@ void BalloonCircleDestroy::callbackTimerPublishStatus([[maybe_unused]] const ros
     return;
   }
 
-  std::stringstream strstr;
-  strstr << getStateName().c_str() << "\n Popped count " << _forb_vect_.size() << ".";
-  status_.data = strstr.str().c_str();
+  /* std::stringstream strstr; */
+  /* strstr << getStateName().c_str() << "\n Popped count " << _forb_vect_.size() << "."; */
+  status_.data = getStateName().c_str();
   status_pub_.publish(status_);
 }
 
