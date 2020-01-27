@@ -349,7 +349,7 @@ private:
 
   void        getCloseToBalloon(eigen_vect dest_, double dist, double speed_);
   double      getBalloonHeading(eigen_vect dest_);
-  double      getArenaHeading(eigen_vect p_);
+  double      getArenaHeading(eigen_vect a_, eigen_vect b_);
   std::string getStateName();
   bool        pointInForbidden(eigen_vect vect_);
   void        checkForbidden();
