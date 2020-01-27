@@ -340,7 +340,9 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
     return;
   }
 
+
   {
+    std::scoped_lock lock(mutex_is_balloon_cloud_incoming_);
 
     /*  verbose output //{ */
 
@@ -1512,7 +1514,7 @@ eigen_vect BalloonCircleDestroy::getClosestBalloon() {
   eigen_vect ball_vect_best_;
   {
     std::scoped_lock lock_uav(mutex_odom_uav_);
-    std::scoped_lock lock_balloon(mutex_is_balloon_cloud_incoming_);
+    /* std::scoped_lock lock_balloon(mutex_is_balloon_cloud_incoming_); */
 
     for (uint8_t i = 0; i < balloon_pcl_processed_.size(); i++) {
 
@@ -1582,7 +1584,7 @@ bool BalloonCircleDestroy::isBalloonVisible(eigen_vect balloon_) {
   bool       res_ = false;
   {
     std::scoped_lock lock_uav(mutex_odom_uav_);
-    std::scoped_lock lock_balloon(mutex_is_balloon_cloud_incoming_);
+    /* std::scoped_lock lock_balloon(mutex_is_balloon_cloud_incoming_); */
 
     for (uint8_t i = 0; i < balloon_pcl_processed_.size(); i++) {
 
