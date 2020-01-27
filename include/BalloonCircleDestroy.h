@@ -270,6 +270,8 @@ private:
   std::mutex     mutex_status_;
   int            _rate_time_publish_status_;
 
+  ros::Publisher point_pub_;
+  ros::Publisher balloon_pub_;
 
   // | --------------------- service clients -------------------- |
 

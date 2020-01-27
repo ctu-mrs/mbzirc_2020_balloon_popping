@@ -110,6 +110,10 @@ void BalloonCircleDestroy::onInit() {
   rviz_pub_   = nh.advertise<visualization_msgs::MarkerArray>("rviz_out", 1);
   status_pub_ = nh.advertise<std_msgs::String>("status_out", 1);
 
+  point_pub_   = nh.advertise<geometry_msgs::PointStamped>("ref_out", 1);
+  balloon_pub_ = nh.advertise<geometry_msgs::PointStamped>("ball_out", 1);
+
+
   // | --------------- initialize service servers --------------- |
   /*  server services //{ */
 
@@ -1203,6 +1207,14 @@ void BalloonCircleDestroy::getCloseToBalloon(eigen_vect dest_, double close_dist
   p.yaw = angle_;
   new_traj_.points.push_back(p);
 
+  geometry_msgs::PointStamped ref_;
+  ref_.header.frame_id = world_frame_id_;
+  ref_.point.x         = goal_(0, 0);
+  ref_.point.y         = goal_(1, 0);
+  ref_.point.z         = dest_(2, 0);
+  point_pub_.publish(ref_);
+
+
   /* ROS_INFO("[]: cur_pos_ 0 x %f y %f z %f", cur_pos_(0, 0), cur_pos_(1, 0), cur_pos_(2, 0)); */
   /* ROS_INFO("[]: goal_ 0 x %f y %f z %f", goal_(0, 0), goal_(1, 0), goal_(2, 0)); */
   while (cur_pos_(0, 0) != goal_(0, 0) && cur_pos_(1, 0) != goal_(1, 0) && cur_pos_(2, 0) != goal_(2, 0)) {
@@ -1576,7 +1588,15 @@ bool BalloonCircleDestroy::isBalloonVisible(eigen_vect balloon_) {
         res_                     = true;
         _last_time_balloon_seen_ = ros::Time::now();
         if (_state_ == GOING_TO_BALLOON) {
-          balloon_closest_vector_ = ball_vect_;
+          if ((balloon_closest_vector_ - ball_vect_).norm() < _dist_acc_+_dist_error_) {
+            balloon_closest_vector_ = ball_vect_;
+            geometry_msgs::PointStamped p_;
+            p_.header.frame_id = world_frame_id_;
+            p_.point.x         = balloon_closest_vector_(0, 0);
+            p_.point.y         = balloon_closest_vector_(1, 0);
+            p_.point.z         = balloon_closest_vector_(2, 0);
+            balloon_pub_.publish(p_);
+          }
         }
       }
     }
@@ -1658,6 +1678,7 @@ void BalloonCircleDestroy::scanArena() {
     if (dir) {
       eigen_vect angle_vector_ = eigen_vect(_x_max_, _y_min_, 0) - eigen_vect(_x_min_, _y_min_, 0);
 
+      yaw = atan2(angle_vector_(1), angle_vector_(0));
       // going from left to right
       nxt = eigen_vect(cur_odom_(0, 0), top, _height_);
       goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, yaw);
@@ -1672,15 +1693,15 @@ void BalloonCircleDestroy::scanArena() {
       goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, yaw);
       cur_odom_(0, 0) += fov;
 
-      if (i > 0) {
-        yaw = atan2(angle_vector_(new_traj_.points[i].y - new_traj_.points[i-1].y), new_traj_.points[i].x - new_traj_.points[i-1].x));
-      }
+      /* if (i > 0) { */
+      /*   yaw = atan2(angle_vector_(new_traj_.points[i].y - new_traj_.points[i-1].y), new_traj_.points[i].x - new_traj_.points[i-1].x)); */
+      /* } */
 
       /* break; */
     } else {
       // going from right to left
       eigen_vect angle_vector_ = eigen_vect(_x_min_, _y_min_, 0) - eigen_vect(_x_max_, _y_min_, 0);
-      /* yaw                      = atan2(angle_vector_(1), angle_vector_(0)); */
+      yaw                      = atan2(angle_vector_(1), angle_vector_(0));
       nxt                      = eigen_vect(cur_odom_(0, 0), top, _height_);
       goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, yaw);
       cur_odom_(1, 0) = top;
@@ -1694,14 +1715,14 @@ void BalloonCircleDestroy::scanArena() {
       goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, yaw);
       cur_odom_(0, 0) -= fov;
 
-      if (i > 0) {
-        yaw = atan2(angle_vector_(new_traj_.points[i].y - new_traj_.points[i-1].y), new_traj_.points[i].x - new_traj_.points[i-1].x));
-      }
+      /* if (i > 0) { */
+      /*   yaw = atan2(angle_vector_(new_traj_.points[i].y - new_traj_.points[i-1].y), new_traj_.points[i].x - new_traj_.points[i-1].x)); */
+      /* } */
     }
   }
 
   // yaw for the first point
-  new_traj_.points[0].yaw = atan2(angle_vector_(new_traj_.points[1].y - new_traj_.points[0].y), new_traj_.points[1].x - new_traj_.points[0].x));
+  /* new_traj_.points[0].yaw = atan2(angle_vector_(new_traj_.points[1].y - new_traj_.points[0].y), new_traj_.points[1].x - new_traj_.points[0].x)); */
 
 
   mrs_msgs::TrackerTrajectorySrv req_;
