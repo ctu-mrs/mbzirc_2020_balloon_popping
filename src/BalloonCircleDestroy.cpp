@@ -43,6 +43,7 @@ void BalloonCircleDestroy::onInit() {
   param_loader.load_param("vel_attack", _vel_attack_);
   param_loader.load_param("vel_arena", _vel_arena_);
   param_loader.load_param("dist_error", _dist_error_);
+  param_loader.load_param("dist_acc", _dist_acc_);
   param_loader.load_param("wait_for_ball", _wait_for_ball_);
   param_loader.load_param("wait_for_ball", _wait_for_ball_);
   param_loader.load_param("time_to_emulate", _time_to_emulate_);
@@ -1649,10 +1650,11 @@ void BalloonCircleDestroy::scanArena() {
   new_traj_.loop            = false;
   int    fov                = 5;
   int    step               = (_x_max_ - _x_min_ - _arena_offset_) / fov;
-  double left               = _x_max_ - _arena_offset_;
-  double right              = _x_min_ + _arena_offset_;
-  double top                = _y_max_ - _arena_offset_;
-  double bot                = _y_min_ + _arena_offset_;
+  double left               = _x_max_ - _arena_offset_ - _dist_acc_;
+  double right              = _x_min_ + _arena_offset_ + _dist_acc_;
+  ROS_INFO("[]: left %f right %f ",left, right );
+  double top                = _y_max_ - _arena_offset_ - _dist_acc_;
+  double bot                = _y_min_ + _arena_offset_ + _dist_acc_;
   ROS_INFO("[]: step size %d", step);
   eigen_vect cur_odom_ = odom_vector_;
   cur_odom_(2, 0)      = _height_;
@@ -1706,13 +1708,15 @@ void BalloonCircleDestroy::scanArena() {
       goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, yaw);
       cur_odom_(1, 0) = top;
       nxt(0, 0) -= fov;
-      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, yaw);
+      ROS_INFO("[]: size before %d",(int) new_traj_.points.size() );
+      goToPoint(cur_odom_, nxt, _vel_arena_/2, new_traj_, yaw);
+      ROS_INFO("[]: size after %d",(int) new_traj_.points.size() );
       cur_odom_(0, 0) -= fov;
       nxt(1, 0) = bot;
       goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, yaw);
       cur_odom_(1, 0) = bot;
       nxt(0, 0) -= fov;
-      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, yaw);
+      goToPoint(cur_odom_, nxt, _vel_arena_/2, new_traj_, yaw);
       cur_odom_(0, 0) -= fov;
 
       /* if (i > 0) { */
@@ -1769,7 +1773,7 @@ void BalloonCircleDestroy::goToPoint(eigen_vect p_, eigen_vect goal, double spee
         /* ROS_INFO("[BalloonCircleDestroy]: goToPoint returned %d ", (int)new_traj_.points.size()); */
         /* ROS_WARN("[]: pizdec cur_pos_ 0 x %f y %f z %f", cur_pos_(0, 0), cur_pos_(1, 0), cur_pos_(2, 0)); */
         cur_pos_ = goal;
-        break;
+        /* break; */
       }
 
 
@@ -1778,7 +1782,7 @@ void BalloonCircleDestroy::goToPoint(eigen_vect p_, eigen_vect goal, double spee
       p.z   = cur_pos_(2, 0);
       p.yaw = yaw;
       if (!isPointInArena(p)) {
-        /* ROS_INFO("[]: pizdeeec cur_pos_ 0 x %f y %f z %f", cur_pos_(0, 0), cur_pos_(1, 0), cur_pos_(2, 0)); */
+        ROS_INFO("[]: pizdeeec cur_pos_ 0 x %f y %f z %f", cur_pos_(0, 0), cur_pos_(1, 0), cur_pos_(2, 0));
         return;
       }
 
