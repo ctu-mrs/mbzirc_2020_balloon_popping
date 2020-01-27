@@ -1180,7 +1180,6 @@ void BalloonCircleDestroy::getCloseToBalloon(eigen_vect dest_, double close_dist
     dest_(2, 0) += _overshoot_offset_;
   }
 
-
   double sample_dist_ = speed_ * (_traj_time_ / _traj_len_);
 
   // getting new reference
@@ -1204,7 +1203,7 @@ void BalloonCircleDestroy::getCloseToBalloon(eigen_vect dest_, double close_dist
   mrs_msgs::TrackerPoint p;
   p.x   = cur_pos_(0, 0);
   p.y   = cur_pos_(1, 0);
-  p.z   = dest_(2, 0);
+  p.z   = odom_vector_(3, 0);
   p.yaw = angle_;
   new_traj_.points.push_back(p);
 
@@ -1215,26 +1214,32 @@ void BalloonCircleDestroy::getCloseToBalloon(eigen_vect dest_, double close_dist
   ref_.point.z         = dest_(2, 0);
   point_pub_.publish(ref_);
 
-
   /* ROS_INFO("[]: cur_pos_ 0 x %f y %f z %f", cur_pos_(0, 0), cur_pos_(1, 0), cur_pos_(2, 0)); */
   /* ROS_INFO("[]: goal_ 0 x %f y %f z %f", goal_(0, 0), goal_(1, 0), goal_(2, 0)); */
   while (cur_pos_(0, 0) != goal_(0, 0) && cur_pos_(1, 0) != goal_(1, 0) && cur_pos_(2, 0) != goal_(2, 0)) {
 
     for (int i = 0; i < _traj_len_; i++) {
+
       mrs_msgs::TrackerPoint p;
       cur_pos_     = cur_pos_ + dir_vector_;
       diff_vector_ = cur_pos_ - odom_vector_;
-
 
       if (diff_vector_.norm() >= dist_) {
         cur_pos_ = goal_;
       }
 
-      p.x   = cur_pos_(0, 0);
-      p.y   = cur_pos_(1, 0);
-      p.z   = dest_(2, 0);
-      p.yaw = angle_;
+      p.x = cur_pos_(0, 0);
+      p.y = cur_pos_(1, 0);
 
+      if (dist_ > 10.0) {
+        p.z = odom_vector_(3, 0);
+      } else {
+        p.z = dest_(2, 0);
+      }
+
+      ROS_INFO_THROTTLE(0.1, "[BallonCircleDestroy]: desired_height in traj: %.2f", p.z);
+
+      p.yaw = angle_;
 
       /* ROS_INFO("[]: cur_pos_ 0 x %f y %f z %f", cur_pos_(0, 0), cur_pos_(1, 0), cur_pos_(2, 0)); */
       new_traj_.points.push_back(p);
@@ -1589,7 +1594,7 @@ bool BalloonCircleDestroy::isBalloonVisible(eigen_vect balloon_) {
         res_                     = true;
         _last_time_balloon_seen_ = ros::Time::now();
         if (_state_ == GOING_TO_BALLOON) {
-          if ((balloon_closest_vector_ - ball_vect_).norm() < _dist_acc_+_dist_error_) {
+          if ((balloon_closest_vector_ - ball_vect_).norm() < _dist_acc_ + _dist_error_) {
             balloon_closest_vector_ = ball_vect_;
             geometry_msgs::PointStamped p_;
             p_.header.frame_id = world_frame_id_;
@@ -1652,9 +1657,9 @@ void BalloonCircleDestroy::scanArena() {
   int    step               = (_x_max_ - _x_min_ - _arena_offset_) / fov;
   double left               = _x_max_ - _arena_offset_ - _dist_acc_;
   double right              = _x_min_ + _arena_offset_ + _dist_acc_;
-  ROS_INFO("[]: left %f right %f ",left, right );
-  double top                = _y_max_ - _arena_offset_ - _dist_acc_;
-  double bot                = _y_min_ + _arena_offset_ + _dist_acc_;
+  ROS_INFO("[]: left %f right %f ", left, right);
+  double top = _y_max_ - _arena_offset_ - _dist_acc_;
+  double bot = _y_min_ + _arena_offset_ + _dist_acc_;
   ROS_INFO("[]: step size %d", step);
   eigen_vect cur_odom_ = odom_vector_;
   cur_odom_(2, 0)      = _height_;
@@ -1708,15 +1713,13 @@ void BalloonCircleDestroy::scanArena() {
       goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, yaw);
       cur_odom_(1, 0) = top;
       nxt(0, 0) -= fov;
-      ROS_INFO("[]: size before %d",(int) new_traj_.points.size() );
-      goToPoint(cur_odom_, nxt, _vel_arena_/2, new_traj_, yaw);
-      ROS_INFO("[]: size after %d",(int) new_traj_.points.size() );
+      goToPoint(cur_odom_, nxt, _vel_arena_ / 2, new_traj_, yaw);
       cur_odom_(0, 0) -= fov;
       nxt(1, 0) = bot;
       goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, yaw);
       cur_odom_(1, 0) = bot;
       nxt(0, 0) -= fov;
-      goToPoint(cur_odom_, nxt, _vel_arena_/2, new_traj_, yaw);
+      goToPoint(cur_odom_, nxt, _vel_arena_ / 2, new_traj_, yaw);
       cur_odom_(0, 0) -= fov;
 
       /* if (i > 0) { */
@@ -1759,7 +1762,13 @@ void BalloonCircleDestroy::goToPoint(eigen_vect p_, eigen_vect goal, double spee
   eigen_vect             cur_pos_ = p_;
   eigen_vect             diff_vector_;
   mrs_msgs::TrackerPoint p;
-
+  p.x   = cur_pos_(0, 0);
+  p.y   = cur_pos_(1, 0);
+  p.z   = cur_pos_(2, 0);
+  p.yaw = yaw;
+  if (isPointInArena(p)) {
+    new_traj_.points.push_back(p);
+  }
   while (cur_pos_(0, 0) != goal(0, 0) || cur_pos_(1, 0) != goal(1, 0)) {
 
 
@@ -1773,7 +1782,18 @@ void BalloonCircleDestroy::goToPoint(eigen_vect p_, eigen_vect goal, double spee
         /* ROS_INFO("[BalloonCircleDestroy]: goToPoint returned %d ", (int)new_traj_.points.size()); */
         /* ROS_WARN("[]: pizdec cur_pos_ 0 x %f y %f z %f", cur_pos_(0, 0), cur_pos_(1, 0), cur_pos_(2, 0)); */
         cur_pos_ = goal;
-        /* break; */
+        p.x      = cur_pos_(0, 0);
+        p.y      = cur_pos_(1, 0);
+        p.z      = cur_pos_(2, 0);
+        p.yaw    = yaw;
+        if (!isPointInArena(p)) {
+          ROS_INFO("[]: pizdeeec cur_pos_ 0 x %f y %f z %f", cur_pos_(0, 0), cur_pos_(1, 0), cur_pos_(2, 0));
+          return;
+        }
+
+
+        new_traj_.points.push_back(p);
+        break;
       }
 
 
