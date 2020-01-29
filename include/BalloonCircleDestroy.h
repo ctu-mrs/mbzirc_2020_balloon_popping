@@ -140,6 +140,7 @@ private:
   double _overshoot_offset_;
   double _dead_band_factor_;
   double _time_to_emulate_;
+  double _balloon_activation_dist_;
 
 
   // | ------------------------- state machine params ------------------------- |
@@ -167,6 +168,7 @@ private:
   int                      _cur_arena_length_;
   std::vector<Forbidden_t> _forb_vect_;
   eigen_vect               _estimate_vect_;
+  eigen_vect               _cur_reference_;
   eigen_vect               _prev_closest_;
   eigen_vect               _last_goal_;
   bool                     _last_goal_reached_;

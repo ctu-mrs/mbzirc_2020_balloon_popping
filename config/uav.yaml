@@ -40,11 +40,11 @@ traj_len: 40
 #traj time for MPC
 traj_time: 8
 #distance error to target the closest balloon so, it will be compared to current chosen via KF + dist_error 
-dist_error: 3.5
+dist_error: 1.5
 #dist accurace to be as close to the balloon
 dist_acc: 1.5
 # distance to activate KF flying
-dist_kf_activation: 4.5
+dist_kf_activation: 5.5
 #time for waiting for KF reset
 wait_for_ball: 6
 #max time balloon not seen in PCL
@@ -68,6 +68,7 @@ height_tol: 0.5
 dead_band_factor: 0.5
 # timer to count the balloon as popped - for emulation
 time_to_emulate: 4
+balloon_activation_dist: 4
 
 
 

@@ -29,8 +29,6 @@ void BalloonCircleDestroy::onInit() {
 
   mrs_lib::ParamLoader param_loader(nh, "BalloonCircleDestroy");
   param_loader.load_param("elips_height", _height_);
-  param_loader.load_param("height_min", _min_height_);
-  param_loader.load_param("height_max", _max_height_);
   param_loader.load_param("height_tol", _height_tol_);
   param_loader.load_param("idle_time", _idle_time_);
   param_loader.load_param("traj_time", _traj_time_);
@@ -44,7 +42,6 @@ void BalloonCircleDestroy::onInit() {
   param_loader.load_param("vel_arena", _vel_arena_);
   param_loader.load_param("dist_error", _dist_error_);
   param_loader.load_param("dist_acc", _dist_acc_);
-  param_loader.load_param("wait_for_ball", _wait_for_ball_);
   param_loader.load_param("wait_for_ball", _wait_for_ball_);
   param_loader.load_param("time_to_emulate", _time_to_emulate_);
 
@@ -69,6 +66,7 @@ void BalloonCircleDestroy::onInit() {
   param_loader.load_param("area/z_max", _z_max_);
   param_loader.load_param("area/offset", _arena_offset_);
   param_loader.load_param("dead_band_factor", _dead_band_factor_);
+  param_loader.load_param("balloon_activation_dist", _balloon_activation_dist_);
 
   ROS_INFO_STREAM_ONCE("[BalloonCircleDestroy]: params loaded");
   _cur_arena_width_ = std::abs(_x_max_ - _x_min_) - _arena_offset_;
@@ -473,6 +471,10 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
           if (is_idling_) {
             return;
           }
+          if(!is_ballon_cloud_incoming_) {
+            _state_ = IDLE; 
+            ROS_WARN_THROTTLE(0.5, "[StateMachine]: PCL not incoming STATE RESET TO %s", getStateName().c_str());
+          }
           if (!_planner_active_ || !is_ballon_incoming_) {
             plannerActivate(balloon_closest_vector_, _dist_error_);
 
@@ -645,7 +647,7 @@ void BalloonCircleDestroy::callbackTimerCheckSubscribers([[maybe_unused]] const 
   if (!got_balloon_point_cloud_) {
     ROS_WARN_THROTTLE(0.5, "[%s]: haven't received balloon point cloud since launch", ros::this_node::getName().c_str());
   } else {
-    if ((time_now - time_last_balloon_cloud_point_).toSec() > 1) {
+    if ((time_now - time_last_balloon_cloud_point_).toSec() > _wait_for_ball_) {
       ROS_WARN_THROTTLE(0.5, "[%s]: haven't received any balloon cloud points for %f", ros::this_node::getName().c_str(),
                         (time_now - time_last_balloon_cloud_point_).toSec());
       is_ballon_cloud_incoming_ = false;
@@ -665,7 +667,7 @@ void BalloonCircleDestroy::callbackTimerCheckEmulation([[maybe_unused]] const ro
   if (!is_initialized_) {
     return;
   }
-  if (_state_ = DESTROYING) {
+  if (_state_ == DESTROYING) {
     ROS_INFO("[EmulationTimer]: This balloon was shot, adding to forbidden list");
     addForbidden(balloon_vector_, _forbidden_radius_);
     _state_    = IDLE;
@@ -1233,7 +1235,7 @@ void BalloonCircleDestroy::getCloseToBalloon(eigen_vect dest_, double close_dist
       p.x = cur_pos_(0, 0);
       p.y = cur_pos_(1, 0);
 
-      if (dist_ > 10.0) {
+      if (dist_ > _balloon_activation_dist_) {
         p.z = odom_vector_(2, 0);
       } else {
         p.z = dest_(2, 0);
@@ -1596,8 +1598,9 @@ bool BalloonCircleDestroy::isBalloonVisible(eigen_vect balloon_) {
         res_                     = true;
         _last_time_balloon_seen_ = ros::Time::now();
         if (_state_ == GOING_TO_BALLOON) {
-          if ((balloon_closest_vector_ - ball_vect_).norm() < _dist_acc_ + _dist_error_) {
+          if ((balloon_closest_vector_ - ball_vect_).norm() < _dist_error_) {
             balloon_closest_vector_ = ball_vect_;
+            ROS_INFO("[]:  changed ");
             geometry_msgs::PointStamped p_;
             p_.header.frame_id = world_frame_id_;
             p_.point.x         = balloon_closest_vector_(0, 0);
