@@ -28,7 +28,7 @@ input=(
   'Sensors' 'waitForRos; roslaunch mrs_general sensors.launch
 '
   'Tersus' 'waitForRos; roslaunch tersus_gps_driver test.launch'
-  'Control' 'waitForRos; roslaunch mrs_general core.launch config_uav_manager:=./custom_configs/uav_manager.yaml DEBUG:=true
+  'Control' 'waitForRos; roslaunch mrs_general core.launch config_constraint_manager:=./custom_configs/constraint_manager.yaml config_uav_manager:=./custom_configs/uav_manager.yaml config_odometry:=./custom_configs/odometry.yaml DEBUG:=true
 '
   'Vision' 'waitForRos; roslaunch balloon_filter localization_pipeline.launch
 '
@@ -37,6 +37,7 @@ input=(
   'MotorsOn' 'rosservice call /'"$UAV_NAME"'/control_manager/motors 1'
   'Takeoff' 'rosservice call /'"$UAV_NAME"'/uav_manager/takeoff'
   'DestroyStart' 'waitForRos; rosservice call /uav60/balloon_circle_destroy/start_state_machine'
+  'DestroyReset' 'waitForRos; rosservice call /uav60/balloon_circle_destroy/reset_forbidden'
   'ChangeEstimator' 'waitForOdometry; rosservice call /'"$UAV_NAME"'/odometry/change_estimator_type_string T265'
   'GoTo_FCU' 'rosservice call /'"$UAV_NAME"'/control_manager/goto_fcu "goal: [0.0, 0.0, 0.0, 0.0]"'
   'GoToRelative' 'rosservice call /'"$UAV_NAME"'/control_manager/goto_relative "goal: [0.0, 0.0, 0.0, 0.0]"'

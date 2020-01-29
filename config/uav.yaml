@@ -8,10 +8,10 @@ rate:
   pub_status: 15
 # defines area for drone to operate
 area:
-  x_min: 0
-  x_max: 40
-  y_min: 0
-  y_max: 80
+  x_min: -20
+  x_max: 20
+  y_min: -15
+  y_max: 15
   z_min: 1
   z_max: 8
   offset: 1
@@ -20,15 +20,15 @@ land_at_the_end: false
 #height offset when killing the balloon
 height_offset: 0.0
 #height where drone will operate ( up to this height )
-elips_height: 3
+elips_height: 2.75
 #idle_time
 idle_time: 1.5
 #velocity for goTo's
-vel: 2
+vel: 3
 #velocity for attack
 vel_attack: 4
 #velocity of going around arena
-vel_arena: 3
+vel_arena: 4
 #distance to the balloon
 dist_to_balloon: 3.5
 #distance to kill the balloon
@@ -40,7 +40,7 @@ traj_len: 40
 #traj time for MPC
 traj_time: 8
 #distance error to target the closest balloon so, it will be compared to current chosen via KF + dist_error 
-dist_error: 1.5
+dist_error: 2.5
 #dist accurace to be as close to the balloon
 dist_acc: 1.5
 # distance to activate KF flying
