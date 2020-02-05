@@ -471,8 +471,8 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
           if (is_idling_) {
             return;
           }
-          if(!is_ballon_cloud_incoming_) {
-            _state_ = IDLE; 
+          if (!is_ballon_cloud_incoming_) {
+            _state_ = IDLE;
             ROS_WARN_THROTTLE(0.5, "[StateMachine]: PCL not incoming STATE RESET TO %s", getStateName().c_str());
           }
           if (!_planner_active_ || !is_ballon_incoming_) {
@@ -550,12 +550,16 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
           }
           if (isBalloonVisible(balloon_vector_)) {
             if (!balloon_closest_vector_.isZero()) {
-              getCloseToBalloon(balloon_vector_, -_dist_to_overshoot_, _vel_attack_);
-              /* if (!timer_set_) { */
-              /*   ros::NodeHandle nh("~"); */
-              /*   timer_check_emulation_ = nh.createTimer(ros::Duration(_time_to_emulate_), &BalloonCircleDestroy::callbackTimerCheckEmulation, this, true); */
-              /*   timer_set_             = true; */
-              /* } */
+              if (_is_destroy_enabled_) {
+                getCloseToBalloon(balloon_vector_, -_dist_to_overshoot_, _vel_attack_);
+              } else {
+                getCloseToBalloon(balloon_vector_, _dist_to_balloon_, _vel_attack_);
+                if (!timer_set_) {
+                  ros::NodeHandle nh("~");
+                  timer_check_emulation_ = nh.createTimer(ros::Duration(_time_to_emulate_), &BalloonCircleDestroy::callbackTimerCheckEmulation, this, true);
+                  timer_set_             = true;
+                }
+              }
             }
             return;
           } else {
@@ -1541,14 +1545,16 @@ eigen_vect BalloonCircleDestroy::getClosestBalloon() {
 void BalloonCircleDestroy::callbackDynamicReconfigure([[maybe_unused]] Config& config, uint32_t level) {
   {
     std::scoped_lock lock(mutex_dynamic_reconfigure_);
-    _height_offset_    = config.height_offset;
-    _dist_error_       = config.dist_error;
-    _dist_to_balloon_  = config.dist_to_balloon;
-    _wait_for_ball_    = config.wait_for_ball;
-    _vel_              = config.vel;
-    _vel_arena_        = config.arena_vel;
-    _overshoot_offset_ = config.overshoot_offset;
-    _dead_band_factor_ = config.dead_band_factor;
+    _height_offset_           = config.height_offset;
+    _dist_error_              = config.dist_error;
+    _dist_to_balloon_         = config.dist_to_balloon;
+    _wait_for_ball_           = config.wait_for_ball;
+    _vel_                     = config.vel;
+    _vel_arena_               = config.arena_vel;
+    _overshoot_offset_        = config.overshoot_offset;
+    _dead_band_factor_        = config.dead_band_factor;
+    _balloon_activation_dist_ = config.balloon_activation_dist;
+    _dist_kf_activation_      = config.dist_kf_activation;
   }
 }
 
@@ -1696,13 +1702,13 @@ void BalloonCircleDestroy::scanArena() {
       goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, getArenaHeading(cur_odom_, nxt));
       cur_odom_(1, 0) = top;
       nxt(0, 0) += fov;
-      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, getArenaHeading(cur_odom_,eigen_vect(nxt(0,0),bot, 0)));
+      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, getArenaHeading(cur_odom_, eigen_vect(nxt(0, 0), bot, 0)));
       cur_odom_(0, 0) += fov;
       nxt(1, 0) = bot;
-      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, getArenaHeading(cur_odom_,nxt));
+      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, getArenaHeading(cur_odom_, nxt));
       cur_odom_(1, 0) = bot;
       nxt(0, 0) += fov;
-      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, getArenaHeading(cur_odom_,eigen_vect(nxt(0,0),top, 0)));
+      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, getArenaHeading(cur_odom_, eigen_vect(nxt(0, 0), top, 0)));
       cur_odom_(0, 0) += fov;
 
       /* if (i > 0) { */
@@ -1714,17 +1720,17 @@ void BalloonCircleDestroy::scanArena() {
       // going from right to left
       /* eigen_vect angle_vector_ = eigen_vect(_x_min_, _y_min_, 0) - eigen_vect(_x_max_, _y_min_, 0); */
       /* yaw                      = atan2(angle_vector_(1), angle_vector_(0)); */
-      nxt                      = eigen_vect(cur_odom_(0, 0), top, _height_);
-      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, getArenaHeading(cur_odom_,nxt));
+      nxt = eigen_vect(cur_odom_(0, 0), top, _height_);
+      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, getArenaHeading(cur_odom_, nxt));
       cur_odom_(1, 0) = top;
       nxt(0, 0) -= fov;
-      goToPoint(cur_odom_, nxt, _vel_arena_ / 2, new_traj_, getArenaHeading(cur_odom_,eigen_vect(nxt(0,0),bot, 0)));
+      goToPoint(cur_odom_, nxt, _vel_arena_ / 2, new_traj_, getArenaHeading(cur_odom_, eigen_vect(nxt(0, 0), bot, 0)));
       cur_odom_(0, 0) -= fov;
       nxt(1, 0) = bot;
-      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, getArenaHeading(cur_odom_,nxt));
+      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, getArenaHeading(cur_odom_, nxt));
       cur_odom_(1, 0) = bot;
       nxt(0, 0) -= fov;
-      goToPoint(cur_odom_, nxt, _vel_arena_ / 2, new_traj_, getArenaHeading(cur_odom_,eigen_vect(nxt(0,0),top, 0)));
+      goToPoint(cur_odom_, nxt, _vel_arena_ / 2, new_traj_, getArenaHeading(cur_odom_, eigen_vect(nxt(0, 0), top, 0)));
       cur_odom_(0, 0) -= fov;
 
       /* if (i > 0) { */
@@ -1735,6 +1741,15 @@ void BalloonCircleDestroy::scanArena() {
 
   // yaw for the first point
   /* new_traj_.points[0].yaw = atan2(angle_vector_(new_traj_.points[1].y - new_traj_.points[0].y), new_traj_.points[1].x - new_traj_.points[0].x)); */
+  ROS_INFO("[]: new traj last %f, size %d",new_traj_.points.back().yaw, (int)new_traj_.points.size() );
+
+
+  /* new_traj_.points[new_traj_.points.size()-1].yaw = */ 
+
+  /* for (int i = (int) new_traj_.points.size()-1; i > (int) new_traj_.points.size() - 5 ; i-- ){ */
+  /*   new_traj_.points.at(i).yaw += M_PI; */
+  /*   ROS_INFO("[]: p %d yaw %f",i, new_traj_.points[i].yaw ); */
+  /* } */
 
 
   mrs_msgs::TrackerTrajectorySrv req_;
