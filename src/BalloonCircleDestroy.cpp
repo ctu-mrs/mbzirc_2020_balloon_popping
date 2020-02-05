@@ -550,12 +550,12 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
           }
           if (isBalloonVisible(balloon_vector_)) {
             if (!balloon_closest_vector_.isZero()) {
-              getCloseToBalloon(balloon_vector_, _dist_to_balloon_, _vel_attack_);
-              if (!timer_set_) {
-                ros::NodeHandle nh("~");
-                timer_check_emulation_ = nh.createTimer(ros::Duration(_time_to_emulate_), &BalloonCircleDestroy::callbackTimerCheckEmulation, this, true);
-                timer_set_             = true;
-              }
+              getCloseToBalloon(balloon_vector_, -_dist_to_overshoot_, _vel_attack_);
+              /* if (!timer_set_) { */
+              /*   ros::NodeHandle nh("~"); */
+              /*   timer_check_emulation_ = nh.createTimer(ros::Duration(_time_to_emulate_), &BalloonCircleDestroy::callbackTimerCheckEmulation, this, true); */
+              /*   timer_set_             = true; */
+              /* } */
             }
             return;
           } else {
@@ -1600,7 +1600,7 @@ bool BalloonCircleDestroy::isBalloonVisible(eigen_vect balloon_) {
         if (_state_ == GOING_TO_BALLOON) {
           if ((balloon_closest_vector_ - ball_vect_).norm() < _dist_error_) {
             balloon_closest_vector_ = ball_vect_;
-            ROS_INFO("[]:  changed ");
+            /* ROS_INFO("[]:  changed "); */
             geometry_msgs::PointStamped p_;
             p_.header.frame_id = world_frame_id_;
             p_.point.x         = balloon_closest_vector_(0, 0);

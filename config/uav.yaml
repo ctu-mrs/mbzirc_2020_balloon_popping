@@ -8,13 +8,18 @@ rate:
   pub_status: 15
 # defines area for drone to operate
 area:
-  x_min: -20
-  x_max: 20
-  y_min: -15
-  y_max: 15
+  x_min: 2
+  x_max: 40
+  y_min: 5
+  y_max: 34
   z_min: 1
   z_max: 8
   offset: 1
+sweeper:
+  p1: [0,0]
+  p2: [10,0]
+  p3: [10,10]
+  p4: [0,10]
 # should the UAV land after destroying all balloons
 land_at_the_end: false
 #height offset when killing the balloon
@@ -69,6 +74,3 @@ dead_band_factor: 0.5
 # timer to count the balloon as popped - for emulation
 time_to_emulate: 4
 balloon_activation_dist: 4
-
-
-

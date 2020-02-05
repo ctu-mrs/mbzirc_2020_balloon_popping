@@ -141,6 +141,7 @@ private:
   double _dead_band_factor_;
   double _time_to_emulate_;
   double _balloon_activation_dist_;
+  
 
 
   // | ------------------------- state machine params ------------------------- |
