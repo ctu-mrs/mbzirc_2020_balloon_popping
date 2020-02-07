@@ -13,7 +13,7 @@ fi
 
 source $HOME/.bashrc
 
-PROJECT_NAME=balloons
+PROJECT_NAME=balloons_bag
 
 MAIN_DIR=~/"bag_files"
 
@@ -27,15 +27,17 @@ input=(
 '
   'Sensors' 'waitForRos; roslaunch mrs_general sensors.launch
 '
+  'Nimbro' 'waitForRos; roslaunch mrs_general nimbro.launch'
   'Tersus' 'waitForRos; roslaunch tersus_gps_driver test.launch'
-  'Control' 'waitForRos; roslaunch mrs_general core.launch config_constraint_manager:=./custom_configs/constraint_manager.yaml config_uav_manager:=./custom_configs/uav_manager.yaml config_odometry:=./custom_configs/odometry.yaml DEBUG:=true
+  'Control' 'waitForRos; roslaunch mrs_general core.launch config_constraint_manager:=./custom_configs/constraint_manager.yaml config_uav_manager:=./custom_configs/uav_manager.yaml config_odometry:=./custom_configs/odometry.yaml
 '
   'Vision' 'waitForRos; roslaunch balloon_filter localization_pipeline.launch
 '
-  'Destroy' 'waitForRos; roslaunch balloon_circle_destroy uav.launch
+  'Destroy' 'waitForRos; roslaunch balloon_circle_destroy uav.launch debug:=true
 '
   'MotorsOn' 'rosservice call /'"$UAV_NAME"'/control_manager/motors 1'
   'Takeoff' 'rosservice call /'"$UAV_NAME"'/uav_manager/takeoff'
+  'GoToStart' 'rosservice call /'"$UAV_NAME"'/control_manager/goto "goal: [0.0, -10.0, 3.0, 0.0]"'
   'DestroyStart' 'waitForRos; rosservice call /'"$UAV_NAME"'/balloon_circle_destroy/start_state_machine'
   'DestroyReset' 'waitForRos; rosservice call /'"$UAV_NAME"'/balloon_circle_destroy/reset_forbidden'
   'ChangeEstimator' 'waitForOdometry; rosservice call /'"$UAV_NAME"'/odometry/change_estimator_type_string T265'
