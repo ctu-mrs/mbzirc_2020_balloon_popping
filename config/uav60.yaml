@@ -1,0 +1,71 @@
+# rates of timers in Hz
+rate:
+  check_subscribers: 1 # [Hz]
+  check_balloons: 20
+  check_emulation: 10
+  state_machine: 30
+  pub_rviz: 30
+  pub_status: 15
+# defines area for drone to operate
+area:
+  x_min: -25 
+  x_max: 0
+  y_min: -10
+  y_max: 10
+  z_min: 1
+  z_max: 8
+  offset: 3
+# should the UAV land after destroying all balloons
+land_at_the_end: false
+#height offset when killing the balloon
+height_offset: 0.0
+#height where drone will operate ( up to this height )
+elips_height: 3.2
+#idle_time
+idle_time: 1.5
+#velocity for goTo's
+vel: 2.5
+#velocity for attack
+vel_attack: 3
+#velocity of going around arena
+vel_arena: 3
+#distance to the balloon
+dist_to_balloon: 3.5
+#distance to kill the balloon
+dist_to_overshoot: 2
+#overshoot offset
+overshoot_offset: 0.0
+#trajectory length for MPC
+traj_len: 40
+#traj time for MPC
+traj_time: 8
+#distance error to target the closest balloon so, it will be compared to current chosen via KF + dist_error 
+dist_error: 2.5
+#dist accurace to be as close to the balloon
+dist_acc: 1.5
+# distance to activate KF flying
+dist_kf_activation: 4.5
+#time for waiting for KF reset
+wait_for_ball: 6
+#max time balloon not seen in PCL
+max_time_balloon: 6
+#how many time to reset the KF
+reset_tries: 2
+#time to land - max time of not observing any balloons at all 
+time_to_land: 120 # seconds 
+#world frame, all points are tran
+# number of trying to hit the same balloon
+balloon_tries: 2
+#forbidden area radius
+forbidden_radius: 4.5
+# height tolerance of the arena
+height_tol: 0.5
+# not used
+# acceleration: 3
+# jerk: 10
+# state_reset_time: 30
+# dead band distance factor
+dead_band_factor: 0.5
+# timer to count the balloon as popped - for emulation
+time_to_emulate: 4
+balloon_activation_dist: 6
