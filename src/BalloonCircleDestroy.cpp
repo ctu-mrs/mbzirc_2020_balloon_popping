@@ -67,8 +67,15 @@ void BalloonCircleDestroy::onInit() {
   param_loader.load_param("area/offset", _arena_offset_);
   param_loader.load_param("dead_band_factor", _dead_band_factor_);
   param_loader.load_param("balloon_activation_dist", _balloon_activation_dist_);
+  param_loader.load_param("arena_scan_step", _fov_step_);
 
   ROS_INFO_STREAM_ONCE("[BalloonCircleDestroy]: params loaded");
+  if (_x_min_ > _x_max_ || _y_min_ > _y_max_) {
+    ROS_ERROR("[BalloonCircleDestroy]: Arena params are wrong, please check them once again, shutdown");
+    ros::shutdown();
+  }
+
+
   _cur_arena_width_ = std::abs(_x_max_ - _x_min_) - _arena_offset_;
   /* _cur_arena_length_ = std::abs(_x_max_ - _x_min_); */
   _cur_arena_length_ = std::abs(_y_max_ - _y_min_) - _arena_offset_;
@@ -1006,8 +1013,8 @@ void BalloonCircleDestroy::callbackTimerPublishRviz([[maybe_unused]] const ros::
     arena_pole_1.scale.y            = 0.5;
     arena_pole_1.scale.z            = _z_max_ - 1;
     arena_pole_1.color.a            = 0.3;
-    arena_pole_1.color.r            = 0.0;
-    arena_pole_1.color.g            = 1.0;
+    arena_pole_1.color.r            = 1.0;
+    arena_pole_1.color.g            = 0.0;
     arena_pole_1.color.b            = 0.0;
 
     msg_out.markers.push_back(arena_pole_1);
@@ -1029,8 +1036,8 @@ void BalloonCircleDestroy::callbackTimerPublishRviz([[maybe_unused]] const ros::
     arena_pole_2.scale.y            = 0.5;
     arena_pole_2.scale.z            = _z_max_ - 1;
     arena_pole_2.color.a            = 0.3;
-    arena_pole_2.color.r            = 0.0;
-    arena_pole_2.color.g            = 1.0;
+    arena_pole_2.color.r            = 1.0;
+    arena_pole_2.color.g            = 0.0;
     arena_pole_2.color.b            = 0.0;
 
     msg_out.markers.push_back(arena_pole_2);
@@ -1103,12 +1110,71 @@ bool BalloonCircleDestroy::callbackStartStateMachine([[maybe_unused]] std_srvs::
     return false;
   }
   if (_is_state_machine_active_) {
+    res.message               = "State machine was already active";
+    res.success = true;
+    return true;
+  } else {
+    _is_state_machine_active_ = true;
+    res.message               = "State machine activated";
+    _state_     = IDLE;
+    res.success = true;
+    return true;
+  }
+
+}
+
+//}
+
+/* callbackAutoStart //{ */
+
+bool BalloonCircleDestroy::callbackAutoStart(mrs_msgs::SetInt::Request& req, mrs_msgs::SetInt::Response& res) {
+  switch(req.value) {
+  
+    case 0:
+      ROS_INFO("[AutoStart]: Arena 0 is set");
+      res.message ="[AutoStart]: Arena 0 is set";
+      _is_state_machine_active_ = true;
+      res.success = true;
+      return true;
+  
+    case 1:
+      ROS_INFO("[AutoStart]: Arena 1 is set");
+      res.message ="[AutoStart]: Arena 1 is set";
+      _is_state_machine_active_ = true;
+      res.success = true;
+      return true;
+    case 2:
+      ROS_INFO("[AutoStart]: Arena 2 is set");
+      res.message ="[AutoStart]: Arena 2 is set";
+      _is_state_machine_active_ = true;
+      res.success = true;
+      return true;
+
+  }
+  ROS_WARN("[AutoStart]: Unexpected value from automatic start request");
+  return false;
+}
+
+//}
+
+/* callbackStopStateMachine //{ */
+
+
+bool BalloonCircleDestroy::callbackStopStateMachine([[maybe_unused]] std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res) {
+
+  if (!is_initialized_) {
+    res.success = false;
+    res.message = "Can't trigger service, not initialized";
+    ROS_WARN_THROTTLE(0.5, "[BalloonCircleDestroy]: Couldn't call the service, not inited yet");
+
+    return false;
+  }
+  if (_is_state_machine_active_) {
     _is_state_machine_active_ = false;
     res.message               = "State machine disabled";
 
   } else {
-    _is_state_machine_active_ = true;
-    res.message               = "State machine activated";
+    res.message               = "State machine isn't working";
   }
 
   _state_     = IDLE;
@@ -1664,8 +1730,7 @@ void BalloonCircleDestroy::scanArena() {
   new_traj_.fly_now         = true;
   new_traj_.use_yaw         = true;
   new_traj_.loop            = false;
-  int    fov                = 5;
-  int    step               = (_x_max_ - _x_min_ - _arena_offset_) / fov;
+  int    step               = (_x_max_ - _x_min_ - _arena_offset_) / _fov_step_;
   double left               = _x_max_ - _arena_offset_ - _dist_acc_;
   double right              = _x_min_ + _arena_offset_ + _dist_acc_;
   ROS_INFO("[]: left %f right %f ", left, right);
@@ -1701,15 +1766,15 @@ void BalloonCircleDestroy::scanArena() {
       nxt = eigen_vect(cur_odom_(0, 0), top, _height_);
       goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, getArenaHeading(cur_odom_, nxt));
       cur_odom_(1, 0) = top;
-      nxt(0, 0) += fov;
+      nxt(0, 0) += _fov_step_;
       goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, getArenaHeading(cur_odom_, eigen_vect(nxt(0, 0), bot, 0)));
-      cur_odom_(0, 0) += fov;
+      cur_odom_(0, 0) += _fov_step_;
       nxt(1, 0) = bot;
       goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, getArenaHeading(cur_odom_, nxt));
       cur_odom_(1, 0) = bot;
-      nxt(0, 0) += fov;
+      nxt(0, 0) += _fov_step_;
       goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, getArenaHeading(cur_odom_, eigen_vect(nxt(0, 0), top, 0)));
-      cur_odom_(0, 0) += fov;
+      cur_odom_(0, 0) += _fov_step_;
 
       /* if (i > 0) { */
       /*   yaw = atan2(angle_vector_(new_traj_.points[i].y - new_traj_.points[i-1].y), new_traj_.points[i].x - new_traj_.points[i-1].x)); */
@@ -1723,15 +1788,15 @@ void BalloonCircleDestroy::scanArena() {
       nxt = eigen_vect(cur_odom_(0, 0), top, _height_);
       goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, getArenaHeading(cur_odom_, nxt));
       cur_odom_(1, 0) = top;
-      nxt(0, 0) -= fov;
+      nxt(0, 0) -= _fov_step_;
       goToPoint(cur_odom_, nxt, _vel_arena_ / 2, new_traj_, getArenaHeading(cur_odom_, eigen_vect(nxt(0, 0), bot, 0)));
-      cur_odom_(0, 0) -= fov;
+      cur_odom_(0, 0) -= _fov_step_;
       nxt(1, 0) = bot;
       goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, getArenaHeading(cur_odom_, nxt));
       cur_odom_(1, 0) = bot;
-      nxt(0, 0) -= fov;
+      nxt(0, 0) -= _fov_step_;
       goToPoint(cur_odom_, nxt, _vel_arena_ / 2, new_traj_, getArenaHeading(cur_odom_, eigen_vect(nxt(0, 0), top, 0)));
-      cur_odom_(0, 0) -= fov;
+      cur_odom_(0, 0) -= _fov_step_;
 
       /* if (i > 0) { */
       /*   yaw = atan2(angle_vector_(new_traj_.points[i].y - new_traj_.points[i-1].y), new_traj_.points[i].x - new_traj_.points[i-1].x)); */
@@ -1741,10 +1806,10 @@ void BalloonCircleDestroy::scanArena() {
 
   // yaw for the first point
   /* new_traj_.points[0].yaw = atan2(angle_vector_(new_traj_.points[1].y - new_traj_.points[0].y), new_traj_.points[1].x - new_traj_.points[0].x)); */
-  ROS_INFO("[]: new traj last %f, size %d",new_traj_.points.back().yaw, (int)new_traj_.points.size() );
+  ROS_INFO("[]: new traj last %f, size %d", new_traj_.points.back().yaw, (int)new_traj_.points.size());
 
 
-  /* new_traj_.points[new_traj_.points.size()-1].yaw = */ 
+  /* new_traj_.points[new_traj_.points.size()-1].yaw = */
 
   /* for (int i = (int) new_traj_.points.size()-1; i > (int) new_traj_.points.size() - 5 ; i-- ){ */
   /*   new_traj_.points.at(i).yaw += M_PI; */

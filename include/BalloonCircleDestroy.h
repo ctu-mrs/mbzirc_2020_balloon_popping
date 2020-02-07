@@ -45,7 +45,10 @@
 #include <mrs_msgs/TrackerPoint.h>
 #include <mrs_msgs/MpcTrackerDiagnostics.h>
 #include <mrs_msgs/Float64Stamped.h>
+#include <mrs_msgs/SetInt.h>
+
 #include <std_msgs/String.h>
+
 
 /* custom helper functions from our library */
 #include <mrs_lib/ParamLoader.h>
@@ -141,6 +144,7 @@ private:
   double _dead_band_factor_;
   double _time_to_emulate_;
   double _balloon_activation_dist_;
+  double _fov_step_;
   
 
 
@@ -273,6 +277,7 @@ private:
   std::mutex     mutex_status_;
   int            _rate_time_publish_status_;
 
+  // Publishing references from PCL and from planner
   ros::Publisher point_pub_;
   ros::Publisher balloon_pub_;
 
@@ -304,6 +309,8 @@ private:
 
   ros::Time time_last_planner_reset_;
 
+
+  
   // | -------------------- Planner functions ------------------- |
 
   void plannerActivate(eigen_vect estimation, double radius_);
@@ -322,6 +329,9 @@ private:
 
   bool               callbackStartStateMachine(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res);
   ros::ServiceServer srv_server_start_state_machine_;
+
+
+  bool               callbackStopStateMachine(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res);
   ros::ServiceServer srv_server_stop_state_machine_;
 
   bool               callbackToggleDestroy(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res);
@@ -329,6 +339,10 @@ private:
 
   bool               callbackResetZones(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res);
   ros::ServiceServer srv_server_reset_zones_;
+
+
+  bool               callbackAutoStart(mrs_msgs::SetInt::Request& req, mrs_msgs::SetInt::Response& res);
+  ros::ServiceServer srv_server_auto_start_;
 
 
   // | ------------------- dynamic reconfigure ------------------ |
