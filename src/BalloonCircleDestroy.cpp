@@ -68,6 +68,11 @@ void BalloonCircleDestroy::onInit() {
   param_loader.load_param("dead_band_factor", _dead_band_factor_);
   param_loader.load_param("balloon_activation_dist", _balloon_activation_dist_);
   param_loader.load_param("arena_scan_step", _fov_step_);
+  param_loader.load_matrix_static("arena", _arenas_);
+  if(!param_loader.loaded_successfully()) {
+    ROS_ERROR("[BalloonCircleDestroy]: Couldn't load all params, shutdown");
+    ros::shutdown();
+  }
 
   ROS_INFO_STREAM_ONCE("[BalloonCircleDestroy]: params loaded");
   if (_x_min_ > _x_max_ || _y_min_ > _y_max_) {
@@ -127,6 +132,7 @@ void BalloonCircleDestroy::onInit() {
   srv_server_stop_state_machine_  = nh.advertiseService("stop_state_machine", &BalloonCircleDestroy::callbackStartStateMachine, this);
   srv_server_toggle_destroy_      = nh.advertiseService("toggle_destroy", &BalloonCircleDestroy::callbackToggleDestroy, this);
   srv_server_reset_zones_         = nh.advertiseService("reset_forbidden_zones", &BalloonCircleDestroy::callbackResetZones, this);
+  srv_server_auto_start_         = nh.advertiseService("auto_start", &BalloonCircleDestroy::callbackAutoStart, this);
 
 
   //}
@@ -142,6 +148,7 @@ void BalloonCircleDestroy::onInit() {
   srv_planner_stop_estimation_  = nh.serviceClient<std_srvs::Trigger>("stop_estimation");
   srv_planner_add_zone_         = nh.serviceClient<balloon_filter::AddExclusionZone>("add_zone");
   srv_planner_reset_zones_      = nh.serviceClient<std_srvs::Trigger>("reset_zones");
+
 
   time_last_planner_reset_ = ros::Time::now();
 
@@ -1110,17 +1117,16 @@ bool BalloonCircleDestroy::callbackStartStateMachine([[maybe_unused]] std_srvs::
     return false;
   }
   if (_is_state_machine_active_) {
-    res.message               = "State machine was already active";
+    res.message = "State machine was already active";
     res.success = true;
     return true;
   } else {
     _is_state_machine_active_ = true;
     res.message               = "State machine activated";
-    _state_     = IDLE;
-    res.success = true;
+    _state_                   = IDLE;
+    res.success               = true;
     return true;
   }
-
 }
 
 //}
@@ -1128,28 +1134,41 @@ bool BalloonCircleDestroy::callbackStartStateMachine([[maybe_unused]] std_srvs::
 /* callbackAutoStart //{ */
 
 bool BalloonCircleDestroy::callbackAutoStart(mrs_msgs::SetInt::Request& req, mrs_msgs::SetInt::Response& res) {
-  switch(req.value) {
-  
+  switch (req.value) {
+
     case 0:
-      ROS_INFO("[AutoStart]: Arena 0 is set");
-      res.message ="[AutoStart]: Arena 0 is set";
+      if (!setArena(0)) {
+        res.message = "[AutoStart]: Arena 0 couldn't be  set";
+        res.success = false;
+        return false;
+      }
+      res.message               = "[AutoStart]: Arena 0 is set";
       _is_state_machine_active_ = true;
-      res.success = true;
-      return true;
-  
-    case 1:
-      ROS_INFO("[AutoStart]: Arena 1 is set");
-      res.message ="[AutoStart]: Arena 1 is set";
-      _is_state_machine_active_ = true;
-      res.success = true;
-      return true;
-    case 2:
-      ROS_INFO("[AutoStart]: Arena 2 is set");
-      res.message ="[AutoStart]: Arena 2 is set";
-      _is_state_machine_active_ = true;
-      res.success = true;
+      res.success               = true;
       return true;
 
+    case 1:
+      if (!setArena(1)) {
+        res.message = "[AutoStart]: Arena 1 couldn't be  set";
+        res.success = false;
+        return false;
+      }
+      ROS_INFO("[AutoStart]: Arena 1 is set");
+      res.message               = "[AutoStart]: Arena 1 is set";
+      _is_state_machine_active_ = true;
+      res.success               = true;
+      return true;
+    case 2:
+      if (!setArena(2)) {
+        res.message = "[AutoStart]: Arena 2 couldn't be  set";
+        res.success = false;
+        return false;
+      }
+      ROS_INFO("[AutoStart]: Arena 2 is set");
+      res.message               = "[AutoStart]: Arena 2 is set";
+      _is_state_machine_active_ = true;
+      res.success               = true;
+      return true;
   }
   ROS_WARN("[AutoStart]: Unexpected value from automatic start request");
   return false;
@@ -1174,7 +1193,7 @@ bool BalloonCircleDestroy::callbackStopStateMachine([[maybe_unused]] std_srvs::T
     res.message               = "State machine disabled";
 
   } else {
-    res.message               = "State machine isn't working";
+    res.message = "State machine isn't working";
   }
 
   _state_     = IDLE;
@@ -1744,15 +1763,15 @@ void BalloonCircleDestroy::scanArena() {
            std::abs(cur_odom_(0, 0) - left) > std::abs(cur_odom_(0, 0) - right));
 
   bool dir = std::abs(cur_odom_(0, 0) - left) > std::abs(cur_odom_(0, 0) - right);
-  /* if (!isPointInArena(cur_odom_(0, 0), cur_odom_(1, 0), cur_odom_(2, 0))) { */
-  /*   if (cur_odom_(0, 0) > left && cur_odom_(0, 0) < right) { */
-  /*     ROS_INFO("[]: is outside from the left side x %f y %f z %f", cur_odom_(0, 0), cur_odom_(1, 0), cur_odom_(2, 0)); */
-  /*   } else if (cur_odom_(0, 0) > right && cur_odom_(0, 0) < left) { */
-  /*     ROS_INFO("[]: is outside from the right side x %f y %f z %f", cur_odom_(0, 0), cur_odom_(1, 0), cur_odom_(2, 0)); */
-  /*   } else { */
-  /*     ROS_WARN("[]: kurwa"); */
-  /*   } */
-  /* } */
+  if (!isPointInArena(cur_odom_(0, 0), cur_odom_(1, 0), cur_odom_(2, 0))) {
+    if (cur_odom_(0, 0) > left && cur_odom_(0, 0) < right) {
+      ROS_INFO("[]: is outside from the left side x %f y %f z %f", cur_odom_(0, 0), cur_odom_(1, 0), cur_odom_(2, 0));
+    } else if (cur_odom_(0, 0) > right && cur_odom_(0, 0) < left) {
+      ROS_INFO("[]: is outside from the right side x %f y %f z %f", cur_odom_(0, 0), cur_odom_(1, 0), cur_odom_(2, 0));
+    } else {
+      ROS_WARN("[]: kurwa");
+    }
+  }
 
   /* double yaw = 0; */
 
@@ -1806,6 +1825,8 @@ void BalloonCircleDestroy::scanArena() {
 
   // yaw for the first point
   /* new_traj_.points[0].yaw = atan2(angle_vector_(new_traj_.points[1].y - new_traj_.points[0].y), new_traj_.points[1].x - new_traj_.points[0].x)); */
+  ROS_INFO("[]: new traj last %f, size %d", new_traj_.points.back().yaw, (int)new_traj_.points.size());
+
 
   /* new_traj_.points[new_traj_.points.size()-1].yaw = */
 
@@ -1995,6 +2016,29 @@ eigen_vect BalloonCircleDestroy::deadBand(eigen_vect target_, eigen_vect referen
     /* ROS_INFO("[]: DEAD BAND"); */
   }
   return reference_;
+}
+
+//}
+
+/* setArena //{ */
+
+bool BalloonCircleDestroy::setArena(int i) {
+  if (i > _arenas_.rows()) {
+    ROS_INFO("[AutoStart]: Arena couldn't set to type %d is out of matrix range, redefine your arenas", i);
+    return false;
+  }
+  _x_min_ = _arenas_(i, 0);
+  _x_max_ = _arenas_(i, 1);
+
+  _y_min_ = _arenas_(i, 2);
+  _y_max_ = _arenas_(i, 3);
+
+  _z_min_ = _arenas_(i, 4);
+  _z_max_ = _arenas_(i, 5);
+
+  _arena_offset_ = _arenas_(i, 6);
+  ROS_INFO("[AutoStart]: Arena is set to type %d", i);
+  return true;
 }
 
 //}

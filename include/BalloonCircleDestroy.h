@@ -2,6 +2,9 @@
 #ifndef BALLOON_CIRCLE_DESTROY_H
 #define BALLOON_CIRCLE_DESTROY_H
 
+#define N_ARENAS 3
+#define N_POINTS 7
+
 /* includes //{ */
 
 /* each ros package must have these */
@@ -145,8 +148,7 @@ private:
   double _time_to_emulate_;
   double _balloon_activation_dist_;
   double _fov_step_;
-  
-
+  Eigen::Matrix<double, N_ARENAS, N_POINTS> _arenas_;
 
   // | ------------------------- state machine params ------------------------- |
   enum State
@@ -310,7 +312,6 @@ private:
   ros::Time time_last_planner_reset_;
 
 
-  
   // | -------------------- Planner functions ------------------- |
 
   void plannerActivate(eigen_vect estimation, double radius_);
@@ -383,6 +384,7 @@ private:
   void        goToPoint(eigen_vect p_, eigen_vect goal, double speed_, mrs_msgs::TrackerTrajectory& new_traj_, double yaw);
   void        goToHeight(double height_, double speed_);
   eigen_vect  deadBand(eigen_vect target_, eigen_vect reference_);
+  bool        setArena(int i);
   //}
 };
 //}

@@ -8,13 +8,26 @@ rate:
   pub_status: 15
 # defines area for drone to operate
 area:
-  x_min: 2
-  x_max: -40
-  y_min: 5
-  y_max: 34
+  x_min: -5
+  x_max: 5
+  y_min: -5
+  y_max: 5
   z_min: 1
   z_max: 8
   offset: 3
+# arena coords are like this [x_min,x_max,y_min, y_max, z_min,z_max, offset]
+# arena:
+#   left: [-20,0,-20,20, 1,8,3]
+#   right: [0,20,-20,20, 1,8,3]
+#   all: [-20,20,-20,20, 1,8,3]
+
+arena:
+  [
+  -20,0,-20,20, 1,8,3,
+  0,20,-20,20, 1,8,3,
+  -20,20,-20,20, 1,8,3
+  ]
+
 # should the UAV land after destroying all balloons
 land_at_the_end: false
 #height offset when killing the balloon
