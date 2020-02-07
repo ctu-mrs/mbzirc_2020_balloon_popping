@@ -8,8 +8,8 @@ rate:
   pub_status: 15
 # defines area for drone to operate
 area:
-  x_min: -25 
-  x_max: 0
+  x_min: 0
+  x_max: 20
   y_min: -10
   y_max: 10
   z_min: 1
@@ -69,3 +69,4 @@ dead_band_factor: 0.5
 # timer to count the balloon as popped - for emulation
 time_to_emulate: 4
 balloon_activation_dist: 6
+arena_scan_step: 5

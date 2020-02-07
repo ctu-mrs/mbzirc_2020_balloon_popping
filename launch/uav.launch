@@ -26,7 +26,7 @@
       <!-- Parameters loaded from launch file -->
 
       <!-- ROS parameters config file -->
-      <rosparam file="$(find balloon_circle_destroy)/config/uav.yaml" />
+      <rosparam file="$(find balloon_circle_destroy)/config/uav60.yaml" />
 
       <param name="world_frame_id" type="string" value="$(arg uav_name)/gps_origin" />
       <!-- Subscribers -->
