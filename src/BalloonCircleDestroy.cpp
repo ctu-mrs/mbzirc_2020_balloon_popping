@@ -1679,15 +1679,15 @@ void BalloonCircleDestroy::scanArena() {
            std::abs(cur_odom_(0, 0) - left) > std::abs(cur_odom_(0, 0) - right));
 
   bool dir = std::abs(cur_odom_(0, 0) - left) > std::abs(cur_odom_(0, 0) - right);
-  if (!isPointInArena(cur_odom_(0, 0), cur_odom_(1, 0), cur_odom_(2, 0))) {
-    if (cur_odom_(0, 0) > left && cur_odom_(0, 0) < right) {
-      ROS_INFO("[]: is outside from the left side x %f y %f z %f", cur_odom_(0, 0), cur_odom_(1, 0), cur_odom_(2, 0));
-    } else if (cur_odom_(0, 0) > right && cur_odom_(0, 0) < left) {
-      ROS_INFO("[]: is outside from the right side x %f y %f z %f", cur_odom_(0, 0), cur_odom_(1, 0), cur_odom_(2, 0));
-    } else {
-      ROS_WARN("[]: kurwa");
-    }
-  }
+  /* if (!isPointInArena(cur_odom_(0, 0), cur_odom_(1, 0), cur_odom_(2, 0))) { */
+  /*   if (cur_odom_(0, 0) > left && cur_odom_(0, 0) < right) { */
+  /*     ROS_INFO("[]: is outside from the left side x %f y %f z %f", cur_odom_(0, 0), cur_odom_(1, 0), cur_odom_(2, 0)); */
+  /*   } else if (cur_odom_(0, 0) > right && cur_odom_(0, 0) < left) { */
+  /*     ROS_INFO("[]: is outside from the right side x %f y %f z %f", cur_odom_(0, 0), cur_odom_(1, 0), cur_odom_(2, 0)); */
+  /*   } else { */
+  /*     ROS_WARN("[]: kurwa"); */
+  /*   } */
+  /* } */
 
   /* double yaw = 0; */
 
@@ -1741,7 +1741,7 @@ void BalloonCircleDestroy::scanArena() {
 
   // yaw for the first point
   /* new_traj_.points[0].yaw = atan2(angle_vector_(new_traj_.points[1].y - new_traj_.points[0].y), new_traj_.points[1].x - new_traj_.points[0].x)); */
-  ROS_INFO("[]: new traj last %f, size %d",new_traj_.points.back().yaw, (int)new_traj_.points.size() );
+  /* ROS_INFO("[]: new traj last %f, size %d",new_traj_.points.back().yaw, (int)new_traj_.points.size() ); */
 
 
   /* new_traj_.points[new_traj_.points.size()-1].yaw = */ 

@@ -8,32 +8,27 @@ rate:
   pub_status: 15
 # defines area for drone to operate
 area:
-  x_min: 2
-  x_max: 40
-  y_min: 5
-  y_max: 34
+  x_min: -25 
+  x_max: 0
+  y_min: -10
+  y_max: 10
   z_min: 1
   z_max: 8
-  offset: 1
-sweeper:
-  p1: [0,0]
-  p2: [10,0]
-  p3: [10,10]
-  p4: [0,10]
+  offset: 3
 # should the UAV land after destroying all balloons
 land_at_the_end: false
 #height offset when killing the balloon
 height_offset: 0.0
 #height where drone will operate ( up to this height )
-elips_height: 2.75
+elips_height: 3.2
 #idle_time
 idle_time: 1.5
 #velocity for goTo's
-vel: 3
+vel: 2.5
 #velocity for attack
-vel_attack: 4
+vel_attack: 3
 #velocity of going around arena
-vel_arena: 4
+vel_arena: 3
 #distance to the balloon
 dist_to_balloon: 3.5
 #distance to kill the balloon
@@ -49,7 +44,7 @@ dist_error: 2.5
 #dist accurace to be as close to the balloon
 dist_acc: 1.5
 # distance to activate KF flying
-dist_kf_activation: 5.5
+dist_kf_activation: 4.5
 #time for waiting for KF reset
 wait_for_ball: 6
 #max time balloon not seen in PCL
@@ -73,4 +68,4 @@ height_tol: 0.5
 dead_band_factor: 0.5
 # timer to count the balloon as popped - for emulation
 time_to_emulate: 4
-balloon_activation_dist: 4
+balloon_activation_dist: 6
