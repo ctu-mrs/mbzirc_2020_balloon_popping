@@ -167,6 +167,12 @@ private:
   State _state_ = IDLE;
   State _prev_state_;
 
+  // Time thresholds for how long drone can be in a state
+  double time_to_going_to;
+  double time_to_destroy;
+  double time_to_check_balloon;
+
+
   bool                     _is_state_machine_active_ = false;
   bool                     _is_destroy_enabled_      = false;
   bool                     _height_checking_         = false;
@@ -201,6 +207,8 @@ private:
 
 
   bool transformPointFromWorld(const geometry_msgs::Point& point, const std::string& to_frame, const ros::Time& stamp, geometry_msgs::Point& point_out);
+  bool transformQuaternionFromWorld(const geometry_msgs::Quaternion& point, const std::string& to_frame, const ros::Time& stamp,
+                                    geometry_msgs::Quaternion& point_out);
   bool getTransform(const std::string& from_frame, const std::string& to_frame, const ros::Time& stamp, geometry_msgs::TransformStamped& transform_out);
 
   bool transformPclFromWorld(const PC::Ptr& pcl, const std::string& to_frame, const ros::Time& stamp, PC& pcl_out);
@@ -211,6 +219,7 @@ private:
   ros::Subscriber    sub_odom_uav_;
   nav_msgs::Odometry odom_uav_;
   eigen_vect         odom_vector_;
+  double             dron_yaw_;
   bool               got_odom_uav_ = false;
   std::mutex         mutex_odom_uav_;
   ros::Time          time_last_odom_uav_;
@@ -269,6 +278,11 @@ private:
   void       callbackTimerCheckStateMachine(const ros::TimerEvent& te);
   ros::Timer timer_check_state_machine_;
   int        _rate_timer_check_state_machine_;
+
+  void       callbackTimerCheckForbidden(const ros::TimerEvent& te);
+  ros::Timer timer_check_forbidden_;
+  int        _rate_timer_check_forbidden_;
+
 
   void       callbackTimerCheckEmulation(const ros::TimerEvent& te);
   ros::Timer timer_check_emulation_;

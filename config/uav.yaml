@@ -2,6 +2,7 @@
 rate:
   check_subscribers: 1 # [Hz]
   check_state_machine: 4 # [Hz]
+  check_forbidden: 2
   check_balloons: 20
   check_emulation: 10
   state_machine: 30
@@ -34,8 +35,6 @@ time_thresholds:
   going_to: 30
   destroy: 10
   checking_balloon: 30
-
-
 # should the UAV land after destroying all balloons
 land_at_the_end: false
 #height offset when killing the balloon
@@ -79,6 +78,8 @@ time_to_land: 120 # seconds
 balloon_tries: 2
 #forbidden area radius
 forbidden_radius: 4.5
+#forbidden time
+forbidden_time: 30
 # height tolerance of the arena
 height_tol: 0.5
 # not used

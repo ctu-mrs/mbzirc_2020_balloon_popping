@@ -203,13 +203,25 @@ void BalloonCircleDestroy::callbackOdomUav(const nav_msgs::OdometryConstPtr& msg
     std::scoped_lock lock(mutex_odom_uav_);
     odom_uav_ = *msg;
     geometry_msgs::Point p_;
-    /* const std::string& to_frame, const ros::Time& stamp, */
-    /*                                               geometry_msgs::Point& point_out */
+    geometry_msgs::Quaternion q_;
+
     try {
 
       if (transformPointFromWorld(odom_uav_.pose.pose.position, odom_uav_.header.frame_id, msg->header.stamp, p_)) {
 
         odom_vector_ = eigen_vect(p_.x, p_.y, p_.z);
+      }
+
+      if (transformQuaternionFromWorld(odom_uav_.pose.pose.orientation, odom_uav_.header.frame_id, msg->header.stamp, q_)) {
+        tf2::Quaternion q(
+        q_.x,
+        q_.y,
+        q_.z,
+        q_.w);
+        tf2::Matrix3x3 m(q);
+        double roll,pitch,yaw;
+        m.getRPY(roll,pitch,yaw);
+        ROS_INFO("[]: YAAAW %F", yaw);
       }
     }
     catch (tf2::ExtrapolationException e) {
@@ -239,6 +251,7 @@ void BalloonCircleDestroy::callbackBalloonPoint(const geometry_msgs::PoseWithCov
     /* const std::string& to_frame, const ros::Time& stamp, */
     /*                                               geometry_msgs::Point& point_out */
     try {
+
 
       if (transformPointFromWorld(balloon_point_.pose.pose.position, balloon_point_.header.frame_id, msg->header.stamp, p_)) {
         balloon_vector_ = eigen_vect(p_.x, p_.y, p_.z);
@@ -725,6 +738,26 @@ void BalloonCircleDestroy::callbackTimerCheckBalloonPoints([[maybe_unused]] cons
 
 //}
 
+/* callbackTimerCheckForbidden //{ */
+
+void BalloonCircleDestroy::callbackTimerCheckForbidden([[maybe_unused]] const ros::TimerEvent& te) {
+
+  if (!_is_state_machine_active_) {
+    return;
+  }
+  std::vector<Forbidden_t>::iterator it = _forb_vect_.begin();
+  for (; it != _forb_vect_.end();) {
+    if (ros::Time::now().toSec() - it->start_time.toSec() > it->lifetime) {
+      ROS_INFO("[StateMachine]: cleared forbidden area due to timer");
+      it = _forb_vect_.erase(it);
+    } else {
+      ++it;
+    }
+  }
+}
+
+//}
+
 /* callbackTimerCheckStateMachine //{ */
 
 void BalloonCircleDestroy::callbackTimerCheckStateMachine([[maybe_unused]] const ros::TimerEvent& te) {
@@ -734,6 +767,25 @@ void BalloonCircleDestroy::callbackTimerCheckStateMachine([[maybe_unused]] const
   }
 
   cur_state_dur_ = ros::Time::now().toSec() - time_state_set_.toSec();
+  switch (_state_) {
+
+    case CHECKING_BALLOON:
+      if (cur_state_dur_ > time_to_check_balloon) {
+        addToForbidden(balloon_closest_vector_);
+        changeState(IDLE);
+      }
+      break;
+    case GOING_TO_BALLOON:
+      if (cur_state_dur_ > time_to_going_to) {
+        addToForbidden(balloon_closest_vector_);
+        changeState(IDLE);
+      }
+    case DESTROYING:
+      if (cur_state_dur_ > time_to_destroy) {
+        addToForbidden(balloon_closest_vector_);
+        changeState(IDLE);
+      }
+  }
 }
 
 //}
@@ -2108,6 +2160,19 @@ bool BalloonCircleDestroy::transformPointFromWorld(const geometry_msgs::Point& p
 
 
   tf2::doTransform(p_, point_out, transform);
+  return true;
+}
+//}
+
+/* transformQuaternion() method //{ */
+bool BalloonCircleDestroy::transformQuaternionFromWorld(const geometry_msgs::Quaternion& point, const std::string& to_frame, const ros::Time& stamp,
+                                                       geometry_msgs::Quaternion& point_out) {
+  geometry_msgs::TransformStamped transform;
+  if (!getTransform(to_frame, world_frame_id_, stamp - ros::Duration(0.2), transform))
+    return false;
+
+
+  tf2::doTransform(point, point_out, transform);
   return true;
 }
 //}
