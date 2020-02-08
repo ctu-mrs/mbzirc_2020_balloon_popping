@@ -494,7 +494,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
 
           } else if ((odom_vector_ - balloon_closest_vector_).norm() < _dist_kf_activation_ && isBalloonVisible(balloon_vector_) &&
                      isPointInArena(balloon_vector_)) {
-            
+
             ROS_WARN_THROTTLE(0.5, "[StateMachine]: KF close ");
             changeState(DESTROYING);
             return;
@@ -1280,7 +1280,6 @@ bool BalloonCircleDestroy::callbackResetZones([[maybe_unused]] std_srvs::Trigger
 
 void BalloonCircleDestroy::getCloseToBalloon(eigen_vect dest_, double close_dist_, double speed_) {
 
-  
 
   double sample_dist_ = speed_ * (_traj_time_ / _traj_len_);
 
@@ -1349,10 +1348,10 @@ void BalloonCircleDestroy::getCloseToBalloon(eigen_vect dest_, double close_dist
   }
 
   if (_state_ == DESTROYING) {
-    new_traj_.points[new_traj_.points.size()-1].z += _overshoot_offset_;
+    new_traj_.points[new_traj_.points.size() - 1].z += _overshoot_offset_;
   }
 
-  
+
   _last_goal_         = cur_pos_;
   _last_goal_reached_ = false;
   ROS_INFO_THROTTLE(0.5, "[BalloonCircleDestroy]: Trajectory ready ");
@@ -2064,8 +2063,8 @@ bool BalloonCircleDestroy::setArena(int i) {
 /* changeState //{ */
 
 void BalloonCircleDestroy::changeState(State state) {
-  _prev_state_ = _state_;
-  _state_ = state; 
+  _prev_state_    = _state_;
+  _state_         = state;
   time_state_set_ = ros::Time::now();
   ROS_WARN_THROTTLE(0.5, "[StateMachine]: State changed to %s time was set ", getStateName().c_str());
 }
@@ -2081,8 +2080,16 @@ bool BalloonCircleDestroy::getTransform(const std::string& from_frame, const std
     return true;
   }
   catch (tf2::TransformException& ex) {
-    ROS_WARN_THROTTLE(0.5, "[BalloonCircleDestroy]: Error during transform from \"%s\" frame to \"%s\" frame.\n\tMSG: %s", from_frame.c_str(), to_frame.c_str(),
-                      ex.what());
+    try {
+      transform_out = tf_buffer_.lookupTransform(to_frame, from_frame, ros::Time(0));
+      return true;
+    }
+    catch (tf2::TransformException& ex) {
+      ROS_WARN_THROTTLE(0.5, "[BalloonCircleDestroy]: Error during transform from \"%s\" frame to \"%s\" frame.\n\tMSG: %s", from_frame.c_str(),
+                        to_frame.c_str(), ex.what());
+    }
+
+
     return false;
   }
 }

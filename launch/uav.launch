@@ -29,7 +29,7 @@
       <rosparam file="$(find balloon_circle_destroy)/config/uav.yaml" />
 
       <!-- World frame -->
-      <param name="world_frame_id" type="string" value="$(arg uav_name)/gps_origin" />
+      <param name="world_frame_id" type="string" value="$(arg uav_name)/arena_origin" />
       <!-- Subscribers -->
 
       <remap from="~odom_uav_in" to="control_manager/cmd_odom" />
