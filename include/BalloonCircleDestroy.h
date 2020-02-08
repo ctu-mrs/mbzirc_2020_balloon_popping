@@ -93,6 +93,8 @@ struct Forbidden_t
 {
   eigen_vect vect_;
   double     r;
+  ros::Time  start_time;
+  double     lifetime;
 };
 //}
 
@@ -110,44 +112,44 @@ private:
   bool       is_idling_ = false;
   ros::Timer timer_idling_;
   /* ros parameters */
-  double _idle_time_;
-  bool   _simulation_;
-  float  _height_;
-  float  _min_height_;
-  float  _max_height_;
-  float  _height_tol_;
-  double _vel_;
-  double _vel_attack_;
-  double _vel_arena_;
-  double _dist_to_balloon_;
-  double _dist_acc_;
-  double _dist_to_overshoot_;
-  double _dist_kf_activation_;
-  double _traj_len_;
-  double _traj_time_;
-  double _dist_error_;
-  double _wait_for_ball_;
-  int    _reset_tries_;
-  int    _balloon_tries_;
-  double _forbidden_radius_;
-  double _height_offset_;
-  double _max_time_balloon_;
-  double _x_min_;
-  double _x_max_;
-  double _y_min_;
-  double _y_max_;
-  double _z_min_;
-  double _z_max_;
-  double _arena_center_x_;
-  double _arena_center_y_;
-  double _jerk_;
-  double _acceleration_;
-  double _state_reset_time_;
-  double _overshoot_offset_;
-  double _dead_band_factor_;
-  double _time_to_emulate_;
-  double _balloon_activation_dist_;
-  double _fov_step_;
+  double                                    _idle_time_;
+  bool                                      _simulation_;
+  float                                     _height_;
+  float                                     _min_height_;
+  float                                     _max_height_;
+  float                                     _height_tol_;
+  double                                    _vel_;
+  double                                    _vel_attack_;
+  double                                    _vel_arena_;
+  double                                    _dist_to_balloon_;
+  double                                    _dist_acc_;
+  double                                    _dist_to_overshoot_;
+  double                                    _dist_kf_activation_;
+  double                                    _traj_len_;
+  double                                    _traj_time_;
+  double                                    _dist_error_;
+  double                                    _wait_for_ball_;
+  int                                       _reset_tries_;
+  int                                       _balloon_tries_;
+  double                                    _forbidden_radius_;
+  double                                    _height_offset_;
+  double                                    _max_time_balloon_;
+  double                                    _x_min_;
+  double                                    _x_max_;
+  double                                    _y_min_;
+  double                                    _y_max_;
+  double                                    _z_min_;
+  double                                    _z_max_;
+  double                                    _arena_center_x_;
+  double                                    _arena_center_y_;
+  double                                    _jerk_;
+  double                                    _acceleration_;
+  double                                    _state_reset_time_;
+  double                                    _overshoot_offset_;
+  double                                    _dead_band_factor_;
+  double                                    _time_to_emulate_;
+  double                                    _balloon_activation_dist_;
+  double                                    _fov_step_;
   Eigen::Matrix<double, N_ARENAS, N_POINTS> _arenas_;
 
   // | ------------------------- state machine params ------------------------- |
@@ -163,6 +165,7 @@ private:
 
   };
   State _state_ = IDLE;
+  State _prev_state_;
 
   bool                     _is_state_machine_active_ = false;
   bool                     _is_destroy_enabled_      = false;
@@ -184,6 +187,9 @@ private:
   ros::Time                _last_time_balloon_seen_;
   double                   _arena_offset_;
   ros::Time                _time_destroy_overshoot_set_;
+  void                     changeState(State state);
+  ros::Time                time_state_set_;
+  double                   cur_state_dur_;
 
 
   // | ----------------------- transforms ----------------------- |
@@ -259,6 +265,10 @@ private:
   void       callbackTimerStateMachine(const ros::TimerEvent& te);
   ros::Timer timer_state_machine_;
   int        _rate_timer_state_machine_;
+
+  void       callbackTimerCheckStateMachine(const ros::TimerEvent& te);
+  ros::Timer timer_check_state_machine_;
+  int        _rate_timer_check_state_machine_;
 
   void       callbackTimerCheckEmulation(const ros::TimerEvent& te);
   ros::Timer timer_check_emulation_;
