@@ -27,7 +27,8 @@ input=(
 '
   'Sensors' 'waitForRos; roslaunch mrs_general sensors.launch
 '
-  'Nimbro' 'waitForRos; roslaunch mrs_general nimbro.launch'
+  'Nimbro' 'waitForRos; roslaunch mrs_general nimbro.launch
+  '
   'Tersus' 'waitForRos; roslaunch tersus_gps_driver test.launch'
   'Control' 'waitForRos; roslaunch mrs_general core.launch config_constraint_manager:=./custom_configs/constraint_manager.yaml config_uav_manager:=./custom_configs/uav_manager.yaml config_odometry:=./custom_configs/odometry.yaml
 '
