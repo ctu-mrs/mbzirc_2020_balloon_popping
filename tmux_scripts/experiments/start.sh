@@ -29,7 +29,10 @@ input=(
 '
   'Nimbro' 'waitForRos; roslaunch mrs_general nimbro.launch
   '
-  'Tersus' 'waitForRos; roslaunch tersus_gps_driver test.launch'
+  'Status' 'waitForRos; roslaunch mrs_status status.launch
+'
+  'AutomaticStart' 'waitForRos; roslaunch mrs_general automatic_start_mbzirc.launch challenge:=balloons
+'
   'Control' 'waitForRos; roslaunch mrs_general core.launch config_constraint_manager:=./custom_configs/constraint_manager.yaml config_uav_manager:=./custom_configs/uav_manager.yaml config_odometry:=./custom_configs/odometry.yaml
 '
   'Vision' 'waitForRos; roslaunch balloon_filter localization_pipeline.launch
@@ -60,7 +63,7 @@ input=(
   'KILL_ALL' 'dmesg; tmux kill-session -t '
 )
 
-init_window="Control"
+init_window="Destroy"
 
 ###########################
 ### DO NOT MODIFY BELOW ###
@@ -122,24 +125,24 @@ do
   /usr/bin/tmux new-window -t $SESSION_NAME:$(($i+1)) -n "${names[$i]}"
 done
 
-# add pane splitter for mrs_status
-/usr/bin/tmux new-window -t $SESSION_NAME:$((${#names[*]}+1)) -n "mrs_status"
+# # add pane splitter for mrs_status
+# /usr/bin/tmux new-window -t $SESSION_NAME:$((${#names[*]}+1)) -n "mrs_status"
 
-# clear mrs status file so that no clutter is displayed
-truncate -s 0 /tmp/status.txt
+# # clear mrs status file so that no clutter is displayed
+# truncate -s 0 /tmp/status.txt
 
 # split all panes
-pes=""
-for ((i=0; i < ((${#names[*]}+2)); i++));
-do
-  pes=$pes"/usr/bin/tmux split-window -d -t $SESSION_NAME:$(($i))"
-  pes=$pes"/usr/bin/tmux send-keys -t $SESSION_NAME:$(($i)) 'tail -F /tmp/status.txt'"
-  pes=$pes"/usr/bin/tmux select-pane -U -t $(($i))"
-done
+# pes=""
+# for ((i=0; i < ((${#names[*]}+2)); i++));
+# do
+#   pes=$pes"/usr/bin/tmux split-window -d -t $SESSION_NAME:$(($i))"
+#   pes=$pes"/usr/bin/tmux send-keys -t $SESSION_NAME:$(($i)) 'tail -F /tmp/status.txt'"
+#   pes=$pes"/usr/bin/tmux select-pane -U -t $(($i))"
+# done
 
-/usr/bin/tmux send-keys -t $SESSION_NAME:$((${#names[*]}+1)) "${pes}"
+# /usr/bin/tmux send-keys -t $SESSION_NAME:$((${#names[*]}+1)) "${pes}"
 
-sleep 6
+sleep 3
 
 # start loggers
 for ((i=0; i < ${#names[*]}; i++));
@@ -170,10 +173,10 @@ do
   fi
 done
 
-pes=$pes"/usr/bin/tmux select-window -t $SESSION_NAME:$init_index"
-pes=$pes"waitForRos; roslaunch mrs_status status.launch >> /tmp/status.txt"
+/usr/bin/tmux select-window -t $SESSION_NAME:$init_index
+# pes=$pes"waitForRos; roslaunch mrs_status status.launch >> /tmp/status.txt"
 
-/usr/bin/tmux send-keys -t $SESSION_NAME:$((${#names[*]}+1)) "${pes}"
+# /usr/bin/tmux send-keys -t $SESSION_NAME:$((${#names[*]}+1)) "${pes}"
 
 /usr/bin/tmux -2 attach-session -t $SESSION_NAME
 

@@ -74,6 +74,7 @@ void BalloonCircleDestroy::onInit() {
     ros::shutdown();
   }
 
+
   ROS_INFO_STREAM_ONCE("[BalloonCircleDestroy]: params loaded");
   if (_x_min_ > _x_max_ || _y_min_ > _y_max_) {
     ROS_ERROR("[BalloonCircleDestroy]: Arena params are wrong, please check them once again, shutdown");
@@ -1762,6 +1763,9 @@ void BalloonCircleDestroy::scanArena() {
   ROS_INFO("[]: to left %f to right %f bool %d", cur_odom_(0, 0) - left, cur_odom_(0, 0) - right,
            std::abs(cur_odom_(0, 0) - left) > std::abs(cur_odom_(0, 0) - right));
 
+  if (_x_min_ > _x_max_ || _y_min_ > _y_max_) {
+    ROS_INFO("[]: ERROR min max swapped");
+  }
   bool dir = std::abs(cur_odom_(0, 0) - left) > std::abs(cur_odom_(0, 0) - right);
   if (!isPointInArena(cur_odom_(0, 0), cur_odom_(1, 0), cur_odom_(2, 0))) {
     if (cur_odom_(0, 0) > left && cur_odom_(0, 0) < right) {
@@ -1825,7 +1829,7 @@ void BalloonCircleDestroy::scanArena() {
 
   // yaw for the first point
   /* new_traj_.points[0].yaw = atan2(angle_vector_(new_traj_.points[1].y - new_traj_.points[0].y), new_traj_.points[1].x - new_traj_.points[0].x)); */
-  ROS_INFO("[]: new traj last %f, size %d", new_traj_.points.back().yaw, (int)new_traj_.points.size());
+  /* ROS_INFO("[]: new traj last %f, size %d", new_traj_.points.back().yaw, (int)new_traj_.points.size()); */
 
 
   /* new_traj_.points[new_traj_.points.size()-1].yaw = */

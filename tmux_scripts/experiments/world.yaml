@@ -32,7 +32,7 @@ safety_area:
   point_obstacles:
     # loaded as a vector of matrices
     # x, y, radius
-    enabled: true
+    enabled: false
     # [x1, y1, radisu1, height1,
     #  x2, y2, radius2, height2]
     data: [24.132245, 55.332897, 2, 2,
