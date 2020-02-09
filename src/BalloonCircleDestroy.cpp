@@ -1349,8 +1349,8 @@ void BalloonCircleDestroy::getCloseToBalloon(eigen_vect dest_, double close_dist
   mrs_msgs::TrackerTrajectory new_traj_;
   eigen_vect                  diff_vector_;
   double                      angle_ = getBalloonHeading(dest_);
-  if(_state_ == DESTROYING) {
-    if(getAngleBetween(angle_, odom_yaw_) > M_PI/6) {
+  if (_state_ == DESTROYING) {
+    if (getAngleBetween(angle_, odom_yaw_) > M_PI / 6) {
       ROS_INFO("[BalloonCircleDestroy]: Angle between drone and balloon is too big, abort");
       return;
     }
@@ -1586,6 +1586,9 @@ void BalloonCircleDestroy::addForbidden(eigen_vect forb_, double radius_) {
   Forbidden_t forb_t_;
   forb_t_.r     = radius_;
   forb_t_.vect_ = forb_;
+  forb_t_.lifetime   = 30;
+  forb_t_.start_time = ros::Time::now();
+
   _forb_vect_.push_back(forb_t_);
   balloon_filter::AddExclusionZone        req_;
   balloon_filter::AddExclusionZoneRequest rq_;
@@ -2136,6 +2139,14 @@ double BalloonCircleDestroy::getAngleBetween(double a, double b) {
 
 //}
 
+/* void BalloonCircleDestroy::addToForbidden(eigen_vect dest_) { */
+/*   Forbidden_t forb_; */
+/*   forb_.lifetime   = 30; */
+/*   forb_.r          = _forbidden_radius_; */
+/*   forb_.start_time = ros::Time::now(); */
+/*   forb_.vect_      = dest_; */
+/*   _forb_vect_.push_back(forb_); */
+/* } */
 // | --------------------- transformations -------------------- |
 /* getTransform() method //{ */
 bool BalloonCircleDestroy::getTransform(const std::string& from_frame, const std::string& to_frame, const ros::Time& stamp,
