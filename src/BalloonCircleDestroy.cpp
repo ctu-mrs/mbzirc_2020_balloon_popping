@@ -768,18 +768,18 @@ void BalloonCircleDestroy::callbackTimerCheckStateMachine([[maybe_unused]] const
 
     case CHECKING_BALLOON:
       if (cur_state_dur_ > time_to_check_balloon) {
-        addToForbidden(balloon_closest_vector_);
+        addForbidden(balloon_closest_vector_);
         changeState(IDLE);
       }
       break;
     case GOING_TO_BALLOON:
       if (cur_state_dur_ > time_to_going_to) {
-        addToForbidden(balloon_closest_vector_);
+        addForbidden(balloon_closest_vector_);
         changeState(IDLE);
       }
     case DESTROYING:
       if (cur_state_dur_ > time_to_destroy) {
-        addToForbidden(balloon_closest_vector_);
+        addForbidden(balloon_closest_vector_);
         changeState(IDLE);
       }
   }
