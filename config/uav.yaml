@@ -42,7 +42,7 @@ height_offset: 0.0
 #height where drone will operate ( up to this height )
 elips_height: 3.2
 #idle_time
-idle_time: 1.5
+idle_time: 0.3
 #velocity for goTo's
 vel: 2.5
 #velocity for attack
@@ -66,9 +66,9 @@ dist_acc: 1.5
 # distance to activate KF flying
 dist_kf_activation: 4.5
 #time for waiting for KF reset
-wait_for_ball: 6
+wait_for_ball: 3
 #max time balloon not seen in PCL
-max_time_balloon: 6
+max_time_balloon: 3
 #how many time to reset the KF
 reset_tries: 2
 #time to land - max time of not observing any balloons at all 
@@ -82,10 +82,6 @@ forbidden_radius: 4.5
 forbidden_time: 30
 # height tolerance of the arena
 height_tol: 0.5
-# not used
-# acceleration: 3
-# jerk: 10
-# state_reset_time: 30
 # dead band distance factor
 dead_band_factor: 0.5
 # timer to count the balloon as popped - for emulation
