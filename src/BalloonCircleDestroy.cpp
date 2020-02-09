@@ -53,6 +53,7 @@ void BalloonCircleDestroy::onInit() {
   param_loader.load_param("rate/pub_status", _rate_time_publish_status_);
 
   param_loader.load_param("world_frame_id", world_frame_id_);
+  param_loader.load_param("untilted_frame_id", untilted_frame_id_);
   param_loader.load_param("reset_tries", _reset_tries_);
   param_loader.load_param("balloon_tries", _balloon_tries_);
   param_loader.load_param("time_to_land", _time_to_land_);
@@ -202,8 +203,8 @@ void BalloonCircleDestroy::callbackOdomUav(const nav_msgs::OdometryConstPtr& msg
   {
     std::scoped_lock lock(mutex_odom_uav_);
     odom_uav_ = *msg;
-    geometry_msgs::Point p_;
-    geometry_msgs::Quaternion q_;
+    geometry_msgs::Point      p_;
+    geometry_msgs::Quaternion q_untilted;
 
     try {
 
@@ -212,16 +213,12 @@ void BalloonCircleDestroy::callbackOdomUav(const nav_msgs::OdometryConstPtr& msg
         odom_vector_ = eigen_vect(p_.x, p_.y, p_.z);
       }
 
-      if (transformQuaternionFromWorld(odom_uav_.pose.pose.orientation, odom_uav_.header.frame_id, msg->header.stamp, q_)) {
-        tf2::Quaternion q(
-        q_.x,
-        q_.y,
-        q_.z,
-        q_.w);
-        tf2::Matrix3x3 m(q);
-        double roll,pitch,yaw;
-        m.getRPY(roll,pitch,yaw);
-        ROS_INFO("[]: YAAAW %F", yaw);
+      if (transformQuaternionToUntilted(odom_uav_.pose.pose.orientation, odom_uav_.header.frame_id, msg->header.stamp, q_untilted)) {
+        tf2::Quaternion q(q_untilted.x, q_untilted.y, q_untilted.z, q_untilted.w);
+        tf2::Matrix3x3  m(q);
+        double          roll, pitch, yaw;
+        m.getRPY(roll, pitch, yaw);
+        odom_yaw_ = yaw;
       }
     }
     catch (tf2::ExtrapolationException e) {
@@ -1352,6 +1349,12 @@ void BalloonCircleDestroy::getCloseToBalloon(eigen_vect dest_, double close_dist
   mrs_msgs::TrackerTrajectory new_traj_;
   eigen_vect                  diff_vector_;
   double                      angle_ = getBalloonHeading(dest_);
+  if(_state_ == DESTROYING) {
+    if(getAngleBetween(angle_, odom_yaw_) > M_PI/6) {
+      ROS_INFO("[BalloonCircleDestroy]: Angle between drone and balloon is too big, abort");
+      return;
+    }
+  }
 
   mrs_msgs::TrackerPoint p;
   p.x   = cur_pos_(0, 0);
@@ -2123,6 +2126,16 @@ void BalloonCircleDestroy::changeState(State state) {
 
 //}
 
+/* getAngleBetween //{ */
+
+double BalloonCircleDestroy::getAngleBetween(double a, double b) {
+  double temp = a - b;
+
+  return atan2(sin(temp), cos(temp));
+}
+
+//}
+
 // | --------------------- transformations -------------------- |
 /* getTransform() method //{ */
 bool BalloonCircleDestroy::getTransform(const std::string& from_frame, const std::string& to_frame, const ros::Time& stamp,
@@ -2165,8 +2178,8 @@ bool BalloonCircleDestroy::transformPointFromWorld(const geometry_msgs::Point& p
 //}
 
 /* transformQuaternion() method //{ */
-bool BalloonCircleDestroy::transformQuaternionFromWorld(const geometry_msgs::Quaternion& point, const std::string& to_frame, const ros::Time& stamp,
-                                                       geometry_msgs::Quaternion& point_out) {
+bool BalloonCircleDestroy::transformQuaternionToUntilted(const geometry_msgs::Quaternion& point, const std::string& to_frame, const ros::Time& stamp,
+                                                         geometry_msgs::Quaternion& point_out) {
   geometry_msgs::TransformStamped transform;
   if (!getTransform(to_frame, world_frame_id_, stamp - ros::Duration(0.2), transform))
     return false;

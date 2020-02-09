@@ -30,6 +30,9 @@
 
       <!-- World frame -->
       <param name="world_frame_id" type="string" value="$(arg uav_name)/arena_origin" />
+
+      <!-- Untilted frame for yaw -->
+      <param name="untilted_frame_id" type="string" value="$(arg uav_name)/fcu_untilted" />
       <!-- Subscribers -->
 
       <remap from="~odom_uav_in" to="control_manager/cmd_odom" />

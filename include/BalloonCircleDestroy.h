@@ -202,13 +202,14 @@ private:
 
 
   std::string                                 world_frame_id_;
+  std::string                                 untilted_frame_id_;
   tf2_ros::Buffer                             tf_buffer_;
   std::unique_ptr<tf2_ros::TransformListener> tf_listener_ptr_;
 
 
   bool transformPointFromWorld(const geometry_msgs::Point& point, const std::string& to_frame, const ros::Time& stamp, geometry_msgs::Point& point_out);
-  bool transformQuaternionFromWorld(const geometry_msgs::Quaternion& point, const std::string& to_frame, const ros::Time& stamp,
-                                    geometry_msgs::Quaternion& point_out);
+  bool transformQuaternionToUntilted(const geometry_msgs::Quaternion& point, const std::string& to_frame, const ros::Time& stamp,
+                                     geometry_msgs::Quaternion& point_out);
   bool getTransform(const std::string& from_frame, const std::string& to_frame, const ros::Time& stamp, geometry_msgs::TransformStamped& transform_out);
 
   bool transformPclFromWorld(const PC::Ptr& pcl, const std::string& to_frame, const ros::Time& stamp, PC& pcl_out);
@@ -219,7 +220,7 @@ private:
   ros::Subscriber    sub_odom_uav_;
   nav_msgs::Odometry odom_uav_;
   eigen_vect         odom_vector_;
-  double             dron_yaw_;
+  double             odom_yaw_;
   bool               got_odom_uav_ = false;
   std::mutex         mutex_odom_uav_;
   ros::Time          time_last_odom_uav_;
@@ -409,6 +410,7 @@ private:
   void        goToHeight(double height_, double speed_);
   eigen_vect  deadBand(eigen_vect target_, eigen_vect reference_);
   bool        setArena(int i);
+  double      getAngleBetween(double a, double b);
   //}
 };
 //}
