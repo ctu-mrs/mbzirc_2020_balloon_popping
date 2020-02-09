@@ -174,7 +174,7 @@ private:
 
 
   bool                     _is_state_machine_active_ = false;
-  bool                     _is_destroy_enabled_      = false;
+  bool                     _is_destroy_enabled_      = true;
   bool                     _height_checking_         = false;
   double                   _closest_on_arena_        = 999.9;
   double                   _closest_angle_           = 0;

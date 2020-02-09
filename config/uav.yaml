@@ -25,9 +25,9 @@ area:
 
 arena:
   [
-  0,20,-10,10, 1,8,0.5,
-  -20,0,-10,10, 1,8,0.5,
-  -20,20,-10,10, 1,8,0.5
+  0,20,-10,10, 0.5,8,0.5,
+  -20,0,-10,10, 0.5,8,0.5,
+  -20,20,-10,10, 0.5,8,0.5
   ]
 
 # time thresholds for states - means, if dron stays in area for this amount a time, it'll go to fobidden
@@ -44,9 +44,9 @@ elips_height: 3.2
 #idle_time
 idle_time: 0
 #velocity for goTo's
-vel: 2.5
+vel: 3
 #velocity for attack
-vel_attack: 2
+vel_attack: 4
 #velocity of going around arena
 vel_arena: 3
 #distance to the balloon
@@ -54,7 +54,7 @@ dist_to_balloon: 5
 #distance to kill the balloon
 dist_to_overshoot: 2
 #overshoot offset
-overshoot_offset: -0.05
+overshoot_offset: 0
 #trajectory length for MPC
 traj_len: 40
 #traj time for MPC
@@ -64,7 +64,7 @@ dist_error: 2.5
 #dist accurace to be as close to the balloon
 dist_acc: 1.5
 # distance to activate KF flying
-dist_kf_activation: 5.5
+dist_kf_activation: 5.2
 #time for waiting for KF reset
 wait_for_ball: 3
 #max time balloon not seen in PCL

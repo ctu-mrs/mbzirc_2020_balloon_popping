@@ -135,7 +135,7 @@ void BalloonCircleDestroy::onInit() {
   /*  server services //{ */
 
   srv_server_start_state_machine_ = nh.advertiseService("start_state_machine", &BalloonCircleDestroy::callbackStartStateMachine, this);
-  srv_server_stop_state_machine_  = nh.advertiseService("stop_state_machine", &BalloonCircleDestroy::callbackStartStateMachine, this);
+  srv_server_stop_state_machine_  = nh.advertiseService("stop_state_machine", &BalloonCircleDestroy::callbackStopStateMachine, this);
   srv_server_toggle_destroy_      = nh.advertiseService("toggle_destroy", &BalloonCircleDestroy::callbackToggleDestroy, this);
   srv_server_reset_zones_         = nh.advertiseService("reset_forbidden_zones", &BalloonCircleDestroy::callbackResetZones, this);
   srv_server_auto_start_          = nh.advertiseService("auto_start", &BalloonCircleDestroy::callbackAutoStart, this);
@@ -556,8 +556,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
         /* DESTROYING state //{ */
 
         {
-          if (balloon_vector_(2, 0) == 0) {
-
+          if (odom_vector_(2,0) - _height_tol_ > balloon_vector_(2, 0) ) {
             ROS_WARN_THROTTLE(0.5, "[StateMachine]: height is not the same with the balloon, reset");
             changeState(GOING_TO_BALLOON);
             break;
