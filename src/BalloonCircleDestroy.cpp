@@ -460,12 +460,12 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
         /* CHECKING_BALLOON state //{ */
 
         {
-          if (_mpc_stop_ == false) {
-            droneStop();
-            return;
-          }
+          /* if (_mpc_stop_ == false) { */
+          /*   droneStop(); */
+          /*   return; */
+          /* } */
 
-          if (!is_tracking_ && !is_idling_) {
+          if (!is_idling_) {
             if (odom_vector_(2, 0) < _height_ - _height_tol_) {
               ROS_INFO("[]: Height is %f  compared to %f", odom_vector_(2, 0), _height_ - _height_tol_);
               ROS_WARN_THROTTLE(0.5, "[StateMachine]: height is not correct, ascend");
@@ -476,6 +476,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
             break;
           }
           if (!is_ballon_cloud_incoming_) {
+            ROS_INFO("[]: PCL is not incoming");
             changeState(IDLE);
           }
           balloon_closest_vector_ = getClosestBalloon();
@@ -771,18 +772,18 @@ void BalloonCircleDestroy::callbackTimerCheckStateMachine([[maybe_unused]] const
 
     case CHECKING_BALLOON:
       if (cur_state_dur_ > time_to_check_balloon) {
-        addForbidden(balloon_closest_vector_,_forbidden_radius_);
+        ROS_INFO("[]: too long check balloon");
         changeState(IDLE);
       }
       break;
     case GOING_TO_BALLOON:
       if (cur_state_dur_ > time_to_going_to) {
-        addForbidden(balloon_closest_vector_,_forbidden_radius_);
+        ROS_INFO("[]: too long going to balloon");
         changeState(IDLE);
       }
     case DESTROYING:
       if (cur_state_dur_ > time_to_destroy) {
-        addForbidden(balloon_closest_vector_,_forbidden_radius_);
+        ROS_INFO("[]: too long destroy");
         changeState(IDLE);
       }
   }

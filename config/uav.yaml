@@ -16,7 +16,7 @@ area:
   y_max: 5
   z_min: 1
   z_max: 8
-  offset: 3
+  offset: 1
 # arena coords are like this [x_min,x_max,y_min, y_max, z_min,z_max, offset]
 # arena:
 #   left: [-20,0,-20,20, 1,8,3]
@@ -25,9 +25,9 @@ area:
 
 arena:
   [
-  0,20,-10,10, 1,8,3,
-  -20,0,-10,10, 1,8,3,
-  -20,20,-10,10, 1,8,3
+  0,20,-10,10, 1,8,0.5,
+  -20,0,-10,10, 1,8,0.5,
+  -20,20,-10,10, 1,8,0.5
   ]
 
 # time thresholds for states - means, if dron stays in area for this amount a time, it'll go to fobidden
@@ -42,19 +42,19 @@ height_offset: 0.0
 #height where drone will operate ( up to this height )
 elips_height: 3.2
 #idle_time
-idle_time: 0.3
+idle_time: 0
 #velocity for goTo's
 vel: 2.5
 #velocity for attack
-vel_attack: 3
+vel_attack: 2
 #velocity of going around arena
 vel_arena: 3
 #distance to the balloon
-dist_to_balloon: 3.5
+dist_to_balloon: 5
 #distance to kill the balloon
 dist_to_overshoot: 2
 #overshoot offset
-overshoot_offset: 0.0
+overshoot_offset: -0.05
 #trajectory length for MPC
 traj_len: 40
 #traj time for MPC
@@ -64,7 +64,7 @@ dist_error: 2.5
 #dist accurace to be as close to the balloon
 dist_acc: 1.5
 # distance to activate KF flying
-dist_kf_activation: 4.5
+dist_kf_activation: 5.5
 #time for waiting for KF reset
 wait_for_ball: 3
 #max time balloon not seen in PCL
@@ -87,7 +87,7 @@ dead_band_factor: 0.5
 # timer to count the balloon as popped - for emulation
 time_to_emulate: 4
 # dist to activate flying by PCL z
-balloon_activation_dist: 4
+balloon_activation_dist: 11
 # scan step 
 arena_scan_step: 5
 
