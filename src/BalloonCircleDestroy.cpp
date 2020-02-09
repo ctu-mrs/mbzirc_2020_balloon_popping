@@ -51,6 +51,9 @@ void BalloonCircleDestroy::onInit() {
   param_loader.load_param("rate/state_machine", _rate_timer_state_machine_);
   param_loader.load_param("rate/pub_rviz", _rate_time_publish_rviz_);
   param_loader.load_param("rate/pub_status", _rate_time_publish_status_);
+  param_loader.load_param("time_thresholds/going_to", time_to_going_to);
+  param_loader.load_param("time_thresholds/destroy", time_to_destroy);
+  param_loader.load_param("time_thresholds/checking_balloon", time_to_check_balloon);
 
   param_loader.load_param("world_frame_id", world_frame_id_);
   param_loader.load_param("untilted_frame_id", untilted_frame_id_);
