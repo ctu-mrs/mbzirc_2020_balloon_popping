@@ -33,12 +33,13 @@
 
       <!-- Untilted frame for yaw -->
       <param name="untilted_frame_id" type="string" value="$(arg uav_name)/fcu_untilted" />
-      <!-- Subscribers -->
 
+      <!-- Subscribers -->
       <remap from="~odom_uav_in" to="control_manager/cmd_odom" />
       <remap from="~tracker_diagnostics_in" to="control_manager/mpc_tracker/diagnostics" />
       <remap from="~balloon_point_in" to="balloon_filter/balloon_chosen_out" />
       <remap from="~balloon_point_cloud_in" to="object_detect/detected_balls_pcl" />
+      <remap from="~constraints_diagnostics_in" to="constraint_manager/diagnostics" />
 
       <!-- Publishers -->
       <remap from="~rviz_out" to="~rviz_out" />

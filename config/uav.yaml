@@ -30,6 +30,9 @@ arena:
   -20,20,-10,10, 0.5,8,0.5
   ]
 
+constraints:
+  sweeping: "sweeping"
+  going: "aggressive"
 # time thresholds for states - means, if dron stays in area for this amount a time, it'll go to fobidden
 time_thresholds:
   going_to: 30
@@ -52,7 +55,7 @@ vel_arena: 3
 #distance to the balloon
 dist_to_balloon: 5
 #distance to kill the balloon
-dist_to_overshoot: 2
+dist_to_overshoot: 4
 #overshoot offset
 overshoot_offset: 0
 #trajectory length for MPC

@@ -50,6 +50,7 @@
 #include <mrs_msgs/Float64Stamped.h>
 #include <mrs_msgs/SetInt.h>
 #include <mrs_msgs/String.h>
+#include <mrs_msgs/ConstraintManagerDiagnostics.h>
 
 #include <std_msgs/String.h>
 
@@ -151,6 +152,8 @@ private:
   double                                    _time_to_emulate_;
   double                                    _balloon_activation_dist_;
   double                                    _fov_step_;
+  std::string                               _sweep_constraints_;
+  std::string                               _attack_constraints_;
   Eigen::Matrix<double, N_ARENAS, N_POINTS> _arenas_;
 
   // | ------------------------- state machine params ------------------------- |
@@ -232,6 +235,14 @@ private:
   bool               got_odom_gt_ = false;
   std::mutex         mutex_odom_gt_;
   ros::Time          time_last_odom_gt_;
+
+  void                                   callbackConstraintsDiag(const mrs_msgs::ConstraintManagerDiagnosticsConstPtr& msg);
+  ros::Subscriber                        subscriber_constraints_diag_;
+  bool                                   got_constraints_diag_ = false;
+  std::string                            cur_constraints_;
+  std::mutex                             mutex_constraints_;
+  mrs_msgs::ConstraintManagerDiagnostics constraints_msg_;
+  ros::Time                              time_last_constraints_diagnostics_;
 
 
   void            callbackTrackerDiag(const mrs_msgs::MpcTrackerDiagnosticsConstPtr& msg);
@@ -322,7 +333,7 @@ private:
   bool               _mpc_stop_ = false;
 
   ros::ServiceClient srv_set_constriants_;
-  void setConstraints(std::string desired_constraints);
+  void               setConstraints(std::string desired_constraints);
 
   // | ------------------- Estimation services ------------------ |
 
