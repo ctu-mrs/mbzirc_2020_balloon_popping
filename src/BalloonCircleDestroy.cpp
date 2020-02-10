@@ -546,7 +546,8 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
           if (!_planner_active_ || !is_ballon_incoming_) {
             plannerActivate(balloon_closest_vector_, _dist_error_);
 
-          } else if ((odom_vector_ - balloon_closest_vector_).norm() < _dist_kf_activation_ && isBalloonVisible(balloon_vector_) &&
+          } 
+          else if ((odom_vector_ - balloon_closest_vector_).norm() < _dist_kf_activation_ && isBalloonVisible(balloon_vector_) &&
                      isPointInArena(balloon_vector_) && odom_vector_(2, 0) - _height_tol_ < balloon_vector_(2, 0)) {
 
             ROS_WARN_THROTTLE(0.5, "[StateMachine]: KF close ");
@@ -596,11 +597,11 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
         /* DESTROYING state //{ */
 
         {
-          if (odom_vector_(2, 0) - _height_tol_ > balloon_vector_(2, 0)) {
-            ROS_WARN_THROTTLE(0.5, "[StateMachine]: height is not the same with the balloon, reset");
-            changeState(GOING_TO_BALLOON);
-            break;
-          }
+          /* if (odom_vector_(2, 0) - _height_tol_ > balloon_vector_(2, 0)) { */
+          /*   ROS_WARN_THROTTLE(0.5, "[StateMachine]: height is not the same with the balloon, reset"); */
+          /*   changeState(GOING_TO_BALLOON); */
+          /*   break; */
+          /* } */
           if (balloonOutdated()) {
             if (ros::Time::now().toSec() - time_last_planner_reset_.toSec() < _wait_for_ball_) {
               return;
@@ -617,16 +618,9 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
           }
           if (isBalloonVisible(balloon_vector_)) {
             if (!balloon_closest_vector_.isZero()) {
-              if (_is_destroy_enabled_) {
+             
                 getCloseToBalloon(balloon_vector_, -_dist_to_overshoot_, _vel_attack_);
-              } else {
-                getCloseToBalloon(balloon_vector_, _dist_to_balloon_, _vel_attack_);
-                if (!timer_set_) {
-                  ros::NodeHandle nh("~");
-                  timer_check_emulation_ = nh.createTimer(ros::Duration(_time_to_emulate_), &BalloonCircleDestroy::callbackTimerCheckEmulation, this, true);
-                  timer_set_             = true;
-                }
-              }
+              
             }
             return;
           } else {
@@ -837,12 +831,12 @@ void BalloonCircleDestroy::callbackTimerCheckStateMachine([[maybe_unused]] const
         addForbidden(balloon_closest_vector_, _forbidden_radius_);
         changeState(IDLE);
       }
-    case DESTROYING:
-      if (cur_state_dur_ > time_to_destroy) {
-        ROS_INFO("[StateMachine]: too long destroy");
-        addForbidden(balloon_closest_vector_, _forbidden_radius_);
-        changeState(IDLE);
-      }
+    /* case DESTROYING: */
+    /*   if (cur_state_dur_ > time_to_destroy) { */
+    /*     ROS_INFO("[StateMachine]: too long destroy"); */
+    /*     addForbidden(balloon_closest_vector_, _forbidden_radius_); */
+    /*     changeState(IDLE); */
+    /*   } */
   }
 }
 

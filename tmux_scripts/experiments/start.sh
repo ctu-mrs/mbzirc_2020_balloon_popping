@@ -39,7 +39,7 @@ input=(
 '
   'Vision' 'waitForRos; roslaunch balloon_filter localization_pipeline.launch
 '
-  'Destroy' 'waitForRos; roslaunch balloon_circle_destroy uav.launch debug:=true
+  'Destroy' 'waitForRos; roslaunch balloon_circle_destroy uav.launch 
 '
   'MotorsOn' 'rosservice call /'"$UAV_NAME"'/control_manager/motors 1'
   'Takeoff' 'rosservice call /'"$UAV_NAME"'/uav_manager/takeoff'

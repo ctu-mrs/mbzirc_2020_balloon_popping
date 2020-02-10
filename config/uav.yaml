@@ -49,7 +49,7 @@ idle_time: 0
 #velocity for goTo's
 vel: 3
 #velocity for attack
-vel_attack: 4
+vel_attack: 2
 #velocity of going around arena
 vel_arena: 3
 #distance to the balloon
@@ -65,7 +65,7 @@ traj_time: 8
 #distance error to target the closest balloon so, it will be compared to current chosen via KF + dist_error 
 dist_error: 2.5
 #dist accurace to be as close to the balloon
-dist_acc: 1.5
+dist_acc: 2.5
 # distance to activate KF flying
 dist_kf_activation: 5.2
 #time for waiting for KF reset
