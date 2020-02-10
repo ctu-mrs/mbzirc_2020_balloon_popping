@@ -150,6 +150,7 @@ void BalloonCircleDestroy::onInit() {
   srv_client_trajectory_        = nh.serviceClient<mrs_msgs::TrackerTrajectorySrv>("trajectory_srv");
   srv_planner_reset_estimation_ = nh.serviceClient<std_srvs::Trigger>("reset_estimation");
   srv_client_stop_              = nh.serviceClient<std_srvs::Trigger>("drone_stop");
+  srv_set_constriants_          = nh.serviceClient<mrs_msgs::String>("set_constraints_out");
   srv_planner_start_estimation_ = nh.serviceClient<balloon_filter::StartEstimation>("start_estimation");
   srv_planner_stop_estimation_  = nh.serviceClient<std_srvs::Trigger>("stop_estimation");
   srv_planner_add_zone_         = nh.serviceClient<balloon_filter::AddExclusionZone>("add_zone");
@@ -556,7 +557,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
         /* DESTROYING state //{ */
 
         {
-          if (odom_vector_(2,0) - _height_tol_ > balloon_vector_(2, 0) ) {
+          if (odom_vector_(2, 0) - _height_tol_ > balloon_vector_(2, 0)) {
             ROS_WARN_THROTTLE(0.5, "[StateMachine]: height is not the same with the balloon, reset");
             changeState(GOING_TO_BALLOON);
             break;
@@ -1587,8 +1588,8 @@ void BalloonCircleDestroy::addForbidden(eigen_vect forb_, double radius_) {
 
 
   Forbidden_t forb_t_;
-  forb_t_.r     = radius_;
-  forb_t_.vect_ = forb_;
+  forb_t_.r          = radius_;
+  forb_t_.vect_      = forb_;
   forb_t_.lifetime   = 30;
   forb_t_.start_time = ros::Time::now();
 
@@ -2138,6 +2139,28 @@ double BalloonCircleDestroy::getAngleBetween(double a, double b) {
   double temp = a - b;
 
   return atan2(sin(temp), cos(temp));
+}
+
+//}
+
+/* setConstraints() //{ */
+
+void BalloonCircleDestroy::setConstraints(std::string desired_constraints) {
+
+  mrs_msgs::String srv;
+  srv.request.value = desired_constraints;
+
+  ROS_INFO("[BrickGrasping]: setting constraints to \"%s\"", desired_constraints.c_str());
+
+  bool res = srv_set_constriants_.call(srv);
+
+  if (res) {
+    if (!srv.response.success) {
+      ROS_WARN_THROTTLE(1.0, "[BrickGrasping]: service call for setConstraints() returned false: %s", srv.response.message.c_str());
+    }
+  } else {
+    ROS_ERROR("[BrickGrasping]: service call for setConstraints() failed!");
+  }
 }
 
 //}

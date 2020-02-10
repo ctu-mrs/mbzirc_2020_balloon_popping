@@ -62,6 +62,7 @@
       <remap from="~stop_estimation" to="balloon_filter/stop_estimation" />
       <remap from="~add_zone" to="balloon_filter/add_exclusion_zone" />
       <remap from="~reset_zones" to="balloon_filter/reset_exclusion_zones" />
+      <remap from="~set_constraints_out" to="constraint_manager/set_constraints" />
 
     </node>
 

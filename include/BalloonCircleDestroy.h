@@ -49,6 +49,7 @@
 #include <mrs_msgs/MpcTrackerDiagnostics.h>
 #include <mrs_msgs/Float64Stamped.h>
 #include <mrs_msgs/SetInt.h>
+#include <mrs_msgs/String.h>
 
 #include <std_msgs/String.h>
 
@@ -319,6 +320,10 @@ private:
 
   ros::ServiceClient srv_client_stop_;
   bool               _mpc_stop_ = false;
+
+  ros::ServiceClient srv_set_constriants_;
+  void setConstraints(std::string desired_constraints);
+
   // | ------------------- Estimation services ------------------ |
 
   ros::ServiceClient srv_planner_reset_estimation_;
