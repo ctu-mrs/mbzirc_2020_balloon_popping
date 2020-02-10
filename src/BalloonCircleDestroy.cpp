@@ -772,18 +772,21 @@ void BalloonCircleDestroy::callbackTimerCheckStateMachine([[maybe_unused]] const
 
     case CHECKING_BALLOON:
       if (cur_state_dur_ > time_to_check_balloon) {
-        ROS_INFO("[]: too long check balloon");
+        ROS_INFO("[StateMachine]: too long check balloon");
+        addForbidden(balloon_closest_vector_, _forbidden_radius_);
         changeState(IDLE);
       }
       break;
     case GOING_TO_BALLOON:
       if (cur_state_dur_ > time_to_going_to) {
-        ROS_INFO("[]: too long going to balloon");
+        ROS_INFO("[StateMachine]: too long going to balloon");
+        addForbidden(balloon_closest_vector_, _forbidden_radius_);
         changeState(IDLE);
       }
     case DESTROYING:
       if (cur_state_dur_ > time_to_destroy) {
-        ROS_INFO("[]: too long destroy");
+        ROS_INFO("[StateMachine]: too long destroy");
+        addForbidden(balloon_closest_vector_, _forbidden_radius_);
         changeState(IDLE);
       }
   }
@@ -1592,6 +1595,7 @@ void BalloonCircleDestroy::addForbidden(eigen_vect forb_, double radius_) {
   forb_t_.vect_      = forb_;
   forb_t_.lifetime   = 30;
   forb_t_.start_time = ros::Time::now();
+  ROS_INFO("[StateMachine]: Added forbidden zone  ");
 
   _forb_vect_.push_back(forb_t_);
   balloon_filter::AddExclusionZone        req_;
@@ -2165,14 +2169,6 @@ void BalloonCircleDestroy::setConstraints(std::string desired_constraints) {
 
 //}
 
-/* void BalloonCircleDestroy::addToForbidden(eigen_vect dest_) { */
-/*   Forbidden_t forb_; */
-/*   forb_.lifetime   = 30; */
-/*   forb_.r          = _forbidden_radius_; */
-/*   forb_.start_time = ros::Time::now(); */
-/*   forb_.vect_      = dest_; */
-/*   _forb_vect_.push_back(forb_); */
-/* } */
 // | --------------------- transformations -------------------- |
 /* getTransform() method //{ */
 bool BalloonCircleDestroy::getTransform(const std::string& from_frame, const std::string& to_frame, const ros::Time& stamp,
