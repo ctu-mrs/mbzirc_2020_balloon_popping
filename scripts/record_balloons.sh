@@ -21,6 +21,7 @@ exclude=(
 '(.*)rs_d435(.*)depth/image_rect_raw'
 '(.*)rs_d435(.*)/infra(.*)'
 '(.*)rs_d435(.*)/color/image_rect_color'
+'(.*)rs_d435(.*)/color/image_rect_raw'
 '(.*)rs_d435(.*)/color/image_raw'
 
 )

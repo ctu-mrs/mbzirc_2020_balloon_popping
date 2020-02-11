@@ -55,7 +55,7 @@ vel_arena: 3
 #distance to the balloon
 dist_to_balloon: 5
 #distance to kill the balloon
-dist_to_overshoot: 4
+dist_to_overshoot: 5
 #overshoot offset
 overshoot_offset: 0
 #trajectory length for MPC
