@@ -424,7 +424,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
     ROS_INFO_THROTTLE(0.5, "[Balloon KF incoming]: %s", balloon_kf_status_.c_str());
     ROS_INFO_THROTTLE(0.5, "[Current Dist To ball]: %f ", (odom_vector_ - balloon_vector_).norm());
     ROS_INFO_THROTTLE(0.5, "[Closest ball (PointCloud)]: x %f y %f z %f", balloon_closest_vector_(0, 0), balloon_closest_vector_(1, 0),
-                      balloon_closest_vector_(2, 0));
+        balloon_closest_vector_(2, 0));
     ROS_INFO_THROTTLE(0.5, "[Closest ball (KF)]: x %f  y %f z %f", balloon_vector_(0, 0), balloon_vector_(1, 0), balloon_vector_(2, 0));
     ROS_INFO_THROTTLE(0.5, "[Dist between KF and PCL vectors]: %f ", (balloon_vector_ - balloon_closest_vector_).norm());
 
@@ -1255,7 +1255,7 @@ bool BalloonCircleDestroy::callbackAutoStart(mrs_msgs::SetInt::Request& req, mrs
       if (!setArena(0)) {
         res.message = "[AutoStart]: Arena 0 couldn't be  set";
         res.success = false;
-        return false;
+        return true;
       }
       res.message               = "[AutoStart]: Arena 0 is set";
       _is_state_machine_active_ = true;
@@ -1266,7 +1266,7 @@ bool BalloonCircleDestroy::callbackAutoStart(mrs_msgs::SetInt::Request& req, mrs
       if (!setArena(1)) {
         res.message = "[AutoStart]: Arena 1 couldn't be  set";
         res.success = false;
-        return false;
+        return true;
       }
       ROS_INFO("[AutoStart]: Arena 1 is set");
       res.message               = "[AutoStart]: Arena 1 is set";
@@ -1277,7 +1277,7 @@ bool BalloonCircleDestroy::callbackAutoStart(mrs_msgs::SetInt::Request& req, mrs
       if (!setArena(2)) {
         res.message = "[AutoStart]: Arena 2 couldn't be  set";
         res.success = false;
-        return false;
+        return true;
       }
       ROS_INFO("[AutoStart]: Arena 2 is set");
       res.message               = "[AutoStart]: Arena 2 is set";
@@ -1288,7 +1288,7 @@ bool BalloonCircleDestroy::callbackAutoStart(mrs_msgs::SetInt::Request& req, mrs
       if (!setArena(2)) {
           res.message = "[AutoStart]: Arena 2 couldn't be  set";
         res.success = false;
-        return false;
+        return true;
       }
       ROS_INFO("[AutoStart]: Default case is triggered ( RC signal is bad ) Arena 2 is set");
       res.message               = "[AutoStart]: Default case is triggered ( RC signal is bad ) Arena 2 is set";
@@ -1298,7 +1298,7 @@ bool BalloonCircleDestroy::callbackAutoStart(mrs_msgs::SetInt::Request& req, mrs
 
   }
   ROS_WARN("[AutoStart]: Unexpected value from automatic start request");
-  return false;
+  return true;
 }
 
 //}
