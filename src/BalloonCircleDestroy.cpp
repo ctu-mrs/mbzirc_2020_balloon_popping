@@ -1933,13 +1933,13 @@ void BalloonCircleDestroy::scanArena() {
       goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, getArenaHeading(cur_odom_, nxt));
       cur_odom_(1, 0) = top;
       nxt(0, 0) += _fov_step_;
-      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, getArenaHeading(cur_odom_, eigen_vect(nxt(0, 0), bot, 0)));
+      goToPoint(cur_odom_, nxt, _vel_arena_ / 2.5, new_traj_, getArenaHeading(cur_odom_, eigen_vect(nxt(0, 0), bot, 0)));
       cur_odom_(0, 0) += _fov_step_;
       nxt(1, 0) = bot;
       goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, getArenaHeading(cur_odom_, nxt));
       cur_odom_(1, 0) = bot;
       nxt(0, 0) += _fov_step_;
-      goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, getArenaHeading(cur_odom_, eigen_vect(nxt(0, 0), top, 0)));
+      goToPoint(cur_odom_, nxt, _vel_arena_/ 2.5, new_traj_, getArenaHeading(cur_odom_, eigen_vect(nxt(0, 0), top, 0)));
       cur_odom_(0, 0) += _fov_step_;
 
       /* if (i > 0) { */
@@ -1955,13 +1955,13 @@ void BalloonCircleDestroy::scanArena() {
       goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, getArenaHeading(cur_odom_, nxt));
       cur_odom_(1, 0) = top;
       nxt(0, 0) -= _fov_step_;
-      goToPoint(cur_odom_, nxt, _vel_arena_ / 2, new_traj_, getArenaHeading(cur_odom_, eigen_vect(nxt(0, 0), bot, 0)));
+      goToPoint(cur_odom_, nxt, _vel_arena_ / 2.5, new_traj_, getArenaHeading(cur_odom_, eigen_vect(nxt(0, 0), bot, 0)));
       cur_odom_(0, 0) -= _fov_step_;
       nxt(1, 0) = bot;
       goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, getArenaHeading(cur_odom_, nxt));
       cur_odom_(1, 0) = bot;
       nxt(0, 0) -= _fov_step_;
-      goToPoint(cur_odom_, nxt, _vel_arena_ / 2, new_traj_, getArenaHeading(cur_odom_, eigen_vect(nxt(0, 0), top, 0)));
+      goToPoint(cur_odom_, nxt, _vel_arena_ / 2.5, new_traj_, getArenaHeading(cur_odom_, eigen_vect(nxt(0, 0), top, 0)));
       cur_odom_(0, 0) -= _fov_step_;
 
       /* if (i > 0) { */
