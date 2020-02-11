@@ -49,13 +49,17 @@ idle_time: 0
 #velocity for goTo's
 vel: 3
 #velocity for attack
-vel_attack: 2
+vel_attack: 4
 #velocity of going around arena
-vel_arena: 3
+vel_arena: 5
 #distance to the balloon
-dist_to_balloon: 5
+dist_to_balloon: 4
 #distance to kill the balloon
+<<<<<<< HEAD
 dist_to_overshoot: 5
+=======
+dist_to_overshoot: 5.5
+>>>>>>> cc0494706d915df97f54f50dc7f0718516cf1681
 #overshoot offset
 overshoot_offset: 0
 #trajectory length for MPC

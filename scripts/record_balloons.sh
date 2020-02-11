@@ -13,7 +13,7 @@ exclude=(
 # every theora
 '(.*)theora(.*)'
 # every compressed
-'(.*)compressed(.*)'
+'(.*)compressedDepth(.*)'
 '(.*)rs_d435(.*)depth_to_infra(.*)'
 '(.*)rs_d435(.*)depth_to_color/image_raw'
 '(.*)rs_d435(.*)depth_to_color(.*)compressed'
@@ -21,6 +21,8 @@ exclude=(
 '(.*)rs_d435(.*)depth/image_rect_raw'
 '(.*)rs_d435(.*)/infra(.*)'
 '(.*)rs_d435(.*)/color/image_rect_color'
+'(.*)rs_d435(.*)/color/image_rect_raw'
+'(.*)rs_d435(.*)/color/image_raw'
 
 )
 
