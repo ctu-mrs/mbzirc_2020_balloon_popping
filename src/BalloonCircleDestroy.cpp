@@ -211,12 +211,16 @@ void BalloonCircleDestroy::callbackOdomUav(const nav_msgs::OdometryConstPtr& msg
     odom_uav_ = *msg;
     geometry_msgs::Point      p_;
     geometry_msgs::Quaternion q_untilted;
+    //  sqrt(x**2+y**2+z**2)
+    _speed_ = std::sqrt(odom_uav_.twist.twist.linear.x*odom_uav_.twist.twist.linear.x+odom_uav_.twist.twist.linear.y*odom_uav_.twist.twist.linear.y+odom_uav_.twist.twist.linear.z*odom_uav_.twist.twist.linear.z);
+    ROS_INFO_THROTTLE(1.0, "[]: speed %f", _speed_);
 
     try {
 
       if (transformPointToWorld(odom_uav_.pose.pose.position, msg->header.frame_id, msg->header.stamp, p_)) {
 
         odom_vector_ = eigen_vect(p_.x, p_.y, p_.z);
+
       }
 
       if (transformQuaternionToUntilted(odom_uav_.pose.pose.orientation, odom_uav_.header.frame_id, msg->header.stamp, q_untilted)) {
@@ -1396,7 +1400,6 @@ bool BalloonCircleDestroy::callbackResetZones([[maybe_unused]] std_srvs::Trigger
 void BalloonCircleDestroy::getCloseToBalloon(eigen_vect dest_, double close_dist_, double speed_) {
 
 
-  double sample_dist_ = speed_ * (_traj_time_ / _traj_len_);
 
   // getting new reference
   eigen_vect dir_vector_ = dest_ - odom_vector_;
@@ -1409,7 +1412,7 @@ void BalloonCircleDestroy::getCloseToBalloon(eigen_vect dest_, double close_dist
   dir_vector_ = goal_ - odom_vector_;
 
   dist_       = dir_vector_.norm();
-  dir_vector_ = (dir_vector_ / dist_) * sample_dist_;
+  dir_vector_ = (dir_vector_ / dist_);
 
   eigen_vect                  cur_pos_ = odom_vector_;
   mrs_msgs::TrackerTrajectory new_traj_;
@@ -1435,19 +1438,33 @@ void BalloonCircleDestroy::getCloseToBalloon(eigen_vect dest_, double close_dist
   ref_.point.y         = goal_(1, 0);
   ref_.point.z         = dest_(2, 0);
   point_pub_.publish(ref_);
+  double sample_dist_;
+  double acceleration = 2;
+  double cur_speed = _speed_;
+  eigen_vect cur_dir;
 
   /* ROS_INFO("[]: cur_pos_ 0 x %f y %f z %f", cur_pos_(0, 0), cur_pos_(1, 0), cur_pos_(2, 0)); */
   /* ROS_INFO("[]: goal_ 0 x %f y %f z %f", goal_(0, 0), goal_(1, 0), goal_(2, 0)); */
   while (cur_pos_(0, 0) != goal_(0, 0) && cur_pos_(1, 0) != goal_(1, 0) && cur_pos_(2, 0) != goal_(2, 0)) {
 
     for (int i = 0; i < _traj_len_; i++) {
+      if( cur_speed < speed_) {
+        cur_speed += 0.2 * acceleration;
+      
+      } else {
+        cur_speed = speed_;
+      }
 
+      sample_dist_ = cur_speed * (_traj_time_ / _traj_len_);
+      cur_dir = dir_vector_*sample_dist_;
       mrs_msgs::TrackerPoint p;
-      cur_pos_     = cur_pos_ + dir_vector_;
+      cur_pos_     = cur_pos_ + cur_dir;
       diff_vector_ = cur_pos_ - odom_vector_;
 
       if (diff_vector_.norm() >= dist_) {
         cur_pos_ = goal_;
+        ROS_INFO("[]: shit, dan");
+        break;
       }
 
       p.x = cur_pos_(0, 0);

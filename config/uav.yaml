@@ -49,7 +49,7 @@ idle_time: 0
 #velocity for goTo's
 vel: 3
 #velocity for attack
-vel_attack: 4
+vel_attack: 5
 #velocity of going around arena
 vel_arena: 3
 #arena corner velocity factor

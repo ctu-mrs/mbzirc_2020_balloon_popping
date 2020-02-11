@@ -151,6 +151,7 @@ private:
   double                                    _time_to_emulate_;
   double                                    _balloon_activation_dist_;
   double                                    _fov_step_;
+  double                                    _speed_;
   std::string                               _sweep_constraints_;
   std::string                               _attack_constraints_;
   Eigen::Matrix<double, N_ARENAS, N_POINTS> _arenas_;
