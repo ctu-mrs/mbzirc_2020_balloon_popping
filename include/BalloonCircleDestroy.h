@@ -144,8 +144,6 @@ private:
   double                                    _z_max_;
   double                                    _arena_center_x_;
   double                                    _arena_center_y_;
-  double                                    _jerk_;
-  double                                    _acceleration_;
   double                                    _state_reset_time_;
   double                                    _overshoot_offset_;
   double                                    _dead_band_factor_;
@@ -241,6 +239,8 @@ private:
   bool                                   got_constraints_diag_ = false;
   std::string                            cur_constraints_;
   std::mutex                             mutex_constraints_;
+  double                                 acceleration_;
+  double                                 jerk_;
   mrs_msgs::ConstraintManagerDiagnostics constraints_msg_;
   ros::Time                              time_last_constraints_diagnostics_;
 

@@ -67,7 +67,7 @@ dist_error: 2.5
 #dist accurace to be as close to the balloon
 dist_acc: 2.5
 # distance to activate KF flying
-dist_kf_activation: 5
+dist_kf_activation: 5.5
 #time for waiting for KF reset
 wait_for_ball: 3
 #max time balloon not seen in PCL

@@ -376,6 +376,8 @@ void BalloonCircleDestroy::callbackConstraintsDiag(const mrs_msgs::ConstraintMan
     std::scoped_lock lock(mutex_constraints_);
     constraints_msg_ = *msg;
     cur_constraints_ = constraints_msg_.current_name;
+    /* acceleration_ = constraints_msg_.horizontal_acceleration; */
+    /* jerk_ = constraints_msg_.horizontal_jerk; */
   }
 
   time_last_tracker_diagnostics_ = ros::Time::now();
