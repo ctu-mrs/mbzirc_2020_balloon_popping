@@ -18,7 +18,7 @@ PROJECT_NAME=balloons_bag
 MAIN_DIR=~/"bag_files"
 
 # following commands will be executed first, in each window
-pre_input="export ATHAME_ENABLED=0; mkdir -p $MAIN_DIR/$PROJECT_NAME; export WORLD_FILE=./world.yaml"
+pre_input="export ATHAME_ENABLED=0; mkdir -p $MAIN_DIR/$PROJECT_NAME; export WORLD_FILE=./world_ball_arena.yaml"
 
 # define commands
 # 'name' 'command'
@@ -26,6 +26,8 @@ input=(
   'Rosbag' 'waitForRos; rosrun balloon_circle_destroy record_balloons.sh
 '
   'Sensors' 'waitForRos; roslaunch mrs_general sensors.launch
+'
+  'Arena' 'waitForRos; roslaunch mbzirc_arena_config arena_publisher.launch
 '
   'Nimbro' 'waitForRos; roslaunch mrs_general nimbro.launch
   '
@@ -37,7 +39,7 @@ input=(
 '
   'Vision' 'waitForRos; roslaunch balloon_filter localization_pipeline.launch
 '
-  'Destroy' 'waitForRos; roslaunch balloon_circle_destroy uav.launch debug:=true
+  'Destroy' 'waitForRos; roslaunch balloon_circle_destroy uav.launch 
 '
   'MotorsOn' 'rosservice call /'"$UAV_NAME"'/control_manager/motors 1'
   'Takeoff' 'rosservice call /'"$UAV_NAME"'/uav_manager/takeoff'

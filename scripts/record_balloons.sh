@@ -8,14 +8,20 @@ exclude=(
 # h264
 '(.*)h264(.*)'
 # Realsense
-'(.*)rs_d435(.*)'
 # object detect
 '(.*)object_detect(.*)debug_image'
 # every theora
 '(.*)theora(.*)'
 # every compressed
 '(.*)compressed(.*)'
-'(.*)compressedDepth(.*)'
+'(.*)rs_d435(.*)depth_to_infra(.*)'
+'(.*)rs_d435(.*)depth_to_color/image_raw'
+'(.*)rs_d435(.*)depth_to_color(.*)compressed'
+'(.*)rs_d435(.*)depth_to_color(.*)compressed/(.*)'
+'(.*)rs_d435(.*)depth/image_rect_raw'
+'(.*)rs_d435(.*)/infra(.*)'
+'(.*)rs_d435(.*)/color/image_rect_color'
+
 )
 
 # file's header
