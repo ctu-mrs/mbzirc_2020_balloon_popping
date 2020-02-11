@@ -213,7 +213,7 @@ void BalloonCircleDestroy::callbackOdomUav(const nav_msgs::OdometryConstPtr& msg
 
     try {
 
-      if (transformPointFromWorld(odom_uav_.pose.pose.position, odom_uav_.header.frame_id, msg->header.stamp, p_)) {
+      if (transformPointToWorld(odom_uav_.pose.pose.position, msg->header.frame_id, msg->header.stamp, p_)) {
 
         odom_vector_ = eigen_vect(p_.x, p_.y, p_.z);
       }
@@ -259,7 +259,7 @@ void BalloonCircleDestroy::callbackBalloonPoint(const geometry_msgs::PoseWithCov
     try {
 
 
-      if (transformPointFromWorld(balloon_point_.pose.pose.position, balloon_point_.header.frame_id, msg->header.stamp, p_)) {
+      if (transformPointToWorld(balloon_point_.pose.pose.position, msg->header.frame_id, msg->header.stamp, p_)) {
         balloon_vector_ = eigen_vect(p_.x, p_.y, p_.z);
       }
     }
@@ -292,7 +292,7 @@ void BalloonCircleDestroy::callbackBalloonPointCloud(const sensor_msgs::PointClo
     PC                       cloud_out;
     PC::Ptr                  cloud_in(new PC());
     pcl::fromROSMsg(*msg, *cloud_in);
-    bool ts_res = transformPclFromWorld(cloud_in, msg->header.frame_id, msg->header.stamp, cloud_out);
+    bool ts_res = transformPclToWorld(cloud_in, msg->header.frame_id, msg->header.stamp, cloud_out);
     if (!ts_res) {
       ROS_WARN("[BalloonPclCallback]: skipping pcl, no tf");
       return;
@@ -424,7 +424,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
     ROS_INFO_THROTTLE(0.5, "[Balloon KF incoming]: %s", balloon_kf_status_.c_str());
     ROS_INFO_THROTTLE(0.5, "[Current Dist To ball]: %f ", (odom_vector_ - balloon_vector_).norm());
     ROS_INFO_THROTTLE(0.5, "[Closest ball (PointCloud)]: x %f y %f z %f", balloon_closest_vector_(0, 0), balloon_closest_vector_(1, 0),
-                      balloon_closest_vector_(2, 0));
+        balloon_closest_vector_(2, 0));
     ROS_INFO_THROTTLE(0.5, "[Closest ball (KF)]: x %f  y %f z %f", balloon_vector_(0, 0), balloon_vector_(1, 0), balloon_vector_(2, 0));
     ROS_INFO_THROTTLE(0.5, "[Dist between KF and PCL vectors]: %f ", (balloon_vector_ - balloon_closest_vector_).norm());
 
@@ -548,7 +548,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
 
           } 
           else if ((odom_vector_ - balloon_closest_vector_).norm() < _dist_kf_activation_ && isBalloonVisible(balloon_vector_) &&
-                     isPointInArena(balloon_vector_) && odom_vector_(2, 0) - _height_tol_ < balloon_vector_(2, 0)) {
+                     isPointInArena(balloon_vector_)) {
 
             ROS_WARN_THROTTLE(0.5, "[StateMachine]: KF close ");
             changeState(DESTROYING);
@@ -1254,7 +1254,7 @@ bool BalloonCircleDestroy::callbackAutoStart(mrs_msgs::SetInt::Request& req, mrs
       if (!setArena(0)) {
         res.message = "[AutoStart]: Arena 0 couldn't be  set";
         res.success = false;
-        return false;
+        return true;
       }
       res.message               = "[AutoStart]: Arena 0 is set";
       _is_state_machine_active_ = true;
@@ -1265,7 +1265,7 @@ bool BalloonCircleDestroy::callbackAutoStart(mrs_msgs::SetInt::Request& req, mrs
       if (!setArena(1)) {
         res.message = "[AutoStart]: Arena 1 couldn't be  set";
         res.success = false;
-        return false;
+        return true;
       }
       ROS_INFO("[AutoStart]: Arena 1 is set");
       res.message               = "[AutoStart]: Arena 1 is set";
@@ -1276,7 +1276,7 @@ bool BalloonCircleDestroy::callbackAutoStart(mrs_msgs::SetInt::Request& req, mrs
       if (!setArena(2)) {
         res.message = "[AutoStart]: Arena 2 couldn't be  set";
         res.success = false;
-        return false;
+        return true;
       }
       ROS_INFO("[AutoStart]: Arena 2 is set");
       res.message               = "[AutoStart]: Arena 2 is set";
@@ -1287,7 +1287,7 @@ bool BalloonCircleDestroy::callbackAutoStart(mrs_msgs::SetInt::Request& req, mrs
       if (!setArena(2)) {
           res.message = "[AutoStart]: Arena 2 couldn't be  set";
         res.success = false;
-        return false;
+        return true;
       }
       ROS_INFO("[AutoStart]: Default case is triggered ( RC signal is bad ) Arena 2 is set");
       res.message               = "[AutoStart]: Default case is triggered ( RC signal is bad ) Arena 2 is set";
@@ -1297,7 +1297,7 @@ bool BalloonCircleDestroy::callbackAutoStart(mrs_msgs::SetInt::Request& req, mrs
 
   }
   ROS_WARN("[AutoStart]: Unexpected value from automatic start request");
-  return false;
+  return true;
 }
 
 //}
@@ -2236,7 +2236,7 @@ void BalloonCircleDestroy::setConstraints(std::string desired_constraints) {
 bool BalloonCircleDestroy::getTransform(const std::string& from_frame, const std::string& to_frame, const ros::Time& stamp,
                                         geometry_msgs::TransformStamped& transform_out) {
   try {
-    transform_out = tf_buffer_.lookupTransform(to_frame, from_frame, stamp);
+    transform_out = tf_buffer_.lookupTransform(to_frame, from_frame, stamp, ros::Duration(0.05));
     return true;
   }
   catch (tf2::TransformException& ex) {
@@ -2255,15 +2255,15 @@ bool BalloonCircleDestroy::getTransform(const std::string& from_frame, const std
 }
 //}
 
-/* transformPointFromWorld() method //{ */
-bool BalloonCircleDestroy::transformPointFromWorld(const geometry_msgs::Point& point, const std::string& to_frame, const ros::Time& stamp,
+/* transformPointToWorld() method //{ */
+bool BalloonCircleDestroy::transformPointToWorld(const geometry_msgs::Point& point, const std::string& from_frame, const ros::Time& stamp,
                                                    geometry_msgs::Point& point_out) {
   geometry_msgs::Point p_;
   p_.x = point.x;
   p_.y = point.y;
   p_.z = point.z;
   geometry_msgs::TransformStamped transform;
-  if (!getTransform(to_frame, world_frame_id_, stamp - ros::Duration(0.2), transform))
+  if (!getTransform(from_frame, world_frame_id_, stamp - ros::Duration(0.2), transform))
     return false;
 
 
@@ -2273,10 +2273,10 @@ bool BalloonCircleDestroy::transformPointFromWorld(const geometry_msgs::Point& p
 //}
 
 /* transformQuaternion() method //{ */
-bool BalloonCircleDestroy::transformQuaternionToUntilted(const geometry_msgs::Quaternion& point, const std::string& to_frame, const ros::Time& stamp,
+bool BalloonCircleDestroy::transformQuaternionToUntilted(const geometry_msgs::Quaternion& point, const std::string& from_frame, const ros::Time& stamp,
                                                          geometry_msgs::Quaternion& point_out) {
   geometry_msgs::TransformStamped transform;
-  if (!getTransform(to_frame, world_frame_id_, stamp - ros::Duration(0.2), transform))
+  if (!getTransform(from_frame, world_frame_id_, stamp, transform))
     return false;
 
 
@@ -2287,10 +2287,10 @@ bool BalloonCircleDestroy::transformQuaternionToUntilted(const geometry_msgs::Qu
 
 /* transform pcl from World //{ */
 
-bool BalloonCircleDestroy::transformPclFromWorld(const PC::Ptr& pcl, const std::string& to_frame, const ros::Time& stamp, PC& pcl_out) {
+bool BalloonCircleDestroy::transformPclToWorld(const PC::Ptr& pcl, const std::string& from_frame, const ros::Time& stamp, PC& pcl_out) {
   geometry_msgs::TransformStamped transform;
 
-  if (!getTransform(to_frame, world_frame_id_, stamp - ros::Duration(0.2), transform))
+  if (!getTransform(from_frame, world_frame_id_, stamp, transform))
     return false;
 
   Eigen::Affine3d msg2odom_eigen_transform;
