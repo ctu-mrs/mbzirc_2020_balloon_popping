@@ -15,7 +15,7 @@ area:
   y_min: -5
   y_max: 5
   z_min: 1
-  z_max: 8
+  z_max: 6
   offset: 1
 # arena coords are like this [x_min,x_max,y_min, y_max, z_min,z_max, offset]
 # arena:
@@ -25,9 +25,9 @@ area:
 
 arena:
   [
-  0,20,-10,10, 0.5,8,0.5,
-  -20,0,-10,10, 0.5,8,0.5,
-  -20,20,-10,10, 0.5,8,0.5
+  0,20,-10,10, 0.5,6,0.5,
+  -20,0,-10,10, 0.5,6,0.5,
+  -20,20,-10,10, 0.5,6,0.5
   ]
 
 constraints:
@@ -49,9 +49,11 @@ idle_time: 0
 #velocity for goTo's
 vel: 3
 #velocity for attack
-vel_attack: 2
+vel_attack: 4
 #velocity of going around arena
 vel_arena: 3
+#arena corner velocity factor
+arena_corner_factor: 2.5
 #distance to the balloon
 dist_to_balloon: 5
 #distance to kill the balloon

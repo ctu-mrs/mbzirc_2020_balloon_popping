@@ -73,6 +73,7 @@ void BalloonCircleDestroy::onInit() {
   param_loader.load_param("dead_band_factor", _dead_band_factor_);
   param_loader.load_param("balloon_activation_dist", _balloon_activation_dist_);
   param_loader.load_param("arena_scan_step", _fov_step_);
+  param_loader.load_param("arena_corner_factor", _arena_corner_factor_);
   param_loader.load_matrix_static("arena", _arenas_);
   param_loader.load_param("constraints/sweeping", _sweep_constraints_);
   param_loader.load_param("constraints/going", _attack_constraints_);
@@ -426,7 +427,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
     ROS_INFO_THROTTLE(0.5, "[Balloon KF incoming]: %s", balloon_kf_status_.c_str());
     ROS_INFO_THROTTLE(0.5, "[Current Dist To ball]: %f ", (odom_vector_ - balloon_vector_).norm());
     ROS_INFO_THROTTLE(0.5, "[Closest ball (PointCloud)]: x %f y %f z %f", balloon_closest_vector_(0, 0), balloon_closest_vector_(1, 0),
-        balloon_closest_vector_(2, 0));
+                      balloon_closest_vector_(2, 0));
     ROS_INFO_THROTTLE(0.5, "[Closest ball (KF)]: x %f  y %f z %f", balloon_vector_(0, 0), balloon_vector_(1, 0), balloon_vector_(2, 0));
     ROS_INFO_THROTTLE(0.5, "[Dist between KF and PCL vectors]: %f ", (balloon_vector_ - balloon_closest_vector_).norm());
 
@@ -548,8 +549,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
           if (!_planner_active_ || !is_ballon_incoming_) {
             plannerActivate(balloon_closest_vector_, _dist_error_);
 
-          } 
-          else if ((odom_vector_ - balloon_closest_vector_).norm() < _dist_kf_activation_ && isBalloonVisible(balloon_vector_) &&
+          } else if ((odom_vector_ - balloon_closest_vector_).norm() < _dist_kf_activation_ && isBalloonVisible(balloon_vector_) &&
                      isPointInArena(balloon_vector_)) {
 
             ROS_WARN_THROTTLE(0.5, "[StateMachine]: KF close ");
@@ -620,8 +620,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
           }
           if (isBalloonVisible(balloon_vector_)) {
             if (!balloon_closest_vector_.isZero()) {
-                getCloseToBalloon(balloon_vector_, -_dist_to_overshoot_, _vel_attack_);
-              
+              getCloseToBalloon(balloon_vector_, -_dist_to_overshoot_, _vel_attack_);
             }
             return;
           } else {
@@ -669,8 +668,8 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
         /* default case //{ */
         ROS_INFO_THROTTLE(0.5, "[StateMachine]: Received unexpected state");
         break;
-        //}    
-        }
+        //}
+    }
   }
 }
 
@@ -832,12 +831,12 @@ void BalloonCircleDestroy::callbackTimerCheckStateMachine([[maybe_unused]] const
         addForbidden(balloon_closest_vector_, _forbidden_radius_);
         changeState(IDLE);
       }
-    /* case DESTROYING: */
-    /*   if (cur_state_dur_ > time_to_destroy) { */
-    /*     ROS_INFO("[StateMachine]: too long destroy"); */
-    /*     addForbidden(balloon_closest_vector_, _forbidden_radius_); */
-    /*     changeState(IDLE); */
-    /*   } */
+      /* case DESTROYING: */
+      /*   if (cur_state_dur_ > time_to_destroy) { */
+      /*     ROS_INFO("[StateMachine]: too long destroy"); */
+      /*     addForbidden(balloon_closest_vector_, _forbidden_radius_); */
+      /*     changeState(IDLE); */
+      /*   } */
   }
 }
 
@@ -1287,7 +1286,7 @@ bool BalloonCircleDestroy::callbackAutoStart(mrs_msgs::SetInt::Request& req, mrs
       return true;
     default:
       if (!setArena(2)) {
-          res.message = "[AutoStart]: Arena 2 couldn't be  set";
+        res.message = "[AutoStart]: Arena 2 couldn't be  set";
         res.success = false;
         return true;
       }
@@ -1296,7 +1295,6 @@ bool BalloonCircleDestroy::callbackAutoStart(mrs_msgs::SetInt::Request& req, mrs
       _is_state_machine_active_ = true;
       res.success               = true;
       return true;
-
   }
   ROS_WARN("[AutoStart]: Unexpected value from automatic start request");
   return true;
@@ -1907,7 +1905,7 @@ void BalloonCircleDestroy::scanArena() {
            std::abs(cur_odom_(0, 0) - left) > std::abs(cur_odom_(0, 0) - right));
 
   if (_x_min_ > _x_max_ || _y_min_ > _y_max_) {
-    ROS_INFO("[]: ERROR min max swapped");
+    ROS_ERROR("[StateMachine]: ERROR min max swapped");
   }
   bool dir = std::abs(cur_odom_(0, 0) - left) > std::abs(cur_odom_(0, 0) - right);
   if (!isPointInArena(cur_odom_(0, 0), cur_odom_(1, 0), cur_odom_(2, 0))) {
@@ -1920,69 +1918,54 @@ void BalloonCircleDestroy::scanArena() {
     }
   }
 
-  /* double yaw = 0; */
 
   for (int i = 0; i < step; i++) {
 
     if (dir) {
-      /* eigen_vect angle_vector_ = eigen_vect(_x_max_, _y_min_, 0) - eigen_vect(_x_min_, _y_min_, 0); */
-
-      /* yaw = atan2(angle_vector_(1), angle_vector_(0)); */
       // going from left to right
       nxt = eigen_vect(cur_odom_(0, 0), top, _height_);
+
       goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, getArenaHeading(cur_odom_, nxt));
       cur_odom_(1, 0) = top;
       nxt(0, 0) += _fov_step_;
-      goToPoint(cur_odom_, nxt, _vel_arena_ / 2.5, new_traj_, getArenaHeading(cur_odom_, eigen_vect(nxt(0, 0), bot, 0)));
+      goToPoint(cur_odom_, nxt, _vel_arena_ / _arena_corner_factor_, new_traj_, getArenaHeading(cur_odom_, eigen_vect(nxt(0, 0), bot, 0)));
       cur_odom_(0, 0) += _fov_step_;
       nxt(1, 0) = bot;
       goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, getArenaHeading(cur_odom_, nxt));
       cur_odom_(1, 0) = bot;
       nxt(0, 0) += _fov_step_;
-      goToPoint(cur_odom_, nxt, _vel_arena_/ 2.5, new_traj_, getArenaHeading(cur_odom_, eigen_vect(nxt(0, 0), top, 0)));
+      goToPoint(cur_odom_, nxt, _vel_arena_ / _arena_corner_factor_, new_traj_, getArenaHeading(cur_odom_, eigen_vect(nxt(0, 0), top, 0)));
       cur_odom_(0, 0) += _fov_step_;
 
-      /* if (i > 0) { */
-      /*   yaw = atan2(angle_vector_(new_traj_.points[i].y - new_traj_.points[i-1].y), new_traj_.points[i].x - new_traj_.points[i-1].x)); */
-      /* } */
 
-      /* break; */
     } else {
       // going from right to left
-      /* eigen_vect angle_vector_ = eigen_vect(_x_min_, _y_min_, 0) - eigen_vect(_x_max_, _y_min_, 0); */
-      /* yaw                      = atan2(angle_vector_(1), angle_vector_(0)); */
       nxt = eigen_vect(cur_odom_(0, 0), top, _height_);
       goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, getArenaHeading(cur_odom_, nxt));
       cur_odom_(1, 0) = top;
       nxt(0, 0) -= _fov_step_;
-      goToPoint(cur_odom_, nxt, _vel_arena_ / 2.5, new_traj_, getArenaHeading(cur_odom_, eigen_vect(nxt(0, 0), bot, 0)));
+      goToPoint(cur_odom_, nxt, _vel_arena_ / _arena_corner_factor_, new_traj_, getArenaHeading(cur_odom_, eigen_vect(nxt(0, 0), bot, 0)));
       cur_odom_(0, 0) -= _fov_step_;
       nxt(1, 0) = bot;
       goToPoint(cur_odom_, nxt, _vel_arena_, new_traj_, getArenaHeading(cur_odom_, nxt));
       cur_odom_(1, 0) = bot;
       nxt(0, 0) -= _fov_step_;
-      goToPoint(cur_odom_, nxt, _vel_arena_ / 2.5, new_traj_, getArenaHeading(cur_odom_, eigen_vect(nxt(0, 0), top, 0)));
+      goToPoint(cur_odom_, nxt, _vel_arena_ / _arena_corner_factor_, new_traj_, getArenaHeading(cur_odom_, eigen_vect(nxt(0, 0), top, 0)));
       cur_odom_(0, 0) -= _fov_step_;
-
-      /* if (i > 0) { */
-      /*   yaw = atan2(angle_vector_(new_traj_.points[i].y - new_traj_.points[i-1].y), new_traj_.points[i].x - new_traj_.points[i-1].x)); */
-      /* } */
     }
   }
 
-  // yaw for the first point
-  /* new_traj_.points[0].yaw = atan2(angle_vector_(new_traj_.points[1].y - new_traj_.points[0].y), new_traj_.points[1].x - new_traj_.points[0].x)); */
-  /* ROS_INFO("[]: new traj last %f, size %d", new_traj_.points.back().yaw, (int)new_traj_.points.size()); */
-
-
-  /* new_traj_.points[new_traj_.points.size()-1].yaw = */
-
-  /* for (int i = (int) new_traj_.points.size()-1; i > (int) new_traj_.points.size() - 5 ; i-- ){ */
-  /*   new_traj_.points.at(i).yaw += M_PI; */
-  /*   ROS_INFO("[]: p %d yaw %f",i, new_traj_.points[i].yaw ); */
-  /* } */
-
-
+  /* if (!isPointInArena(odom_vector_)) { */
+  /*       ROS_INFO("[Sweeper] Outside of the arena, setting the start point 5 times"); */
+  /*       for (int i = 0; i < 5; i++) { */
+  /*         ROS_INFO("[Sweeper]: "); */
+  /*         new_traj_.points.insert(new_traj_.points.begin(), new_traj_.points.at(0)); */
+  /*       } */
+  /*       for (int i = 0; i < 5; i++) { */
+  /*         ROS_INFO_STREAM("point at 0 " <<new_traj_.points.at(i)); */
+          
+  /*       } */
+  /*     } */
   mrs_msgs::TrackerTrajectorySrv req_;
   ROS_INFO("[BalloonCircleDestroy]: calling service to scan arena %d ", (int)new_traj_.points.size());
   req_.request.trajectory_msg = new_traj_;
@@ -2259,7 +2242,7 @@ bool BalloonCircleDestroy::getTransform(const std::string& from_frame, const std
 
 /* transformPointToWorld() method //{ */
 bool BalloonCircleDestroy::transformPointToWorld(const geometry_msgs::Point& point, const std::string& from_frame, const ros::Time& stamp,
-                                                   geometry_msgs::Point& point_out) {
+                                                 geometry_msgs::Point& point_out) {
   geometry_msgs::Point p_;
   p_.x = point.x;
   p_.y = point.y;

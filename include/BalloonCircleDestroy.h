@@ -123,6 +123,7 @@ private:
   double                                    _vel_;
   double                                    _vel_attack_;
   double                                    _vel_arena_;
+  double                                    _arena_corner_factor_;
   double                                    _dist_to_balloon_;
   double                                    _dist_acc_;
   double                                    _dist_to_overshoot_;
