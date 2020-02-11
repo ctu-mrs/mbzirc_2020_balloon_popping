@@ -49,6 +49,8 @@
 #include <mrs_msgs/MpcTrackerDiagnostics.h>
 #include <mrs_msgs/Float64Stamped.h>
 #include <mrs_msgs/SetInt.h>
+#include <mrs_msgs/String.h>
+#include <mrs_msgs/ConstraintManagerDiagnostics.h>
 
 #include <std_msgs/String.h>
 
@@ -93,6 +95,8 @@ struct Forbidden_t
 {
   eigen_vect vect_;
   double     r;
+  ros::Time  start_time;
+  double     lifetime;
 };
 //}
 
@@ -110,44 +114,46 @@ private:
   bool       is_idling_ = false;
   ros::Timer timer_idling_;
   /* ros parameters */
-  double _idle_time_;
-  bool   _simulation_;
-  float  _height_;
-  float  _min_height_;
-  float  _max_height_;
-  float  _height_tol_;
-  double _vel_;
-  double _vel_attack_;
-  double _vel_arena_;
-  double _dist_to_balloon_;
-  double _dist_acc_;
-  double _dist_to_overshoot_;
-  double _dist_kf_activation_;
-  double _traj_len_;
-  double _traj_time_;
-  double _dist_error_;
-  double _wait_for_ball_;
-  int    _reset_tries_;
-  int    _balloon_tries_;
-  double _forbidden_radius_;
-  double _height_offset_;
-  double _max_time_balloon_;
-  double _x_min_;
-  double _x_max_;
-  double _y_min_;
-  double _y_max_;
-  double _z_min_;
-  double _z_max_;
-  double _arena_center_x_;
-  double _arena_center_y_;
-  double _jerk_;
-  double _acceleration_;
-  double _state_reset_time_;
-  double _overshoot_offset_;
-  double _dead_band_factor_;
-  double _time_to_emulate_;
-  double _balloon_activation_dist_;
-  double _fov_step_;
+  double                                    _idle_time_;
+  bool                                      _simulation_;
+  float                                     _height_;
+  float                                     _min_height_;
+  float                                     _max_height_;
+  float                                     _height_tol_;
+  double                                    _vel_;
+  double                                    _vel_attack_;
+  double                                    _vel_arena_;
+  double                                    _dist_to_balloon_;
+  double                                    _dist_acc_;
+  double                                    _dist_to_overshoot_;
+  double                                    _dist_kf_activation_;
+  double                                    _traj_len_;
+  double                                    _traj_time_;
+  double                                    _dist_error_;
+  double                                    _wait_for_ball_;
+  int                                       _reset_tries_;
+  int                                       _balloon_tries_;
+  double                                    _forbidden_radius_;
+  double                                    _height_offset_;
+  double                                    _max_time_balloon_;
+  double                                    _x_min_;
+  double                                    _x_max_;
+  double                                    _y_min_;
+  double                                    _y_max_;
+  double                                    _z_min_;
+  double                                    _z_max_;
+  double                                    _arena_center_x_;
+  double                                    _arena_center_y_;
+  double                                    _jerk_;
+  double                                    _acceleration_;
+  double                                    _state_reset_time_;
+  double                                    _overshoot_offset_;
+  double                                    _dead_band_factor_;
+  double                                    _time_to_emulate_;
+  double                                    _balloon_activation_dist_;
+  double                                    _fov_step_;
+  std::string                               _sweep_constraints_;
+  std::string                               _attack_constraints_;
   Eigen::Matrix<double, N_ARENAS, N_POINTS> _arenas_;
 
   // | ------------------------- state machine params ------------------------- |
@@ -163,9 +169,16 @@ private:
 
   };
   State _state_ = IDLE;
+  State _prev_state_;
+
+  // Time thresholds for how long drone can be in a state
+  double time_to_going_to;
+  double time_to_destroy;
+  double time_to_check_balloon;
+
 
   bool                     _is_state_machine_active_ = false;
-  bool                     _is_destroy_enabled_      = false;
+  bool                     _is_destroy_enabled_      = true;
   bool                     _height_checking_         = false;
   double                   _closest_on_arena_        = 999.9;
   double                   _closest_angle_           = 0;
@@ -184,17 +197,23 @@ private:
   ros::Time                _last_time_balloon_seen_;
   double                   _arena_offset_;
   ros::Time                _time_destroy_overshoot_set_;
+  void                     changeState(State state);
+  ros::Time                time_state_set_;
+  double                   cur_state_dur_;
 
 
   // | ----------------------- transforms ----------------------- |
 
 
   std::string                                 world_frame_id_;
+  std::string                                 untilted_frame_id_;
   tf2_ros::Buffer                             tf_buffer_;
   std::unique_ptr<tf2_ros::TransformListener> tf_listener_ptr_;
 
 
   bool transformPointFromWorld(const geometry_msgs::Point& point, const std::string& to_frame, const ros::Time& stamp, geometry_msgs::Point& point_out);
+  bool transformQuaternionToUntilted(const geometry_msgs::Quaternion& point, const std::string& to_frame, const ros::Time& stamp,
+                                     geometry_msgs::Quaternion& point_out);
   bool getTransform(const std::string& from_frame, const std::string& to_frame, const ros::Time& stamp, geometry_msgs::TransformStamped& transform_out);
 
   bool transformPclFromWorld(const PC::Ptr& pcl, const std::string& to_frame, const ros::Time& stamp, PC& pcl_out);
@@ -205,6 +224,7 @@ private:
   ros::Subscriber    sub_odom_uav_;
   nav_msgs::Odometry odom_uav_;
   eigen_vect         odom_vector_;
+  double             odom_yaw_;
   bool               got_odom_uav_ = false;
   std::mutex         mutex_odom_uav_;
   ros::Time          time_last_odom_uav_;
@@ -215,6 +235,14 @@ private:
   bool               got_odom_gt_ = false;
   std::mutex         mutex_odom_gt_;
   ros::Time          time_last_odom_gt_;
+
+  void                                   callbackConstraintsDiag(const mrs_msgs::ConstraintManagerDiagnosticsConstPtr& msg);
+  ros::Subscriber                        subscriber_constraints_diag_;
+  bool                                   got_constraints_diag_ = false;
+  std::string                            cur_constraints_;
+  std::mutex                             mutex_constraints_;
+  mrs_msgs::ConstraintManagerDiagnostics constraints_msg_;
+  ros::Time                              time_last_constraints_diagnostics_;
 
 
   void            callbackTrackerDiag(const mrs_msgs::MpcTrackerDiagnosticsConstPtr& msg);
@@ -260,6 +288,15 @@ private:
   ros::Timer timer_state_machine_;
   int        _rate_timer_state_machine_;
 
+  void       callbackTimerCheckStateMachine(const ros::TimerEvent& te);
+  ros::Timer timer_check_state_machine_;
+  int        _rate_timer_check_state_machine_;
+
+  void       callbackTimerCheckForbidden(const ros::TimerEvent& te);
+  ros::Timer timer_check_forbidden_;
+  int        _rate_timer_check_forbidden_;
+
+
   void       callbackTimerCheckEmulation(const ros::TimerEvent& te);
   ros::Timer timer_check_emulation_;
   int        _rate_timer_check_emulation_;
@@ -294,6 +331,10 @@ private:
 
   ros::ServiceClient srv_client_stop_;
   bool               _mpc_stop_ = false;
+
+  ros::ServiceClient srv_set_constriants_;
+  void               setConstraints(std::string desired_constraints);
+
   // | ------------------- Estimation services ------------------ |
 
   ros::ServiceClient srv_planner_reset_estimation_;
@@ -385,6 +426,7 @@ private:
   void        goToHeight(double height_, double speed_);
   eigen_vect  deadBand(eigen_vect target_, eigen_vect reference_);
   bool        setArena(int i);
+  double      getAngleBetween(double a, double b);
   //}
 };
 //}
