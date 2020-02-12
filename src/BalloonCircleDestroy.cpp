@@ -1473,7 +1473,7 @@ void BalloonCircleDestroy::getCloseToBalloon(eigen_vect dest_, double close_dist
 
       if (diff_vector_.norm() >= dist_) {
         cur_pos_ = goal_;
-        ROS_INFO("[]: shit, dan");
+        /* ROS_INFO("[]: shit, dan"); */
         break;
       }
 
