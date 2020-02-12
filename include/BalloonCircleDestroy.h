@@ -57,6 +57,8 @@
 
 /* custom helper functions from our library */
 #include <mrs_lib/ParamLoader.h>
+#include <mrs_lib/mutex.h>
+#include <mrs_lib/transformer.h>
 
 /* for calling simple ros services */
 #include <std_srvs/Trigger.h>
@@ -107,6 +109,11 @@ public:
   /* onInit() is called when nodelet is launched (similar to main() in regular node) */
   virtual void onInit();
 
+  std::string _uav_name_;
+
+private:
+  mrs_lib::Transformer transformer_;
+
 private:
   /* flags */
   bool is_initialized_ = false;
@@ -151,7 +158,6 @@ private:
   double                                    _time_to_emulate_;
   double                                    _balloon_activation_dist_;
   double                                    _fov_step_;
-  double                                    _speed_;
   std::string                               _sweep_constraints_;
   std::string                               _attack_constraints_;
   Eigen::Matrix<double, N_ARENAS, N_POINTS> _arenas_;
@@ -222,14 +228,15 @@ private:
 
   // | ---------------------- msg callbacks --------------------- |
 
-  void               callbackOdomUav(const nav_msgs::OdometryConstPtr& msg);
-  ros::Subscriber    sub_odom_uav_;
-  nav_msgs::Odometry odom_uav_;
-  eigen_vect         odom_vector_;
-  double             odom_yaw_;
-  bool               got_odom_uav_ = false;
-  std::mutex         mutex_odom_uav_;
-  ros::Time          time_last_odom_uav_;
+  void                          callbackOdomUav(const nav_msgs::OdometryConstPtr& msg);
+  ros::Subscriber               sub_odom_uav_;
+  nav_msgs::Odometry            odom_uav_;
+  geometry_msgs::Vector3Stamped uav_velocity_arena_frame_;
+  eigen_vect                    odom_vector_;
+  double                        odom_yaw_;
+  bool                          got_odom_uav_ = false;
+  std::mutex                    mutex_odom_uav_;
+  ros::Time                     time_last_odom_uav_;
 
   void               callbackOdomGt(const nav_msgs::OdometryConstPtr& msg);
   ros::Subscriber    sub_odom_gt_;

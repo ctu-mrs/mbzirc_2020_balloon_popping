@@ -1,6 +1,5 @@
 #include "BalloonCircleDestroy.h"
 
-
 #include <pluginlib/class_list_macros.h>
 
 namespace balloon_circle_destroy
@@ -8,8 +7,8 @@ namespace balloon_circle_destroy
 
 /* init //{ */
 
-
 void BalloonCircleDestroy::onInit() {
+
   got_odom_uav_     = false;
   got_odom_gt_      = false;
   got_tracker_diag_ = false;
@@ -23,11 +22,15 @@ void BalloonCircleDestroy::onInit() {
 
   ros::Time::waitForValid();
 
+  mrs_lib::ParamLoader param_loader(nh, "BalloonCircleDestroy");
+
+  // | ----------------------- transformer ---------------------- |
+  param_loader.load_param("uav_name", _uav_name_);
+  transformer_ = mrs_lib::Transformer("BalloonCircleDestroy", _uav_name_);
 
   // | ------------------- load ros parameters ------------------ |
   /* params //{ */
 
-  mrs_lib::ParamLoader param_loader(nh, "BalloonCircleDestroy");
   param_loader.load_param("elips_height", _height_);
   param_loader.load_param("height_tol", _height_tol_);
   param_loader.load_param("idle_time", _idle_time_);
@@ -133,7 +136,6 @@ void BalloonCircleDestroy::onInit() {
   point_pub_   = nh.advertise<geometry_msgs::PointStamped>("ref_out", 1);
   balloon_pub_ = nh.advertise<geometry_msgs::PointStamped>("ball_out", 1);
 
-
   // | --------------- initialize service servers --------------- |
   /*  server services //{ */
 
@@ -176,6 +178,7 @@ void BalloonCircleDestroy::onInit() {
 
 
   //}
+
   // | -------------------- initialize timers ------------------- |
   /* timers //{ */
 
@@ -212,8 +215,9 @@ void BalloonCircleDestroy::callbackOdomUav(const nav_msgs::OdometryConstPtr& msg
     geometry_msgs::Point      p_;
     geometry_msgs::Quaternion q_untilted;
     //  sqrt(x**2+y**2+z**2)
-    _speed_ = std::sqrt(odom_uav_.twist.twist.linear.x * odom_uav_.twist.twist.linear.x + odom_uav_.twist.twist.linear.y * odom_uav_.twist.twist.linear.y +
-                        odom_uav_.twist.twist.linear.z * odom_uav_.twist.twist.linear.z);
+    /* _speed_ = std::sqrt(odom_uav_.twist.twist.linear.x * odom_uav_.twist.twist.linear.x + odom_uav_.twist.twist.linear.y * odom_uav_.twist.twist.linear.y +
+     */
+    /*                     odom_uav_.twist.twist.linear.z * odom_uav_.twist.twist.linear.z); */
 
     try {
 
@@ -232,6 +236,28 @@ void BalloonCircleDestroy::callbackOdomUav(const nav_msgs::OdometryConstPtr& msg
     }
     catch (tf2::ExtrapolationException e) {
       return;
+    }
+  }
+
+  // transform the uav_odom to arena frame
+  {
+    geometry_msgs::Vector3Stamped uav_velocity_control_frame_;
+    uav_velocity_control_frame_.header   = msg->header;
+    uav_velocity_control_frame_.vector.x = msg->twist.twist.linear.x;
+    uav_velocity_control_frame_.vector.y = msg->twist.twist.linear.y;
+    uav_velocity_control_frame_.vector.z = msg->twist.twist.linear.z;
+
+    auto res = transformer_.transformSingle(world_frame_id_, uav_velocity_control_frame_);
+
+    if (res) {
+
+      std::scoped_lock lock(mutex_odom_uav_);
+
+      uav_velocity_arena_frame_ = res.value();
+
+    } else {
+
+      ROS_WARN_THROTTLE(1.0, "[transformer]: could not transform cmd_odom to the arena frame");
     }
   }
 
@@ -1405,6 +1431,7 @@ bool BalloonCircleDestroy::callbackResetZones([[maybe_unused]] std_srvs::Trigger
 
 void BalloonCircleDestroy::getCloseToBalloon(eigen_vect dest_, double close_dist_, double speed_) {
 
+  auto odom_uav = mrs_lib::get_mutexed(mutex_odom_uav_, odom_uav_);
 
   // getting new reference
   eigen_vect dir_vector_ = dest_ - odom_vector_;
@@ -1445,8 +1472,27 @@ void BalloonCircleDestroy::getCloseToBalloon(eigen_vect dest_, double close_dist
   point_pub_.publish(ref_);
   double     sample_dist_;
   double     acceleration = 2;
-  double     cur_speed    = _speed_;
   eigen_vect cur_dir;
+
+  // | --- calculate the speed in the direction to the target --- |
+  double cur_speed = 0;
+  {
+
+    Eigen::Vector2d dir_vector(dir_vector_(0), dir_vector_(1));
+    Eigen::Vector2d curr_pos(cur_pos_(0, 0), cur_pos_(1, 0));
+    Eigen::Vector2d curr_vel(uav_velocity_arena_frame_.vector.x, uav_velocity_arena_frame_.vector.y);
+
+    Eigen::MatrixXd projector = dir_vector * dir_vector.transpose();
+
+    Eigen::Vector2d projection = projector * curr_vel;
+
+    cur_speed = projection.norm();
+
+    if (cur_speed < 0) {
+      cur_speed = 0;
+    }
+    ROS_INFO_THROTTLE(0.1, "[Planner]: current speed: %.2f", cur_speed);
+  }
 
   /* ROS_INFO("[]: cur_pos_ 0 x %f y %f z %f", cur_pos_(0, 0), cur_pos_(1, 0), cur_pos_(2, 0)); */
   /* ROS_INFO("[]: goal_ 0 x %f y %f z %f", goal_(0, 0), goal_(1, 0), goal_(2, 0)); */
@@ -1459,7 +1505,7 @@ void BalloonCircleDestroy::getCloseToBalloon(eigen_vect dest_, double close_dist
         /*   ROS_INFO("[]: dt is %f", dt); */
         /*   cur_speed += dt * acceleration; */
         /* } else { */
-          cur_speed += 0.2 * acceleration;
+        cur_speed += 0.2 * acceleration;
         /* } */
       } else {
         cur_speed = speed_;
@@ -1498,7 +1544,6 @@ void BalloonCircleDestroy::getCloseToBalloon(eigen_vect dest_, double close_dist
   if (_state_ == DESTROYING) {
     new_traj_.points[new_traj_.points.size() - 1].z += _overshoot_offset_;
   }
-
 
   _last_goal_         = cur_pos_;
   _last_goal_reached_ = false;

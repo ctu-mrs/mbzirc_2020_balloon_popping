@@ -3,7 +3,6 @@
   <!-- defines name of the namespace of the drone -->
   <arg name="uav_name" default="$(optenv UAV_NAME uav)" />
 
-
   <!-- will it run using GNU debugger? -->
   <arg name="debug" default="false" />
   <arg unless="$(arg debug)" name="launch_prefix_debug" value=""/>
@@ -22,6 +21,8 @@
 
     <!-- WaypointFlier nodelet -->
     <node pkg="nodelet" type="nodelet" name="balloon_circle_destroy" args="$(arg nodelet) balloon_circle_destroy/BalloonCircleDestroy $(arg nodelet_manager)" launch-prefix="$(arg launch_prefix_debug)" output="screen">
+
+      <param name="uav_name" type="string" value="$(arg uav_name)" />
 
       <!-- Parameters loaded from launch file -->
 
