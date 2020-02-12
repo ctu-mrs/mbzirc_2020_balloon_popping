@@ -75,7 +75,7 @@ wait_for_ball: 3
 #max time balloon not seen in PCL
 max_time_balloon: 3
 #how many time to reset the KF
-reset_tries: 2
+reset_tries: -1
 #time to land - max time of not observing any balloons at all 
 time_to_land: 120 # seconds 
 #world frame, all points are tran
