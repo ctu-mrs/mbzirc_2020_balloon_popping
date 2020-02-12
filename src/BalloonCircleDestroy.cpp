@@ -212,15 +212,14 @@ void BalloonCircleDestroy::callbackOdomUav(const nav_msgs::OdometryConstPtr& msg
     geometry_msgs::Point      p_;
     geometry_msgs::Quaternion q_untilted;
     //  sqrt(x**2+y**2+z**2)
-    _speed_ = std::sqrt(odom_uav_.twist.twist.linear.x*odom_uav_.twist.twist.linear.x+odom_uav_.twist.twist.linear.y*odom_uav_.twist.twist.linear.y+odom_uav_.twist.twist.linear.z*odom_uav_.twist.twist.linear.z);
-    ROS_INFO_THROTTLE(1.0, "[]: speed %f", _speed_);
+    _speed_ = std::sqrt(odom_uav_.twist.twist.linear.x * odom_uav_.twist.twist.linear.x + odom_uav_.twist.twist.linear.y * odom_uav_.twist.twist.linear.y +
+                        odom_uav_.twist.twist.linear.z * odom_uav_.twist.twist.linear.z);
 
     try {
 
       if (transformPointToWorld(odom_uav_.pose.pose.position, msg->header.frame_id, msg->header.stamp, p_)) {
 
         odom_vector_ = eigen_vect(p_.x, p_.y, p_.z);
-
       }
 
       if (transformQuaternionToUntilted(odom_uav_.pose.pose.orientation, odom_uav_.header.frame_id, msg->header.stamp, q_untilted)) {
@@ -449,6 +448,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
         /*  IDLE state //{ */
 
         {
+          destroy_set = false;
           if (_mpc_stop_ == false) {
             droneStop();
             return;
@@ -544,6 +544,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
         /* GOING_TO_BALLOON state //{ */
 
         {
+          destroy_set = false;
           if (is_idling_) {
             return;
           }
@@ -608,6 +609,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
           /*   changeState(GOING_TO_BALLOON); */
           /*   break; */
           /* } */
+
           if (balloonOutdated()) {
             if (ros::Time::now().toSec() - time_last_planner_reset_.toSec() < _wait_for_ball_) {
               return;
@@ -625,6 +627,10 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
           if (isBalloonVisible(balloon_vector_)) {
             if (!balloon_closest_vector_.isZero()) {
               getCloseToBalloon(balloon_vector_, -_dist_to_overshoot_, _vel_attack_);
+              time_traj_sent_ = ros::Time::now();
+              if (!destroy_set) {
+                destroy_set = true;
+              }
             }
             return;
           } else {
@@ -1400,7 +1406,6 @@ bool BalloonCircleDestroy::callbackResetZones([[maybe_unused]] std_srvs::Trigger
 void BalloonCircleDestroy::getCloseToBalloon(eigen_vect dest_, double close_dist_, double speed_) {
 
 
-
   // getting new reference
   eigen_vect dir_vector_ = dest_ - odom_vector_;
   double     dist_       = dir_vector_.norm();
@@ -1438,9 +1443,9 @@ void BalloonCircleDestroy::getCloseToBalloon(eigen_vect dest_, double close_dist
   ref_.point.y         = goal_(1, 0);
   ref_.point.z         = dest_(2, 0);
   point_pub_.publish(ref_);
-  double sample_dist_;
-  double acceleration = 2;
-  double cur_speed = _speed_;
+  double     sample_dist_;
+  double     acceleration = 2;
+  double     cur_speed    = _speed_;
   eigen_vect cur_dir;
 
   /* ROS_INFO("[]: cur_pos_ 0 x %f y %f z %f", cur_pos_(0, 0), cur_pos_(1, 0), cur_pos_(2, 0)); */
@@ -1448,15 +1453,20 @@ void BalloonCircleDestroy::getCloseToBalloon(eigen_vect dest_, double close_dist
   while (cur_pos_(0, 0) != goal_(0, 0) && cur_pos_(1, 0) != goal_(1, 0) && cur_pos_(2, 0) != goal_(2, 0)) {
 
     for (int i = 0; i < _traj_len_; i++) {
-      if( cur_speed < speed_) {
-        cur_speed += 0.2 * acceleration;
-      
+      if (cur_speed < speed_) {
+        /* if (destroy_set) { */
+        /*   double dt = ros::Time::now().toSec() - time_traj_sent_.toSec(); */
+        /*   ROS_INFO("[]: dt is %f", dt); */
+        /*   cur_speed += dt * acceleration; */
+        /* } else { */
+          cur_speed += 0.2 * acceleration;
+        /* } */
       } else {
         cur_speed = speed_;
       }
 
       sample_dist_ = cur_speed * (_traj_time_ / _traj_len_);
-      cur_dir = dir_vector_*sample_dist_;
+      cur_dir      = dir_vector_ * sample_dist_;
       mrs_msgs::TrackerPoint p;
       cur_pos_     = cur_pos_ + cur_dir;
       diff_vector_ = cur_pos_ - odom_vector_;
@@ -1980,7 +1990,7 @@ void BalloonCircleDestroy::scanArena() {
   /*       } */
   /*       for (int i = 0; i < 5; i++) { */
   /*         ROS_INFO_STREAM("point at 0 " <<new_traj_.points.at(i)); */
-          
+
   /*       } */
   /*     } */
   mrs_msgs::TrackerTrajectorySrv req_;

@@ -200,6 +200,8 @@ private:
   void                     changeState(State state);
   ros::Time                time_state_set_;
   double                   cur_state_dur_;
+  bool                     destroy_set = false;
+  ros::Time                time_traj_sent_;
 
 
   // | ----------------------- transforms ----------------------- |
