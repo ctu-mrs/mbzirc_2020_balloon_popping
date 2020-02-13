@@ -13,7 +13,7 @@ fi
 
 source $HOME/.bashrc
 
-PROJECT_NAME=balloons_bag
+PROJECT_NAME=balloons
 
 MAIN_DIR=~/"bag_files"
 
