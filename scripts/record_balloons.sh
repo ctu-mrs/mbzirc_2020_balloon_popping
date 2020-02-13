@@ -5,6 +5,11 @@ path="/home/\$(optenv USER mrs)/bag_files/latest/"
 exclude=(
 # bluefox
 '(.*)bluefox(.*)'
+# bluefox sky
+'/$(arg uav_name)/bluefox_sky/image_raw'
+'/$(arg uav_name)/bluefox_sky/image_raw/compressedDepth(.*)'
+'/$(arg uav_name)/bluefox_sky/image_raw/theora(.*)'
+
 # h264
 '(.*)h264(.*)'
 # Realsense
