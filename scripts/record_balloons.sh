@@ -10,11 +10,13 @@ exclude=(
 # Realsense
 # object detect
 '(.*)object_detect(.*)debug_image'
+'(.*)object_detect(.*)debug_image/compressed'
 # every theora
 '(.*)theora(.*)'
 # every compressed
 '(.*)compressedDepth(.*)'
 '(.*)rs_d435(.*)depth_to_infra(.*)'
+'(.*)rs_d435(.*)depth(.*)'
 '(.*)rs_d435(.*)depth_to_color/image_raw'
 '(.*)rs_d435(.*)depth_to_color(.*)compressed'
 '(.*)rs_d435(.*)depth_to_color(.*)compressed/(.*)'
