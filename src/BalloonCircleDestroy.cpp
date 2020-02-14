@@ -392,6 +392,8 @@ void BalloonCircleDestroy::callbackTrackerDiag(const mrs_msgs::MpcTrackerDiagnos
 
 //}
 
+/* callbackComradeTrackerDiagnostics //{ */
+
 void BalloonCircleDestroy::callbackComradeTrackerDiag(const mrs_msgs::ControlManagerDiagnosticsConstPtr& msg) {
   { 
     std::scoped_lock lock(is_comrade_tracking_); 
@@ -411,6 +413,8 @@ void BalloonCircleDestroy::callbackComradeTrackerDiag(const mrs_msgs::ControlMan
     }
   }
 }
+
+//}
 
 /* callbackCameraInfo //{ */
 
