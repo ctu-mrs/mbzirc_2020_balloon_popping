@@ -36,7 +36,7 @@
 #include <sensor_msgs/PointCloud.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/point_cloud2_iterator.h>
-
+#include <sensor_msgs/CameraInfo.h>
 
 /* for storing information about the state of the uav (position, twist) + covariances */
 #include <nav_msgs/Odometry.h>
@@ -245,6 +245,12 @@ private:
   std::mutex         mutex_odom_gt_;
   ros::Time          time_last_odom_gt_;
 
+  void            callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg);
+  ros::Subscriber sub_realsense;
+  std::mutex      mutex_realsense_;
+  ros::Time       time_last_realsense_;
+  bool            got_realsense_;
+
   void                                   callbackConstraintsDiag(const mrs_msgs::ConstraintManagerDiagnosticsConstPtr& msg);
   ros::Subscriber                        subscriber_constraints_diag_;
   bool                                   got_constraints_diag_ = false;
@@ -327,6 +333,8 @@ private:
   std::mutex     mutex_status_;
   int            _rate_time_publish_status_;
 
+  // | ----------------------- Publishers ----------------------- |
+
   // Publishing references from PCL and from planner
   ros::Publisher point_pub_;
   ros::Publisher balloon_pub_;
@@ -345,6 +353,9 @@ private:
 
   ros::ServiceClient srv_set_constriants_;
   void               setConstraints(std::string desired_constraints);
+
+  ros::ServiceClient srv_eland_;
+  void               abortEland();
 
   // | ------------------- Estimation services ------------------ |
 

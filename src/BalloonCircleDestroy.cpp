@@ -124,6 +124,7 @@ void BalloonCircleDestroy::onInit() {
   sub_balloon_point_ = nh.subscribe("balloon_point_in", 1, &BalloonCircleDestroy::callbackBalloonPoint, this, ros::TransportHints().tcpNoDelay());
   sub_balloon_point_cloud_ =
       nh.subscribe("balloon_point_cloud_in", 1, &BalloonCircleDestroy::callbackBalloonPointCloud, this, ros::TransportHints().tcpNoDelay());
+sub_realsense = nh.subscribe("realsense_camera_info", 1, &BalloonCircleDestroy::callbackCameraInfo, this, ros::TransportHints().tcpNoDelay());
 
 
   //}
@@ -156,6 +157,7 @@ void BalloonCircleDestroy::onInit() {
   srv_planner_reset_estimation_ = nh.serviceClient<std_srvs::Trigger>("reset_estimation");
   srv_client_stop_              = nh.serviceClient<std_srvs::Trigger>("drone_stop");
   srv_set_constriants_          = nh.serviceClient<mrs_msgs::String>("set_constraints_out");
+  srv_eland_                    = nh.serviceClient<std_srvs::Trigger>("eland");
   srv_planner_start_estimation_ = nh.serviceClient<balloon_filter::StartEstimation>("start_estimation");
   srv_planner_stop_estimation_  = nh.serviceClient<std_srvs::Trigger>("stop_estimation");
   srv_planner_add_zone_         = nh.serviceClient<balloon_filter::AddExclusionZone>("add_zone");
@@ -387,6 +389,20 @@ void BalloonCircleDestroy::callbackTrackerDiag(const mrs_msgs::MpcTrackerDiagnos
   time_last_tracker_diagnostics_ = ros::Time::now();
 }
 
+
+//}
+
+/* callbackCameraInfo //{ */
+
+void BalloonCircleDestroy::callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg) {
+
+  if (!got_realsense_) {
+    ROS_INFO_THROTTLE(0.5, "[RealSense]: Got first realsense camera info msg");
+    got_realsense_ = true;
+  }
+
+  time_last_realsense_ = ros::Time::now();
+}
 
 //}
 
@@ -761,14 +777,27 @@ void BalloonCircleDestroy::callbackTimerCheckSubscribers([[maybe_unused]] const 
         is_ballon_cloud_incoming_ = true;
       }
     }
+  }
+
+  if (!got_constraints_diag_) {
+    ROS_WARN_THROTTLE(0.5, "[%s]: haven't received constraints manager diagnostics since launch", ros::this_node::getName().c_str());
+  } else {
+    if ((time_now - time_last_constraints_diagnostics_).toSec() > 4.0) {
+      ROS_WARN_THROTTLE(0.5, "[%s]: haven't received any constraints manager diagnostics for %f", ros::this_node::getName().c_str(),
+                        (time_now - time_last_constraints_diagnostics_).toSec());
+    }
+  }
 
 
-    if (!got_constraints_diag_) {
-      ROS_WARN_THROTTLE(0.5, "[%s]: haven't received constraints manager diagnostics since launch", ros::this_node::getName().c_str());
+  if (_is_state_machine_active_) {
+    if (!got_realsense_) {
+      ROS_WARN_THROTTLE(0.5, "[StateMachine]: Didn't get realsense since start of the state machine");
+        abortEland();
     } else {
-      if ((time_now - time_last_constraints_diagnostics_).toSec() > 4.0) {
-        ROS_WARN_THROTTLE(0.5, "[%s]: haven't received any constraints manager diagnostics for %f", ros::this_node::getName().c_str(),
-                          (time_now - time_last_constraints_diagnostics_).toSec());
+      if ((time_now - time_last_realsense_).toSec() > 5.0) {
+        ROS_WARN_THROTTLE(0.5, "[%s]: haven't received any realsense data %f, ABORT, ALARM KURWA", ros::this_node::getName().c_str(),
+                          (time_now - time_last_realsense_).toSec());
+        abortEland();
       }
     }
   }
@@ -2284,6 +2313,28 @@ void BalloonCircleDestroy::setConstraints(std::string desired_constraints) {
   } else {
     ROS_ERROR("[BalloonCircleDestroy]: service call for setConstraints() failed!");
   }
+}
+
+//}
+
+/* abortEland //{ */
+
+void BalloonCircleDestroy::abortEland() {
+                                                                 
+  std_srvs::Trigger srv_;
+  bool res = srv_eland_.call(srv_);
+  if(res) {
+    if(!srv_.response.success) {
+      ROS_WARN_THROTTLE(0.5, "[StateMachine]: Service call for eland returned false");
+    } else {
+      ROS_WARN("[StateMachine]:  realsense is not going, called eland, turning off");
+    }
+  } else {
+    ROS_WARN("[StateMachine]: Couldn't call eland");
+  
+  }
+
+  _is_state_machine_active_ = false;
 }
 
 //}
