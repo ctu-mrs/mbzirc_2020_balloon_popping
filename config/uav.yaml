@@ -25,14 +25,15 @@ area:
 
 arena:
   [
+  -20,20,-10,10, 0.5,6,0.5,
   0,20,-10,10, 0.5,6,0.5,
   -20,0,-10,10, 0.5,6,0.5,
-  -20,20,-10,10, 0.5,6,0.5
   ]
 
 constraints:
   sweeping: "sweeping"
   going: "aggressive"
+  attack: "attack"
 # time thresholds for states - means, if dron stays in area for this amount a time, it'll go to fobidden
 time_thresholds:
   going_to: 30

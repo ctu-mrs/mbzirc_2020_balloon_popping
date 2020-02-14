@@ -79,7 +79,8 @@ void BalloonCircleDestroy::onInit() {
   param_loader.load_param("arena_corner_factor", _arena_corner_factor_);
   param_loader.load_matrix_static("arena", _arenas_);
   param_loader.load_param("constraints/sweeping", _sweep_constraints_);
-  param_loader.load_param("constraints/going", _attack_constraints_);
+  param_loader.load_param("constraints/going", _going_constraints_);
+  param_loader.load_param("constraints/attack", _attack_constraints_);
   if (!param_loader.loaded_successfully()) {
     ROS_ERROR("[BalloonCircleDestroy]: Couldn't load all params, shutdown");
     ros::shutdown();
@@ -670,6 +671,9 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
         /* DESTROYING state //{ */
 
         {
+          if (cur_constraints_ != _attack_constraints_) {
+            setConstraints(_attack_constraints_);
+          }
           /* if (odom_vector_(2, 0) - _height_tol_ > balloon_vector_(2, 0)) { */
           /*   ROS_WARN_THROTTLE(0.5, "[StateMachine]: height is not the same with the balloon, reset"); */
           /*   changeState(GOING_TO_BALLOON); */
@@ -1912,8 +1916,8 @@ void BalloonCircleDestroy::callbackDynamicReconfigure([[maybe_unused]] Config& c
 /* droneStop //{ */
 
 bool BalloonCircleDestroy::droneStop() {
-  if (cur_constraints_ != _attack_constraints_) {
-    setConstraints(_attack_constraints_);
+  if (cur_constraints_ != _going_constraints_) {
+    setConstraints(_going_constraints_);
   }
   std_srvs::Trigger srv_stop_call_;
   srv_client_stop_.call(srv_stop_call_);
