@@ -2,6 +2,10 @@
 
   <!-- defines name of the namespace of the drone -->
   <arg name="uav_name" default="$(optenv UAV_NAME uav)" />
+  <arg name="NATO_NAME" default="$(env NATO_NAME)" />
+
+  <arg if="$(eval arg('NATO_NAME') == 'alfa')" name="uav_name2" default="uav61" />
+  <arg if="$(eval arg('NATO_NAME') == 'bravo')" name="uav_name2" default="uav60" />
 
   <!-- will it run using GNU debugger? -->
   <arg name="debug" default="false" />
@@ -42,6 +46,7 @@
       <remap from="~balloon_point_cloud_in" to="object_detect/detected_balls_pcl" />
       <remap from="~constraints_diagnostics_in" to="constraint_manager/diagnostics" />
       <remap from="~realsense_camera_info" to="rs_d435/color/camera_info" />
+      <remap from="~comrade_diagnostics" to="/$(arg uav_name2)/control_manager/mpc_tracker/diagnostics" />
 
       <!-- Publishers -->
       <remap from="~rviz_out" to="~rviz_out" />

@@ -124,7 +124,7 @@ void BalloonCircleDestroy::onInit() {
   sub_balloon_point_ = nh.subscribe("balloon_point_in", 1, &BalloonCircleDestroy::callbackBalloonPoint, this, ros::TransportHints().tcpNoDelay());
   sub_balloon_point_cloud_ =
       nh.subscribe("balloon_point_cloud_in", 1, &BalloonCircleDestroy::callbackBalloonPointCloud, this, ros::TransportHints().tcpNoDelay());
-sub_realsense = nh.subscribe("realsense_camera_info", 1, &BalloonCircleDestroy::callbackCameraInfo, this, ros::TransportHints().tcpNoDelay());
+  sub_realsense = nh.subscribe("realsense_camera_info", 1, &BalloonCircleDestroy::callbackCameraInfo, this, ros::TransportHints().tcpNoDelay());
 
 
   //}
@@ -391,6 +391,26 @@ void BalloonCircleDestroy::callbackTrackerDiag(const mrs_msgs::MpcTrackerDiagnos
 
 
 //}
+
+void BalloonCircleDestroy::callbackComradeTrackerDiag(const mrs_msgs::ControlManagerDiagnosticsConstPtr& msg) {
+  { 
+    std::scoped_lock lock(is_comrade_tracking_); 
+    comrade_diag_ = *msg;
+
+    if(comrade_diag_.flying_normally) {
+      if(!got_comrade_tracker_diag_) {
+        got_comrade_tracker_diag_ = true;
+        ROS_WARN_THROTTLE(0.5, "[]: Got first message from comrad, he is flying normally");
+        ROS_WARN("[Comrade]: Паехали!");
+      } 
+    } else {
+      if(got_comrade_tracker_diag_) {
+        ROS_WARN_THROTTLE(1.0, "[]: Comrade is not flying, set arena to 2");
+        setArena(2);
+      }
+    }
+  }
+}
 
 /* callbackCameraInfo //{ */
 
@@ -792,7 +812,7 @@ void BalloonCircleDestroy::callbackTimerCheckSubscribers([[maybe_unused]] const 
   if (_is_state_machine_active_) {
     if (!got_realsense_) {
       ROS_WARN_THROTTLE(0.5, "[StateMachine]: Didn't get realsense since start of the state machine");
-        abortEland();
+      abortEland();
     } else {
       if ((time_now - time_last_realsense_).toSec() > 5.0) {
         ROS_WARN_THROTTLE(0.5, "[%s]: haven't received any realsense data %f, ABORT, ALARM KURWA", ros::this_node::getName().c_str(),
@@ -2320,18 +2340,17 @@ void BalloonCircleDestroy::setConstraints(std::string desired_constraints) {
 /* abortEland //{ */
 
 void BalloonCircleDestroy::abortEland() {
-                                                                 
+
   std_srvs::Trigger srv_;
-  bool res = srv_eland_.call(srv_);
-  if(res) {
-    if(!srv_.response.success) {
+  bool              res = srv_eland_.call(srv_);
+  if (res) {
+    if (!srv_.response.success) {
       ROS_WARN_THROTTLE(0.5, "[StateMachine]: Service call for eland returned false");
     } else {
       ROS_WARN("[StateMachine]:  realsense is not going, called eland, turning off");
     }
   } else {
     ROS_WARN("[StateMachine]: Couldn't call eland");
-  
   }
 
   _is_state_machine_active_ = false;

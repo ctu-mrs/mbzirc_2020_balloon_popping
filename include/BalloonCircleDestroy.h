@@ -51,6 +51,7 @@
 #include <mrs_msgs/SetInt.h>
 #include <mrs_msgs/String.h>
 #include <mrs_msgs/ConstraintManagerDiagnostics.h>
+#include <mrs_msgs/ControlManagerDiagnostics.h>
 
 #include <std_msgs/String.h>
 
@@ -268,6 +269,14 @@ private:
   bool            is_tracking_      = false;
   std::mutex      mutex_is_tracking_;
   ros::Time       time_last_tracker_diagnostics_;
+
+  void                                callbackComradeTrackerDiag(const mrs_msgs::ControlManagerDiagnosticsConstPtr& msg);
+  ros::Subscriber                     sub_comrade_tracker_diag_;
+  mrs_msgs::ControlManagerDiagnostics comrade_diag_;
+  bool                                got_comrade_tracker_diag_ = false;
+  bool                                is_comrade_flying_        = false;
+  std::mutex                          is_comrade_tracking_;
+  ros::Time                           time_last_comrade_tracker_diagnostics_;
 
 
   void                                     callbackBalloonPoint(const geometry_msgs::PoseWithCovarianceStampedConstPtr& msg);
