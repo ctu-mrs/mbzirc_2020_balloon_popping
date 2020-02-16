@@ -20,6 +20,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_sensor_msgs
   balloon_filter
   pcl_ros
+  mbzirc_msgs
 
   )
 
@@ -36,7 +37,7 @@ generate_dynamic_reconfigure_options(
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES BalloonCircleDestroy
-  CATKIN_DEPENDS roscpp mrs_lib mrs_msgs geometry_msgs nav_msgs
+  CATKIN_DEPENDS roscpp mrs_lib mrs_msgs geometry_msgs nav_msgs mbzirc_msgs
   DEPENDS Eigen
   )
 

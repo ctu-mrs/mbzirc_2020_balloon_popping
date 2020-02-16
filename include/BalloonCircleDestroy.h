@@ -60,6 +60,12 @@
 #include <mrs_lib/ParamLoader.h>
 #include <mrs_lib/mutex.h>
 #include <mrs_lib/transformer.h>
+#include <mrs_lib/SafetyZone/Polygon.h>
+
+
+/* mbzirc msgs  */
+#include <mbzirc_msgs/MbzircArenaParameters.h>
+#include <mbzirc_msgs/ArenaZoneSrv.h>
 
 /* for calling simple ros services */
 #include <std_srvs/Trigger.h>
@@ -122,47 +128,74 @@ private:
   bool       is_idling_ = false;
   ros::Timer timer_idling_;
   /* ros parameters */
-  double                                    _idle_time_;
-  bool                                      _simulation_;
-  float                                     _height_;
-  float                                     _min_height_;
-  float                                     _max_height_;
-  float                                     _height_tol_;
-  double                                    _vel_;
-  double                                    _vel_attack_;
-  double                                    _vel_arena_;
-  double                                    _arena_corner_factor_;
-  double                                    _dist_to_balloon_;
-  double                                    _dist_acc_;
-  double                                    _dist_to_overshoot_;
-  double                                    _dist_kf_activation_;
-  double                                    _traj_len_;
-  double                                    _traj_time_;
-  double                                    _dist_error_;
-  double                                    _wait_for_ball_;
-  int                                       _reset_tries_;
-  int                                       _balloon_tries_;
-  double                                    _forbidden_radius_;
-  double                                    _height_offset_;
-  double                                    _max_time_balloon_;
-  double                                    _x_min_;
-  double                                    _x_max_;
-  double                                    _y_min_;
-  double                                    _y_max_;
-  double                                    _z_min_;
-  double                                    _z_max_;
-  double                                    _arena_center_x_;
-  double                                    _arena_center_y_;
-  double                                    _state_reset_time_;
-  double                                    _overshoot_offset_;
-  double                                    _dead_band_factor_;
-  double                                    _time_to_emulate_;
-  double                                    _balloon_activation_dist_;
-  double                                    _fov_step_;
-  std::string                               _sweep_constraints_;
-  std::string                               _going_constraints_;
-  std::string                               _attack_constraints_;
+  double      _idle_time_;
+  bool        _simulation_;
+  float       _height_;
+  float       _min_height_;
+  float       _max_height_;
+  float       _height_tol_;
+  double      _vel_;
+  double      _vel_attack_;
+  double      _vel_arena_;
+  double      _arena_corner_factor_;
+  double      _dist_to_balloon_;
+  double      _dist_acc_;
+  double      _dist_to_overshoot_;
+  double      _dist_kf_activation_;
+  double      _traj_len_;
+  double      _traj_time_;
+  double      _dist_error_;
+  double      _wait_for_ball_;
+  int         _reset_tries_;
+  int         _balloon_tries_;
+  double      _forbidden_radius_;
+  double      _height_offset_;
+  double      _max_time_balloon_;
+  double      _x_min_;
+  double      _x_max_;
+  double      _y_min_;
+  double      _y_max_;
+  double      _z_min_;
+  double      _z_max_;
+  double      _arena_center_x_;
+  double      _arena_center_y_;
+  double      _state_reset_time_;
+  double      _overshoot_offset_;
+  double      _dead_band_factor_;
+  double      _time_to_emulate_;
+  double      _balloon_activation_dist_;
+  double      _fov_step_;
+  std::string _sweep_constraints_;
+  std::string _going_constraints_;
+  std::string _attack_constraints_;
+  // | -------------------- arena parameters -------------------- |
   Eigen::Matrix<double, N_ARENAS, N_POINTS> _arenas_;
+  std::shared_ptr<mrs_lib::Polygon>         cur_safety_;
+
+  std::shared_ptr<mrs_lib::Polygon> safety_polygon_;
+  Eigen::MatrixXd                   safety_;
+  double                            safe_length_;
+  double                            safe_height_;
+
+  std::shared_ptr<mrs_lib::Polygon> safety_polygon_1;
+  Eigen::MatrixXd                   safety_1;
+  double                            safe_length_1;
+  double                            safe_height_1;
+
+  std::shared_ptr<mrs_lib::Polygon> safety_polygon_2;
+  Eigen::MatrixXd                   safety_2;
+  double                            safe_length_2;
+  double                            safe_height_2;
+
+  int _arena_type_ = -1;
+  // arena types
+  // -1 - isn't set
+  // 0 - the whole arena is covered by this drone
+  // 1 - the left part  ( the + side by x )
+  // 2 - the right part ( the - side by x )
+  // this param is set by the autoStart, and is changed when comrade
+  // gives signal of it's death
+
 
   // | ------------------------- state machine params ------------------------- |
   enum State
@@ -252,6 +285,14 @@ private:
   std::mutex      mutex_realsense_;
   ros::Time       time_last_realsense_;
   bool            got_realsense_;
+
+  void                               callbackArenaInfo(const mbzirc_msgs::MbzircArenaParametersConstPtr& msg);
+  ros::Subscriber                    sub_arena_;
+  mbzirc_msgs::MbzircArenaParameters arena_params_;
+  eigen_vect                         middle_one_;
+  eigen_vect                         middle_two_;
+  bool                               _arena_set_ = false;
+  std::mutex                         mutex_arena_;
 
   void                                   callbackConstraintsDiag(const mrs_msgs::ConstraintManagerDiagnosticsConstPtr& msg);
   ros::Subscriber                        subscriber_constraints_diag_;
@@ -459,6 +500,8 @@ private:
   eigen_vect  deadBand(eigen_vect target_, eigen_vect reference_);
   bool        setArena(int i);
   double      getAngleBetween(double a, double b);
+  bool        pointInSafety(float x, float y, float z);
+  bool        pointInSafety(eigen_vect p_);
   //}
 };
 //}

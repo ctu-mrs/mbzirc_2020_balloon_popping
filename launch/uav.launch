@@ -47,6 +47,7 @@
       <remap from="~constraints_diagnostics_in" to="constraint_manager/diagnostics" />
       <remap from="~realsense_camera_info" to="rs_d435/color/camera_info" />
       <remap from="~comrade_diagnostics" to="/$(arg uav_name2)/control_manager/mpc_tracker/diagnostics" />
+      <remap from="~arena_info" to="arena_publisher/mbzirc_arena_parameters" />
 
       <!-- Publishers -->
       <remap from="~rviz_out" to="~rviz_out" />

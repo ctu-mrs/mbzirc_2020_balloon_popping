@@ -79,8 +79,7 @@ void BalloonCircleDestroy::onInit() {
   param_loader.load_param("arena_corner_factor", _arena_corner_factor_);
   param_loader.load_matrix_static("arena", _arenas_);
   param_loader.load_param("constraints/sweeping", _sweep_constraints_);
-  param_loader.load_param("constraints/going", _going_constraints_);
-  param_loader.load_param("constraints/attack", _attack_constraints_);
+  param_loader.load_param("constraints/going", _attack_constraints_);
   if (!param_loader.loaded_successfully()) {
     ROS_ERROR("[BalloonCircleDestroy]: Couldn't load all params, shutdown");
     ros::shutdown();
@@ -127,6 +126,7 @@ void BalloonCircleDestroy::onInit() {
       nh.subscribe("balloon_point_cloud_in", 1, &BalloonCircleDestroy::callbackBalloonPointCloud, this, ros::TransportHints().tcpNoDelay());
   sub_realsense = nh.subscribe("realsense_camera_info", 1, &BalloonCircleDestroy::callbackCameraInfo, this, ros::TransportHints().tcpNoDelay());
 
+  sub_arena_ = nh.subscribe("arena_info", 1, &BalloonCircleDestroy::callbackArenaInfo, this, ros::TransportHints().tcpNoDelay());
 
   //}
 
@@ -335,7 +335,7 @@ void BalloonCircleDestroy::callbackBalloonPointCloud(const sensor_msgs::PointClo
       const auto x_ = cloud_out.points.at(i).x;
       const auto y_ = cloud_out.points.at(i).y;
       const auto z_ = cloud_out.points.at(i).z;
-      if (isPointInArena(x_, y_, z_) && !pointInForbidden(eigen_vect(x_, y_, z_))) {
+      if (pointInSafety(x_, y_, z_) && !pointInForbidden(eigen_vect(x_, y_, z_))) {
         balloon_pcl_processed_.push_back(eigen_vect(x_, y_, z_));
       }
       /* } else { */
@@ -396,18 +396,18 @@ void BalloonCircleDestroy::callbackTrackerDiag(const mrs_msgs::MpcTrackerDiagnos
 /* callbackComradeTrackerDiagnostics //{ */
 
 void BalloonCircleDestroy::callbackComradeTrackerDiag(const mrs_msgs::ControlManagerDiagnosticsConstPtr& msg) {
-  { 
-    std::scoped_lock lock(is_comrade_tracking_); 
+  {
+    std::scoped_lock lock(is_comrade_tracking_);
     comrade_diag_ = *msg;
 
-    if(comrade_diag_.flying_normally) {
-      if(!got_comrade_tracker_diag_) {
+    if (comrade_diag_.flying_normally) {
+      if (!got_comrade_tracker_diag_) {
         got_comrade_tracker_diag_ = true;
         ROS_WARN_THROTTLE(0.5, "[]: Got first message from comrad, he is flying normally");
         ROS_WARN("[Comrade]: Паехали!");
-      } 
+      }
     } else {
-      if(got_comrade_tracker_diag_) {
+      if (got_comrade_tracker_diag_) {
         ROS_WARN_THROTTLE(1.0, "[]: Comrade is not flying, set arena to 2");
         setArena(2);
       }
@@ -622,7 +622,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
             plannerActivate(balloon_closest_vector_, _dist_error_);
 
           } else if ((odom_vector_ - balloon_closest_vector_).norm() < _dist_kf_activation_ && isBalloonVisible(balloon_vector_) &&
-                     isPointInArena(balloon_vector_)) {
+                     pointInSafety(balloon_vector_)) {
 
             ROS_WARN_THROTTLE(0.5, "[StateMachine]: KF close ");
             changeState(DESTROYING);
@@ -643,7 +643,7 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
               timer_idling_ = nh.createTimer(ros::Duration(_idle_time_), &BalloonCircleDestroy::callbackTimerIdling, this,
                                              true);  // the last boolean argument makes the timer run only once
             }
-          } else if (isBalloonVisible(balloon_vector_) && isPointInArena(balloon_vector_)) {
+          } else if (isBalloonVisible(balloon_vector_) && pointInSafety(balloon_vector_)) {
             ROS_WARN_THROTTLE(0.5, "[StateMachine]: dist nice");
             changeState(DESTROYING);
 
@@ -671,9 +671,6 @@ void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros:
         /* DESTROYING state //{ */
 
         {
-          if (cur_constraints_ != _attack_constraints_) {
-            setConstraints(_attack_constraints_);
-          }
           /* if (odom_vector_(2, 0) - _height_tol_ > balloon_vector_(2, 0)) { */
           /*   ROS_WARN_THROTTLE(0.5, "[StateMachine]: height is not the same with the balloon, reset"); */
           /*   changeState(GOING_TO_BALLOON); */
@@ -1296,7 +1293,7 @@ void BalloonCircleDestroy::callbackTimerPublishRviz([[maybe_unused]] const ros::
     arena_pole_4.pose.orientation.w = 1.0;
     arena_pole_4.scale.x            = 0.5;
     arena_pole_4.scale.y            = 0.5;
-    arena_pole_4.scale.z            = _z_max_;
+    arena_pole_4.scale.z            = _z_max_ - 1;
     arena_pole_4.color.a            = 0.3;
     arena_pole_4.color.r            = 0.0;
     arena_pole_4.color.g            = 1.0;
@@ -1304,11 +1301,240 @@ void BalloonCircleDestroy::callbackTimerPublishRviz([[maybe_unused]] const ros::
 
 
     msg_out.markers.push_back(arena_pole_4);
+    // | ---------------------- arena markers --------------------- |
+    if (_arena_set_) {
+      visualization_msgs::Marker marker;
+      marker.header.frame_id    = world_frame_id_;
+      marker.header.stamp       = ros::Time();
+      marker.ns                 = "mtsp";
+      marker.id                 = id++;
+      marker.type               = visualization_msgs::Marker::SPHERE;
+      marker.action             = visualization_msgs::Marker::ADD;
+      marker.pose.position.x    = middle_one_(0, 0);
+      marker.pose.position.y    = middle_one_(1, 0);
+      marker.pose.position.z    = 1;
+      marker.pose.orientation.x = 0.0;
+      marker.pose.orientation.y = 0.0;
+      marker.pose.orientation.z = 0.0;
+      marker.pose.orientation.w = 1.0;
+      marker.scale.x            = 1;
+      marker.scale.y            = 1;
+      marker.scale.z            = 1;
+      marker.color.a            = 1.0;  // Don't forget to set the alpha!
+      marker.color.r            = 0.0;
+      marker.color.g            = 1.0;
+      marker.color.b            = 0.0;
+      // only if using a MESH_RESOURCE marker type:
+      marker.mesh_resource = "package://pr2_description/meshes/base_v0/base.dae";
+
+      msg_out.markers.push_back(marker);
+
+      visualization_msgs::Marker marker2;
+      marker2.header.frame_id    = world_frame_id_;
+      marker2.header.stamp       = ros::Time();
+      marker2.ns                 = "mtsp";
+      marker2.id                 = id++;
+      marker2.type               = visualization_msgs::Marker::SPHERE;
+      marker2.action             = visualization_msgs::Marker::ADD;
+      marker2.pose.position.x    = middle_two_(0, 0);
+      marker2.pose.position.y    = middle_two_(1, 0);
+      marker2.pose.position.z    = 1;
+      marker2.pose.orientation.x = 0.0;
+      marker2.pose.orientation.y = 0.0;
+      marker2.pose.orientation.z = 0.0;
+      marker2.pose.orientation.w = 1.0;
+      marker2.scale.x            = 1;
+      marker2.scale.y            = 1;
+      marker2.scale.z            = 1;
+      marker2.color.a            = 1.0;  // Don't forget to set the alpha!
+      marker2.color.r            = 0.0;
+      marker2.color.g            = 1.0;
+      marker2.color.b            = 0.0;
+      // only if using a MESH_RESOURCE marker2 type:
+      marker2.mesh_resource = "package://pr2_description/meshes/base_v0/base.dae";
+
+
+      msg_out.markers.push_back(marker2);
+
+      // | ---------- current safety area for object detect --------- |
+
+      // safety area marker
+      visualization_msgs::Marker safety_marker;
+
+      safety_marker.header.frame_id = world_frame_id_;
+      safety_marker.type            = visualization_msgs::Marker::LINE_LIST;
+      safety_marker.ns              = "safety_area";
+      safety_marker.id              = id++;
+      safety_marker.color.a         = 0.5;
+      safety_marker.scale.x         = 0.2;
+      safety_marker.color.r         = 1;
+      safety_marker.color.g         = 1;
+      safety_marker.color.b         = 0;
+
+      std::vector<geometry_msgs::Point> safety_area_points;
+      safety_area_points = cur_safety_->getPointMessageVector(0);
+      for (size_t i = 0; i < safety_area_points.size(); i++) {
+        safety_marker.points.push_back(safety_area_points[i]);
+        safety_marker.points.push_back(safety_area_points[(i + 1) % safety_area_points.size()]);
+      }
+
+      msg_out.markers.push_back(safety_marker);
+    }
 
     rviz_pub_.publish(msg_out);
   }
 }
 
+
+//}
+
+/* callbackArenaInfo //{ */
+
+void BalloonCircleDestroy::callbackArenaInfo(const mbzirc_msgs::MbzircArenaParametersConstPtr& msg) {
+  {
+    std::scoped_lock lock(mutex_arena_);
+    arena_params_           = *msg;
+    std::string arena_frame = arena_params_.header.frame_id;
+    ROS_ERROR("[MbzircArena]:Arena  frame id %s", arena_frame.c_str());
+
+    std::vector<geometry_msgs::PointStamped> corners_;
+    for (auto p_ : msg->arena_corners) {
+      geometry_msgs::PointStamped corner_a;
+      corner_a.header  = msg->header;
+      corner_a.point.x = p_.x;
+      corner_a.point.y = p_.y;
+      corner_a.point.z = p_.z;
+      auto res         = transformer_.transformSingle(world_frame_id_, corner_a);
+
+
+      if (res) {
+        corners_.push_back(res.value());
+
+      } else {
+
+        ROS_WARN_THROTTLE(1.0, "[transformer]: could not transform from %s to  to the %s", corner_a.header.frame_id.c_str(), world_frame_id_.c_str());
+        return;
+      }
+    }
+
+    Eigen::MatrixXd safety_matrix_(8, 2);
+
+
+    for (uint i = 0; i < msg->safety_area.size(); i++) {
+      geometry_msgs::PointStamped safety_p_;
+      safety_p_.header  = msg->header;
+      safety_p_.point.x = msg->safety_area[i].x;
+      safety_p_.point.y = msg->safety_area[i].y;
+      safety_p_.point.z = msg->safety_area[i].z;
+      auto res          = transformer_.transformSingle(world_frame_id_, safety_p_);
+
+      if (res) {
+        safety_matrix_(i, 0) = res.value().point.x;
+        safety_matrix_(i, 1) = res.value().point.y;
+
+      } else {
+
+        ROS_WARN_THROTTLE(1.0, "[transformer]: could not transform from %s to  to the %s", safety_p_.header.frame_id.c_str(), world_frame_id_.c_str());
+        return;
+      }
+    }
+
+    middle_one_(0, 0) = (corners_[0].point.x + corners_[1].point.x) / 2;
+    middle_one_(1, 0) = (corners_[0].point.y + corners_[1].point.y) / 2;
+    middle_two_(0, 0) = (corners_[2].point.x + corners_[3].point.x) / 2;
+    middle_two_(1, 0) = (corners_[2].point.y + corners_[3].point.y) / 2;
+
+    safety_1       = Eigen::MatrixXd(6, 2);
+    safety_1(0, 0) = middle_one_(0, 0);
+    safety_1(0, 1) = middle_one_(1, 0);
+
+    safety_1(1, 0) = safety_matrix_(1, 0);
+    safety_1(1, 1) = safety_matrix_(1, 1);
+
+    safety_1(2, 0) = safety_matrix_(2, 0);
+    safety_1(2, 1) = safety_matrix_(2, 1);
+
+    safety_1(3, 0) = safety_matrix_(3, 0);
+    safety_1(3, 1) = safety_matrix_(3, 1);
+
+    safety_1(4, 0) = safety_matrix_(4, 0);
+    safety_1(4, 1) = safety_matrix_(4, 1);
+
+
+    safety_1(5, 0) = middle_two_(0, 0);
+    safety_1(5, 1) = middle_two_(1, 0);
+
+
+    // choosing the shortest parts of the polygon
+    if ((safety_1.row(0) - safety_1.row(1)).norm() > (safety_1.row(4) - safety_1.row(5)).norm()) {
+      safe_length_1 = (safety_1.row(4) - safety_1.row(5)).norm();
+    } else {
+      safe_length_1 = (safety_1.row(0) - safety_1.row(1)).norm();
+    }
+
+    ROS_INFO("[]: height first %f second %f", (safety_1.row(7) - safety_1.row(6)).norm(), (safety_1.row(2) - safety_1.row(3)).norm());
+    if ((safety_1.row(5) - safety_1.row(0)).norm() > (safety_1.row(2) - safety_1.row(3)).norm()) {
+      safe_height_1 = (safety_1.row(2) - safety_1.row(3)).norm();
+    } else {
+      safe_height_1 = (safety_1.row(0) - safety_1.row(5)).norm();
+    }
+
+
+    safety_polygon_1 = std::make_shared<mrs_lib::Polygon>(safety_1);
+
+
+    safety_2       = Eigen::MatrixXd(6, 2);
+    safety_2(0, 0) = middle_two_(0, 0);
+    safety_2(0, 1) = middle_two_(1, 0);
+
+    safety_2(1, 0) = safety_matrix_(5, 0);
+    safety_2(1, 1) = safety_matrix_(5, 1);
+
+    safety_2(2, 0) = safety_matrix_(6, 0);
+    safety_2(2, 1) = safety_matrix_(6, 1);
+
+    safety_2(3, 0) = safety_matrix_(7, 0);
+    safety_2(3, 1) = safety_matrix_(7, 1);
+
+    safety_2(4, 0) = safety_matrix_(0, 0);
+    safety_2(4, 1) = safety_matrix_(0, 1);
+
+    safety_2(5, 0) = middle_one_(0, 0);
+    safety_2(5, 1) = middle_one_(1, 0);
+
+    // choosing the shortest parts of the polygon
+    if ((safety_2.row(0) - safety_2.row(1)).norm() > (safety_2.row(4) - safety_2.row(5)).norm()) {
+      safe_length_2 = (safety_2.row(4) - safety_2.row(5)).norm();
+    } else {
+      safe_length_2 = (safety_2.row(0) - safety_2.row(1)).norm();
+    }
+
+    if ((safety_2.row(5) - safety_2.row(0)).norm() > (safety_2.row(2) - safety_2.row(3)).norm()) {
+      safe_height_2 = (safety_2.row(2) - safety_2.row(3)).norm();
+    } else {
+      safe_height_2 = (safety_2.row(5) - safety_2.row(0)).norm();
+    }
+
+    safety_polygon_2 = std::make_shared<mrs_lib::Polygon>(safety_2);
+
+    safety_polygon_ = std::make_shared<mrs_lib::Polygon>(safety_matrix_);
+
+    // choosing the shortest parts of the polygon
+    if ((safety_matrix_.row(0) - safety_matrix_.row(1)).norm() > (safety_matrix_.row(4) - safety_matrix_.row(5)).norm()) {
+      safe_length_ = (safety_matrix_.row(4) - safety_matrix_.row(5)).norm();
+    } else {
+      safe_length_ = (safety_matrix_.row(0) - safety_matrix_.row(1)).norm();
+    }
+
+    if ((safety_matrix_.row(7) - safety_matrix_.row(6)).norm() > (safety_matrix_.row(2) - safety_matrix_.row(3)).norm()) {
+      safe_height_ = (safety_matrix_.row(2) - safety_matrix_.row(3)).norm();
+    } else {
+      safe_height_ = (safety_matrix_.row(7) - safety_matrix_.row(6)).norm();
+    }
+
+
+  }
+}
 
 //}
 
@@ -1916,8 +2142,8 @@ void BalloonCircleDestroy::callbackDynamicReconfigure([[maybe_unused]] Config& c
 /* droneStop //{ */
 
 bool BalloonCircleDestroy::droneStop() {
-  if (cur_constraints_ != _going_constraints_) {
-    setConstraints(_going_constraints_);
+  if (cur_constraints_ != _attack_constraints_) {
+    setConstraints(_attack_constraints_);
   }
   std_srvs::Trigger srv_stop_call_;
   srv_client_stop_.call(srv_stop_call_);
@@ -2007,6 +2233,18 @@ bool BalloonCircleDestroy::isPointInArena(eigen_vect p_) {
   bool is_z_ = p_(2, 0) > _z_min_ && p_(2, 0) < _z_max_;
 
   return is_x_ && is_y_ && is_z_;
+}
+
+bool BalloonCircleDestroy::pointInSafety(float x, float y, float z) {
+  bool in_polygon = cur_safety_->isPointInside(x, y);
+  bool is_z_      = z > _z_min_ && z < _z_max_;
+  return in_polygon && is_z_;
+}
+
+bool BalloonCircleDestroy::pointInSafety(eigen_vect p_) {
+  bool in_polygon = cur_safety_->isPointInside(p_(0, 0), p_(1, 0));
+  bool is_z_      = p_(2, 0) > _z_min_ && p_(2, 0) < _z_max_;
+  return in_polygon && is_z_;
 }
 
 //}
@@ -2286,17 +2524,57 @@ bool BalloonCircleDestroy::setArena(int i) {
     ROS_INFO("[AutoStart]: Arena couldn't set to type %d is out of matrix range, redefine your arenas", i);
     return false;
   }
-  _x_min_ = _arenas_(i, 0);
-  _x_max_ = _arenas_(i, 1);
+  /* _x_min_ = _arenas_(i, 0); */
+  /* _x_max_ = _arenas_(i, 1); */
 
-  _y_min_ = _arenas_(i, 2);
-  _y_max_ = _arenas_(i, 3);
+  /* _y_min_ = _arenas_(i, 2); */
+  /* _y_max_ = _arenas_(i, 3); */
 
-  _z_min_ = _arenas_(i, 4);
-  _z_max_ = _arenas_(i, 5);
+  /* _z_min_ = _arenas_(i, 4); */
+  /* _z_max_ = _arenas_(i, 5); */
 
+  switch (i) {
+    case 0:
+      _arena_type_ = 0;
+      _x_min_      = 0;
+      _x_max_      = safe_length_1;
+      _y_min_      = -safe_height_1 / 2;
+      _y_max_      = safe_height_1 / 2;
+      cur_safety_  = safety_polygon_2;
+      break;
+    case 1:
+      _arena_type_ = 1;
+      _x_min_      = -safe_length_2;
+      _x_max_      = 0;
+      _y_min_      = -safe_height_2 / 2;
+      _y_max_      = safe_height_2 / 2;
+      cur_safety_  = safety_polygon_1;
+      break;
+
+    case 2:
+      _arena_type_ = 2;
+      _x_min_      = -safe_length_ / 2;
+      _x_max_      = safe_length_ / 2;
+      _y_min_      = -safe_height_ / 2;
+      _y_max_      = safe_height_ / 2;
+      cur_safety_  = safety_polygon_;
+      break;
+
+    default:
+      _arena_type_ = 2;
+      _x_min_      = -safe_length_ / 2;
+      _x_max_      = safe_length_ / 2;
+      _y_min_      = -safe_height_ / 2;
+      _y_max_      = safe_height_ / 2;
+      cur_safety_  = safety_polygon_;
+      break;
+  }
+
+
+  _arena_set_ = true;
   _arena_offset_ = _arenas_(i, 6);
   ROS_INFO("[AutoStart]: Arena is set to type %d", i);
+  ROS_INFO("[]: X min %f max %f Y min %f max %f", _x_min_, _x_max_, _y_min_, _y_max_);
   return true;
 }
 
