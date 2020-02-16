@@ -128,6 +128,8 @@ void BalloonCircleDestroy::onInit() {
 
   sub_arena_ = nh.subscribe("arena_info", 1, &BalloonCircleDestroy::callbackArenaInfo, this, ros::TransportHints().tcpNoDelay());
 
+  sub_comrade_tracker_diag_ =
+      nh.subscribe("comrade_diagnostics", 1, &BalloonCircleDestroy::callbackComradeTrackerDiag, this, ros::TransportHints().tcpNoDelay());
   //}
 
   // | ----------------------- Publishers ----------------------- |
@@ -316,9 +318,8 @@ void BalloonCircleDestroy::callbackBalloonPointCloud(const sensor_msgs::PointClo
   if (!is_initialized_) {
     return;
   }
-  if(!_is_state_machine_active_) {
+  if (!_is_state_machine_active_) {
     return;
-
   }
 
   {
@@ -401,6 +402,7 @@ void BalloonCircleDestroy::callbackTrackerDiag(const mrs_msgs::MpcTrackerDiagnos
 
 void BalloonCircleDestroy::callbackComradeTrackerDiag(const mrs_msgs::ControlManagerDiagnosticsConstPtr& msg) {
   {
+    ROS_INFO("[]: HOVNOO");
     std::scoped_lock lock(is_comrade_tracking_);
     comrade_diag_ = *msg;
 
@@ -408,7 +410,7 @@ void BalloonCircleDestroy::callbackComradeTrackerDiag(const mrs_msgs::ControlMan
       if (!got_comrade_tracker_diag_) {
         got_comrade_tracker_diag_ = true;
         ROS_WARN_THROTTLE(0.5, "[]: Got first message from comrad, he is flying normally");
-        ROS_WARN("[Comrade]: Паехали!");
+        ROS_WARN("[Comrade]: Paehali !");
       }
     } else {
       if (got_comrade_tracker_diag_) {
@@ -1306,7 +1308,7 @@ void BalloonCircleDestroy::callbackTimerPublishRviz([[maybe_unused]] const ros::
 
     msg_out.markers.push_back(arena_pole_4);
     // | ---------------------- arena markers --------------------- |
-    if (_arena_set_) {
+    if (_is_state_machine_active_) {
       visualization_msgs::Marker marker;
       marker.header.frame_id    = world_frame_id_;
       marker.header.stamp       = ros::Time();
@@ -1376,11 +1378,12 @@ void BalloonCircleDestroy::callbackTimerPublishRviz([[maybe_unused]] const ros::
       safety_marker.color.b         = 0;
 
       std::vector<geometry_msgs::Point> safety_area_points;
-      safety_area_points = cur_safety_->getPointMessageVector(0);
-      for (size_t i = 0; i < safety_area_points.size(); i++) {
-        safety_marker.points.push_back(safety_area_points[i]);
-        safety_marker.points.push_back(safety_area_points[(i + 1) % safety_area_points.size()]);
-      }
+      /* ROS_INFO_STREAM("hello bithc " << cur_safety_); */
+      /* safety_area_points = cur_safety_->getPointMessageVector(0); */
+      /* for (size_t i = 0; i < safety_area_points.size(); i++) { */
+      /*   safety_marker.points.push_back(safety_area_points[i]); */
+      /*   safety_marker.points.push_back(safety_area_points[(i + 1) % safety_area_points.size()]); */
+      /* } */
 
       msg_out.markers.push_back(safety_marker);
     }
@@ -1400,6 +1403,15 @@ void BalloonCircleDestroy::callbackArenaInfo(const mbzirc_msgs::MbzircArenaParam
     arena_params_           = *msg;
     std::string arena_frame = arena_params_.header.frame_id;
     ROS_ERROR("[MbzircArena]:Arena  frame id %s", arena_frame.c_str());
+    /* bool BalloonCircleDestroy::getTransform(const std::string& from_frame, const std::string& to_frame, const ros::Time& stamp, */
+    /*                                     geometry_msgs::TransformStamped& transform_out) { */
+    geometry_msgs::TransformStamped trans_out;
+    bool                            trans = getTransform(arena_params_.header.frame_id, world_frame_id_, arena_params_.header.stamp, trans_out);
+    while (trans == false) {
+      ROS_INFO("[Waiting for trans]: did i got: %d", trans);
+      trans = getTransform(arena_params_.header.frame_id, world_frame_id_, arena_params_.header.stamp, trans_out);
+    }
+
 
     std::vector<geometry_msgs::PointStamped> corners_;
     for (auto p_ : msg->arena_corners) {
@@ -1410,14 +1422,12 @@ void BalloonCircleDestroy::callbackArenaInfo(const mbzirc_msgs::MbzircArenaParam
       corner_a.point.z = p_.z;
       auto res         = transformer_.transformSingle(world_frame_id_, corner_a);
 
-
       if (res) {
         corners_.push_back(res.value());
 
       } else {
-
-        ROS_WARN_THROTTLE(1.0, "[transformer]: could not transform from %s to  to the %s", corner_a.header.frame_id.c_str(), world_frame_id_.c_str());
-        return;
+        ROS_WARN("[ArenaTransformer]: could not transform from %s to  to the %s", corner_a.header.frame_id.c_str(), world_frame_id_.c_str());
+        /* return; */
       }
     }
 
@@ -1438,7 +1448,7 @@ void BalloonCircleDestroy::callbackArenaInfo(const mbzirc_msgs::MbzircArenaParam
 
       } else {
 
-        ROS_WARN_THROTTLE(1.0, "[transformer]: could not transform from %s to  to the %s", safety_p_.header.frame_id.c_str(), world_frame_id_.c_str());
+        ROS_WARN("[ArenaTransformer]: could not transform from %s to  to the %s", safety_p_.header.frame_id.c_str(), world_frame_id_.c_str());
         return;
       }
     }
@@ -1476,13 +1486,14 @@ void BalloonCircleDestroy::callbackArenaInfo(const mbzirc_msgs::MbzircArenaParam
       safe_length_1 = (safety_1.row(0) - safety_1.row(1)).norm();
     }
 
-    ROS_INFO("[]: height first %f second %f", (safety_1.row(7) - safety_1.row(6)).norm(), (safety_1.row(2) - safety_1.row(3)).norm());
+    ROS_ERROR("[]: height first %f second %f", (safety_1.row(7) - safety_1.row(6)).norm(), (safety_1.row(2) - safety_1.row(3)).norm());
     if ((safety_1.row(5) - safety_1.row(0)).norm() > (safety_1.row(2) - safety_1.row(3)).norm()) {
       safe_height_1 = (safety_1.row(2) - safety_1.row(3)).norm();
     } else {
       safe_height_1 = (safety_1.row(0) - safety_1.row(5)).norm();
     }
 
+    ROS_ERROR("[]:  arena 1 length %f and height %f ", safe_length_1, safe_height_1);
 
     safety_polygon_1 = std::make_shared<mrs_lib::Polygon>(safety_1);
 
@@ -1518,6 +1529,7 @@ void BalloonCircleDestroy::callbackArenaInfo(const mbzirc_msgs::MbzircArenaParam
     } else {
       safe_height_2 = (safety_2.row(5) - safety_2.row(0)).norm();
     }
+    ROS_ERROR("[]:  arena 2 length %f and height %f ", safe_length_2, safe_height_2);
 
     safety_polygon_2 = std::make_shared<mrs_lib::Polygon>(safety_2);
 
@@ -1535,8 +1547,6 @@ void BalloonCircleDestroy::callbackArenaInfo(const mbzirc_msgs::MbzircArenaParam
     } else {
       safe_height_ = (safety_matrix_.row(7) - safety_matrix_.row(6)).norm();
     }
-
-
   }
 }
 

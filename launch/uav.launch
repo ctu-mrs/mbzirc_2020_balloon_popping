@@ -24,7 +24,7 @@
   <group ns="$(arg uav_name)">
 
     <!-- WaypointFlier nodelet -->
-    <node pkg="nodelet" type="nodelet" name="balloon_circle_destroy" args="$(arg nodelet) balloon_circle_destroy/BalloonCircleDestroy $(arg nodelet_manager)" launch-prefix="$(arg launch_prefix_debug)" output="screen">
+    <node pkg="nodelet" type="nodelet" name="balloon_circle_destroy2" args="$(arg nodelet) balloon_circle_destroy/BalloonCircleDestroy $(arg nodelet_manager)" launch-prefix="$(arg launch_prefix_debug)" output="screen">
 
       <param name="uav_name" type="string" value="$(arg uav_name)" />
 
@@ -46,7 +46,7 @@
       <remap from="~balloon_point_cloud_in" to="object_detect/detected_balls_pcl" />
       <remap from="~constraints_diagnostics_in" to="constraint_manager/diagnostics" />
       <remap from="~realsense_camera_info" to="rs_d435/color/camera_info" />
-      <remap from="~comrade_diagnostics" to="/$(arg uav_name2)/control_manager/mpc_tracker/diagnostics" />
+      <remap from="~comrade_diagnostics" to="/$(arg uav_name2)/control_manager/diagnostics" />
       <remap from="~arena_info" to="arena_publisher/mbzirc_arena_parameters" />
 
       <!-- Publishers -->
