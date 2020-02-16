@@ -16,7 +16,7 @@ area:
   y_max: 5
   z_min: 1
   z_max: 6
-  offset: 1
+  offset: 2.5
 # arena coords are like this [x_min,x_max,y_min, y_max, z_min,z_max, offset]
 # arena:
 #   left: [-20,0,-20,20, 1,8,3]
@@ -60,7 +60,7 @@ dist_to_balloon: 5
 #distance to kill the balloon
 dist_to_overshoot: 4
 #overshoot offset
-overshoot_offset: 0
+overshoot_offset: 0.1
 #trajectory length for MPC
 traj_len: 40
 #traj time for MPC

@@ -316,6 +316,10 @@ void BalloonCircleDestroy::callbackBalloonPointCloud(const sensor_msgs::PointClo
   if (!is_initialized_) {
     return;
   }
+  if(!_is_state_machine_active_) {
+    return;
+
+  }
 
   {
     std::scoped_lock lock(mutex_is_balloon_cloud_incoming_);
@@ -2540,7 +2544,7 @@ bool BalloonCircleDestroy::setArena(int i) {
       _x_max_      = safe_length_1;
       _y_min_      = -safe_height_1 / 2;
       _y_max_      = safe_height_1 / 2;
-      cur_safety_  = safety_polygon_2;
+      cur_safety_  = safety_polygon_1;
       break;
     case 1:
       _arena_type_ = 1;
@@ -2548,7 +2552,7 @@ bool BalloonCircleDestroy::setArena(int i) {
       _x_max_      = 0;
       _y_min_      = -safe_height_2 / 2;
       _y_max_      = safe_height_2 / 2;
-      cur_safety_  = safety_polygon_1;
+      cur_safety_  = safety_polygon_2;
       break;
 
     case 2:
@@ -2572,7 +2576,6 @@ bool BalloonCircleDestroy::setArena(int i) {
 
 
   _arena_set_ = true;
-  _arena_offset_ = _arenas_(i, 6);
   ROS_INFO("[AutoStart]: Arena is set to type %d", i);
   ROS_INFO("[]: X min %f max %f Y min %f max %f", _x_min_, _x_max_, _y_min_, _y_max_);
   return true;
