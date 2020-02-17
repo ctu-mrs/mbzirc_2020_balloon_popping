@@ -416,7 +416,7 @@ void BalloonCircleDestroy::callbackComradeTrackerDiag(const mrs_msgs::ControlMan
     if(revenge_mode) {
       return;
     }
-    ROS_INFO("[]: HOVNOO");
+    ROS_INFO_THROTTLE(1.0, "[Comrade]: Ya topolya, do you copy? ");
     std::scoped_lock lock(is_comrade_tracking_);
     comrade_diag_ = *msg;
 
