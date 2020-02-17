@@ -288,7 +288,10 @@ private:
 
   void                               callbackArenaInfo(const mbzirc_msgs::MbzircArenaParametersConstPtr& msg);
   ros::Subscriber                    sub_arena_;
+  bool                               gotArena = false;
   mbzirc_msgs::MbzircArenaParameters arena_params_;
+  bool                               configurateArena();
+  bool                               arenaConfigured = false;
   eigen_vect                         middle_one_;
   eigen_vect                         middle_two_;
   bool                               _arena_set_ = false;
@@ -318,6 +321,7 @@ private:
   bool                                got_comrade_tracker_diag_ = false;
   bool                                is_comrade_flying_        = false;
   std::mutex                          is_comrade_tracking_;
+  bool                                revenge_mode = false;
   ros::Time                           time_last_comrade_tracker_diagnostics_;
 
 

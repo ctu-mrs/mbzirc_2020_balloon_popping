@@ -266,6 +266,17 @@ void BalloonCircleDestroy::callbackOdomUav(const nav_msgs::OdometryConstPtr& msg
     }
   }
 
+  {
+    if (arenaConfigured == false) {
+      geometry_msgs::TransformStamped trans_out;
+      bool                            trans = getTransform(arena_params_.header.frame_id, world_frame_id_, arena_params_.header.stamp, trans_out);
+      if (trans && gotArena) {
+        configurateArena();
+      }
+    }
+  }
+
+
   if (!got_odom_uav_) {
     got_odom_uav_ = true;
     ROS_INFO("[%s]: Got first odom", ros::this_node::getName().c_str());
@@ -402,6 +413,9 @@ void BalloonCircleDestroy::callbackTrackerDiag(const mrs_msgs::MpcTrackerDiagnos
 
 void BalloonCircleDestroy::callbackComradeTrackerDiag(const mrs_msgs::ControlManagerDiagnosticsConstPtr& msg) {
   {
+    if(revenge_mode) {
+      return;
+    }
     ROS_INFO("[]: HOVNOO");
     std::scoped_lock lock(is_comrade_tracking_);
     comrade_diag_ = *msg;
@@ -416,6 +430,7 @@ void BalloonCircleDestroy::callbackComradeTrackerDiag(const mrs_msgs::ControlMan
       if (got_comrade_tracker_diag_) {
         ROS_WARN_THROTTLE(1.0, "[]: Comrade is not flying, set arena to 2");
         setArena(2);
+        revenge_mode = true;
       }
     }
   }
@@ -1398,159 +1413,165 @@ void BalloonCircleDestroy::callbackTimerPublishRviz([[maybe_unused]] const ros::
 /* callbackArenaInfo //{ */
 
 void BalloonCircleDestroy::callbackArenaInfo(const mbzirc_msgs::MbzircArenaParametersConstPtr& msg) {
-  {
-    std::scoped_lock lock(mutex_arena_);
-    arena_params_           = *msg;
-    std::string arena_frame = arena_params_.header.frame_id;
-    ROS_ERROR("[MbzircArena]:Arena  frame id %s", arena_frame.c_str());
-    /* bool BalloonCircleDestroy::getTransform(const std::string& from_frame, const std::string& to_frame, const ros::Time& stamp, */
-    /*                                     geometry_msgs::TransformStamped& transform_out) { */
-    geometry_msgs::TransformStamped trans_out;
-    bool                            trans = getTransform(arena_params_.header.frame_id, world_frame_id_, arena_params_.header.stamp, trans_out);
-    while (trans == false) {
-      ROS_INFO("[Waiting for trans]: did i got: %d", trans);
-      trans = getTransform(arena_params_.header.frame_id, world_frame_id_, arena_params_.header.stamp, trans_out);
-    }
 
+  arena_params_ = *msg;
+  gotArena      = true;
 
-    std::vector<geometry_msgs::PointStamped> corners_;
-    for (auto p_ : msg->arena_corners) {
-      geometry_msgs::PointStamped corner_a;
-      corner_a.header  = msg->header;
-      corner_a.point.x = p_.x;
-      corner_a.point.y = p_.y;
-      corner_a.point.z = p_.z;
-      auto res         = transformer_.transformSingle(world_frame_id_, corner_a);
-
-      if (res) {
-        corners_.push_back(res.value());
-
-      } else {
-        ROS_WARN("[ArenaTransformer]: could not transform from %s to  to the %s", corner_a.header.frame_id.c_str(), world_frame_id_.c_str());
-        /* return; */
-      }
-    }
-
-    Eigen::MatrixXd safety_matrix_(8, 2);
-
-
-    for (uint i = 0; i < msg->safety_area.size(); i++) {
-      geometry_msgs::PointStamped safety_p_;
-      safety_p_.header  = msg->header;
-      safety_p_.point.x = msg->safety_area[i].x;
-      safety_p_.point.y = msg->safety_area[i].y;
-      safety_p_.point.z = msg->safety_area[i].z;
-      auto res          = transformer_.transformSingle(world_frame_id_, safety_p_);
-
-      if (res) {
-        safety_matrix_(i, 0) = res.value().point.x;
-        safety_matrix_(i, 1) = res.value().point.y;
-
-      } else {
-
-        ROS_WARN("[ArenaTransformer]: could not transform from %s to  to the %s", safety_p_.header.frame_id.c_str(), world_frame_id_.c_str());
-        return;
-      }
-    }
-
-    middle_one_(0, 0) = (corners_[0].point.x + corners_[1].point.x) / 2;
-    middle_one_(1, 0) = (corners_[0].point.y + corners_[1].point.y) / 2;
-    middle_two_(0, 0) = (corners_[2].point.x + corners_[3].point.x) / 2;
-    middle_two_(1, 0) = (corners_[2].point.y + corners_[3].point.y) / 2;
-
-    safety_1       = Eigen::MatrixXd(6, 2);
-    safety_1(0, 0) = middle_one_(0, 0);
-    safety_1(0, 1) = middle_one_(1, 0);
-
-    safety_1(1, 0) = safety_matrix_(1, 0);
-    safety_1(1, 1) = safety_matrix_(1, 1);
-
-    safety_1(2, 0) = safety_matrix_(2, 0);
-    safety_1(2, 1) = safety_matrix_(2, 1);
-
-    safety_1(3, 0) = safety_matrix_(3, 0);
-    safety_1(3, 1) = safety_matrix_(3, 1);
-
-    safety_1(4, 0) = safety_matrix_(4, 0);
-    safety_1(4, 1) = safety_matrix_(4, 1);
-
-
-    safety_1(5, 0) = middle_two_(0, 0);
-    safety_1(5, 1) = middle_two_(1, 0);
-
-
-    // choosing the shortest parts of the polygon
-    if ((safety_1.row(0) - safety_1.row(1)).norm() > (safety_1.row(4) - safety_1.row(5)).norm()) {
-      safe_length_1 = (safety_1.row(4) - safety_1.row(5)).norm();
-    } else {
-      safe_length_1 = (safety_1.row(0) - safety_1.row(1)).norm();
-    }
-
-    ROS_ERROR("[]: height first %f second %f", (safety_1.row(7) - safety_1.row(6)).norm(), (safety_1.row(2) - safety_1.row(3)).norm());
-    if ((safety_1.row(5) - safety_1.row(0)).norm() > (safety_1.row(2) - safety_1.row(3)).norm()) {
-      safe_height_1 = (safety_1.row(2) - safety_1.row(3)).norm();
-    } else {
-      safe_height_1 = (safety_1.row(0) - safety_1.row(5)).norm();
-    }
-
-    ROS_ERROR("[]:  arena 1 length %f and height %f ", safe_length_1, safe_height_1);
-
-    safety_polygon_1 = std::make_shared<mrs_lib::Polygon>(safety_1);
-
-
-    safety_2       = Eigen::MatrixXd(6, 2);
-    safety_2(0, 0) = middle_two_(0, 0);
-    safety_2(0, 1) = middle_two_(1, 0);
-
-    safety_2(1, 0) = safety_matrix_(5, 0);
-    safety_2(1, 1) = safety_matrix_(5, 1);
-
-    safety_2(2, 0) = safety_matrix_(6, 0);
-    safety_2(2, 1) = safety_matrix_(6, 1);
-
-    safety_2(3, 0) = safety_matrix_(7, 0);
-    safety_2(3, 1) = safety_matrix_(7, 1);
-
-    safety_2(4, 0) = safety_matrix_(0, 0);
-    safety_2(4, 1) = safety_matrix_(0, 1);
-
-    safety_2(5, 0) = middle_one_(0, 0);
-    safety_2(5, 1) = middle_one_(1, 0);
-
-    // choosing the shortest parts of the polygon
-    if ((safety_2.row(0) - safety_2.row(1)).norm() > (safety_2.row(4) - safety_2.row(5)).norm()) {
-      safe_length_2 = (safety_2.row(4) - safety_2.row(5)).norm();
-    } else {
-      safe_length_2 = (safety_2.row(0) - safety_2.row(1)).norm();
-    }
-
-    if ((safety_2.row(5) - safety_2.row(0)).norm() > (safety_2.row(2) - safety_2.row(3)).norm()) {
-      safe_height_2 = (safety_2.row(2) - safety_2.row(3)).norm();
-    } else {
-      safe_height_2 = (safety_2.row(5) - safety_2.row(0)).norm();
-    }
-    ROS_ERROR("[]:  arena 2 length %f and height %f ", safe_length_2, safe_height_2);
-
-    safety_polygon_2 = std::make_shared<mrs_lib::Polygon>(safety_2);
-
-    safety_polygon_ = std::make_shared<mrs_lib::Polygon>(safety_matrix_);
-
-    // choosing the shortest parts of the polygon
-    if ((safety_matrix_.row(0) - safety_matrix_.row(1)).norm() > (safety_matrix_.row(4) - safety_matrix_.row(5)).norm()) {
-      safe_length_ = (safety_matrix_.row(4) - safety_matrix_.row(5)).norm();
-    } else {
-      safe_length_ = (safety_matrix_.row(0) - safety_matrix_.row(1)).norm();
-    }
-
-    if ((safety_matrix_.row(7) - safety_matrix_.row(6)).norm() > (safety_matrix_.row(2) - safety_matrix_.row(3)).norm()) {
-      safe_height_ = (safety_matrix_.row(2) - safety_matrix_.row(3)).norm();
-    } else {
-      safe_height_ = (safety_matrix_.row(7) - safety_matrix_.row(6)).norm();
-    }
-  }
+  std::string arena_frame = arena_params_.header.frame_id;
+  ROS_ERROR("[MbzircArena]:Arena  frame id %s", arena_frame.c_str());
+  /* bool BalloonCircleDestroy::getTransform(const std::string& from_frame, const std::string& to_frame, const ros::Time& stamp, */
+  /*                                     geometry_msgs::TransformStamped& transform_out) { */
+  /* while (trans == false) { */
+  /*   ROS_INFO("[Waiting for trans]: did i got: %d", trans); */
+  /*   trans = getTransform(gc.header.frame_id, world_frame_id_, arena_params_.header.stamp, trans_out); */
+  /* } */
 }
 
 //}
+
+
+bool BalloonCircleDestroy::configurateArena() {
+  ROS_WARN("[]: Called configuring the arena");
+
+
+  std::vector<geometry_msgs::PointStamped> corners_;
+  for (auto p_ : arena_params_.arena_corners) {
+    geometry_msgs::PointStamped corner_a;
+    corner_a.header  = arena_params_.header;
+    corner_a.point.x = p_.x;
+    corner_a.point.y = p_.y;
+    corner_a.point.z = p_.z;
+    auto res         = transformer_.transformSingle(world_frame_id_, corner_a);
+
+    if (res) {
+      corners_.push_back(res.value());
+
+    } else {
+      ROS_WARN("[ArenaTransformer]: could not transform from %s to  to the %s", corner_a.header.frame_id.c_str(), world_frame_id_.c_str());
+      return false;
+    }
+  }
+
+  Eigen::MatrixXd safety_matrix_(8, 2);
+
+
+  for (uint i = 0; i < arena_params_.safety_area.size(); i++) {
+    geometry_msgs::PointStamped safety_p_;
+    safety_p_.header  = arena_params_.header;
+    safety_p_.point.x = arena_params_.safety_area[i].x;
+    safety_p_.point.y = arena_params_.safety_area[i].y;
+    safety_p_.point.z = arena_params_.safety_area[i].z;
+    auto res          = transformer_.transformSingle(world_frame_id_, safety_p_);
+
+    if (res) {
+      safety_matrix_(i, 0) = res.value().point.x;
+      safety_matrix_(i, 1) = res.value().point.y;
+
+    } else {
+
+      ROS_WARN("[ArenaTransformer]: could not transform from %s to  to the %s", safety_p_.header.frame_id.c_str(), world_frame_id_.c_str());
+      return false;
+    }
+  }
+
+  middle_one_(0, 0) = (corners_[0].point.x + corners_[1].point.x) / 2;
+  middle_one_(1, 0) = (corners_[0].point.y + corners_[1].point.y) / 2;
+  middle_two_(0, 0) = (corners_[2].point.x + corners_[3].point.x) / 2;
+  middle_two_(1, 0) = (corners_[2].point.y + corners_[3].point.y) / 2;
+
+  safety_1       = Eigen::MatrixXd(6, 2);
+  safety_1(0, 0) = middle_one_(0, 0);
+  safety_1(0, 1) = middle_one_(1, 0);
+
+  safety_1(1, 0) = safety_matrix_(1, 0);
+  safety_1(1, 1) = safety_matrix_(1, 1);
+
+  safety_1(2, 0) = safety_matrix_(2, 0);
+  safety_1(2, 1) = safety_matrix_(2, 1);
+
+  safety_1(3, 0) = safety_matrix_(3, 0);
+  safety_1(3, 1) = safety_matrix_(3, 1);
+
+  safety_1(4, 0) = safety_matrix_(4, 0);
+  safety_1(4, 1) = safety_matrix_(4, 1);
+
+
+  safety_1(5, 0) = middle_two_(0, 0);
+  safety_1(5, 1) = middle_two_(1, 0);
+
+
+  // choosing the shortest parts of the polygon
+  if ((safety_1.row(0) - safety_1.row(1)).norm() > (safety_1.row(4) - safety_1.row(5)).norm()) {
+    safe_length_1 = (safety_1.row(4) - safety_1.row(5)).norm();
+  } else {
+    safe_length_1 = (safety_1.row(0) - safety_1.row(1)).norm();
+  }
+
+  ROS_ERROR("[]: height first %f second %f", (safety_1.row(7) - safety_1.row(6)).norm(), (safety_1.row(2) - safety_1.row(3)).norm());
+  if ((safety_1.row(5) - safety_1.row(0)).norm() > (safety_1.row(2) - safety_1.row(3)).norm()) {
+    safe_height_1 = (safety_1.row(2) - safety_1.row(3)).norm();
+  } else {
+    safe_height_1 = (safety_1.row(0) - safety_1.row(5)).norm();
+  }
+
+  ROS_ERROR("[]:  arena 1 length %f and height %f ", safe_length_1, safe_height_1);
+
+  safety_polygon_1 = std::make_shared<mrs_lib::Polygon>(safety_1);
+
+
+  safety_2       = Eigen::MatrixXd(6, 2);
+  safety_2(0, 0) = middle_two_(0, 0);
+  safety_2(0, 1) = middle_two_(1, 0);
+
+  safety_2(1, 0) = safety_matrix_(5, 0);
+  safety_2(1, 1) = safety_matrix_(5, 1);
+
+  safety_2(2, 0) = safety_matrix_(6, 0);
+  safety_2(2, 1) = safety_matrix_(6, 1);
+
+  safety_2(3, 0) = safety_matrix_(7, 0);
+  safety_2(3, 1) = safety_matrix_(7, 1);
+
+  safety_2(4, 0) = safety_matrix_(0, 0);
+  safety_2(4, 1) = safety_matrix_(0, 1);
+
+  safety_2(5, 0) = middle_one_(0, 0);
+  safety_2(5, 1) = middle_one_(1, 0);
+
+  // choosing the shortest parts of the polygon
+  if ((safety_2.row(0) - safety_2.row(1)).norm() > (safety_2.row(4) - safety_2.row(5)).norm()) {
+    safe_length_2 = (safety_2.row(4) - safety_2.row(5)).norm();
+  } else {
+    safe_length_2 = (safety_2.row(0) - safety_2.row(1)).norm();
+  }
+
+  if ((safety_2.row(5) - safety_2.row(0)).norm() > (safety_2.row(2) - safety_2.row(3)).norm()) {
+    safe_height_2 = (safety_2.row(2) - safety_2.row(3)).norm();
+  } else {
+    safe_height_2 = (safety_2.row(5) - safety_2.row(0)).norm();
+  }
+  ROS_ERROR("[]:  arena 2 length %f and height %f ", safe_length_2, safe_height_2);
+
+  safety_polygon_2 = std::make_shared<mrs_lib::Polygon>(safety_2);
+
+  safety_polygon_ = std::make_shared<mrs_lib::Polygon>(safety_matrix_);
+
+  // choosing the shortest parts of the polygon
+  if ((safety_matrix_.row(0) - safety_matrix_.row(1)).norm() > (safety_matrix_.row(4) - safety_matrix_.row(5)).norm()) {
+    safe_length_ = (safety_matrix_.row(4) - safety_matrix_.row(5)).norm();
+  } else {
+    safe_length_ = (safety_matrix_.row(0) - safety_matrix_.row(1)).norm();
+  }
+
+  if ((safety_matrix_.row(7) - safety_matrix_.row(6)).norm() > (safety_matrix_.row(2) - safety_matrix_.row(3)).norm()) {
+    safe_height_ = (safety_matrix_.row(2) - safety_matrix_.row(3)).norm();
+  } else {
+    safe_height_ = (safety_matrix_.row(7) - safety_matrix_.row(6)).norm();
+  }
+  arenaConfigured = true;
+  return true;
+}
+
 
 /* callbackStartStateMachine //{ */
 
