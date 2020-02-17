@@ -266,16 +266,6 @@ void BalloonCircleDestroy::callbackOdomUav(const nav_msgs::OdometryConstPtr& msg
     }
   }
 
-  {
-    if (arenaConfigured == false) {
-      geometry_msgs::TransformStamped trans_out;
-      bool                            trans = getTransform(arena_params_.header.frame_id, world_frame_id_, arena_params_.header.stamp, trans_out);
-      if (trans && gotArena) {
-        configurateArena();
-      }
-    }
-  }
-
 
   if (!got_odom_uav_) {
     got_odom_uav_ = true;
@@ -383,6 +373,16 @@ void BalloonCircleDestroy::callbackTrackerDiag(const mrs_msgs::MpcTrackerDiagnos
     got_tracker_diag_ = true;
     ROS_INFO("[%s]: got first tracker diagnostics msg", ros::this_node::getName().c_str());
   }
+  {
+    if (arenaConfigured == false) {
+      ROS_INFO("[]: SUKAA");
+      geometry_msgs::TransformStamped trans_out;
+      bool                            trans = getTransform(arena_params_.header.frame_id, world_frame_id_, arena_params_.header.stamp, trans_out);
+      if (trans && gotArena) {
+        configurateArena();
+      }
+    }
+  }
 
   if (_state_ == DESTROY_OVERSHOOT) {
     if ((odom_vector_ - _last_goal_).norm() < _dist_acc_) {
@@ -413,7 +413,7 @@ void BalloonCircleDestroy::callbackTrackerDiag(const mrs_msgs::MpcTrackerDiagnos
 
 void BalloonCircleDestroy::callbackComradeTrackerDiag(const mrs_msgs::ControlManagerDiagnosticsConstPtr& msg) {
   {
-    if(revenge_mode) {
+    if (revenge_mode) {
       return;
     }
     ROS_INFO_THROTTLE(1.0, "[Comrade]: Ya topolya, do you copy? ");
@@ -1323,7 +1323,7 @@ void BalloonCircleDestroy::callbackTimerPublishRviz([[maybe_unused]] const ros::
 
     msg_out.markers.push_back(arena_pole_4);
     // | ---------------------- arena markers --------------------- |
-    if (_is_state_machine_active_) {
+    if (_is_state_machine_active_ && arenaConfigured) {
       visualization_msgs::Marker marker;
       marker.header.frame_id    = world_frame_id_;
       marker.header.stamp       = ros::Time();
@@ -1394,11 +1394,11 @@ void BalloonCircleDestroy::callbackTimerPublishRviz([[maybe_unused]] const ros::
 
       std::vector<geometry_msgs::Point> safety_area_points;
       /* ROS_INFO_STREAM("hello bithc " << cur_safety_); */
-      /* safety_area_points = cur_safety_->getPointMessageVector(0); */
-      /* for (size_t i = 0; i < safety_area_points.size(); i++) { */
-      /*   safety_marker.points.push_back(safety_area_points[i]); */
-      /*   safety_marker.points.push_back(safety_area_points[(i + 1) % safety_area_points.size()]); */
-      /* } */
+      safety_area_points = cur_safety_->getPointMessageVector(0);
+      for (size_t i = 0; i < safety_area_points.size(); i++) {
+        safety_marker.points.push_back(safety_area_points[i]);
+        safety_marker.points.push_back(safety_area_points[(i + 1) % safety_area_points.size()]);
+      }
 
       msg_out.markers.push_back(safety_marker);
     }
@@ -1429,6 +1429,7 @@ void BalloonCircleDestroy::callbackArenaInfo(const mbzirc_msgs::MbzircArenaParam
 
 //}
 
+/* configurateArena //{ */
 
 bool BalloonCircleDestroy::configurateArena() {
   ROS_WARN("[]: Called configuring the arena");
@@ -1572,6 +1573,7 @@ bool BalloonCircleDestroy::configurateArena() {
   return true;
 }
 
+//}
 
 /* callbackStartStateMachine //{ */
 

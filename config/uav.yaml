@@ -16,7 +16,7 @@ area:
   y_max: 5
   z_min: 1
   z_max: 6
-  offset: 2.5
+  offset: 1.5
 # arena coords are like this [x_min,x_max,y_min, y_max, z_min,z_max, offset]
 # arena:
 #   left: [-20,0,-20,20, 1,8,3]
