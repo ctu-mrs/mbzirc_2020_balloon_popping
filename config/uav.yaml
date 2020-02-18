@@ -95,6 +95,9 @@ time_to_emulate: 4
 # dist to activate flying by PCL z
 balloon_activation_dist: 11
 # scan step 
-arena_scan_step: 5
-
+arena_scan_step: 7
+#is arena swap enabled ? 
+is_arena_swap_enabled: true
+# time when arena swaps
+arena_swap_time: 50
 

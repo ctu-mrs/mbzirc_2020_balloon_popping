@@ -165,6 +165,8 @@ private:
   double      _time_to_emulate_;
   double      _balloon_activation_dist_;
   double      _fov_step_;
+  double      _arena_time_;
+  bool        _do_swap_;
   std::string _sweep_constraints_;
   std::string _going_constraints_;
   std::string _attack_constraints_;
@@ -187,7 +189,8 @@ private:
   double                            safe_length_2;
   double                            safe_height_2;
 
-  int _arena_type_ = -1;
+  int       _arena_type_ = -1;
+  ros::Time current_arena_time_;
   // arena types
   // -1 - isn't set
   // 0 - the whole arena is covered by this drone
