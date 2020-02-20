@@ -15,7 +15,7 @@ area:
   y_min: -5
   y_max: 5
   z_min: 0.5
-  z_max: 6
+  z_max: 5.5
   offset: 1.5
 # arena coords are like this [x_min,x_max,y_min, y_max, z_min,z_max, offset]
 # arena:
@@ -44,7 +44,7 @@ land_at_the_end: false
 #height offset when killing the balloon
 height_offset: 0.0
 #height where drone will operate ( up to this height )
-elips_height: 5.5
+elips_height: 5
 #idle_time
 idle_time: 0
 #velocity for goTo's
