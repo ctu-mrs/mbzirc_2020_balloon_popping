@@ -15,7 +15,7 @@ area:
   y_min: -5
   y_max: 5
   z_min: 0.5
-  z_max: 5.5
+  z_max: 5
   offset: 1.5
 # arena coords are like this [x_min,x_max,y_min, y_max, z_min,z_max, offset]
 # arena:
@@ -42,9 +42,9 @@ time_thresholds:
 # should the UAV land after destroying all balloons
 land_at_the_end: false
 #height offset when killing the balloon
-height_offset: 0.0
+height_offset: 0.3
 #height where drone will operate ( up to this height )
-elips_height: 5
+elips_height: 4.5
 #idle_time
 idle_time: 0
 #velocity for goTo's
@@ -60,7 +60,7 @@ dist_to_balloon: 5
 #distance to kill the balloon
 dist_to_overshoot: 4
 #overshoot offset
-overshoot_offset: 0.1
+overshoot_offset: 0.15
 #trajectory length for MPC
 traj_len: 40
 #traj time for MPC

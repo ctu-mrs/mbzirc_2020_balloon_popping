@@ -1790,6 +1790,7 @@ void BalloonCircleDestroy::getCloseToBalloon(eigen_vect dest_, double close_dist
   eigen_vect                  diff_vector_;
   double                      angle_ = getBalloonHeading(dest_);
   if (_state_ == DESTROYING) {
+    goal_(2,0) += _height_offset_;
     if (getAngleBetween(angle_, odom_yaw_) > M_PI / 6) {
       ROS_INFO("[BalloonCircleDestroy]: Angle between drone and balloon is too big, abort");
       return;
