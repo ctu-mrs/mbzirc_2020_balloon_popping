@@ -35,6 +35,8 @@
 
       <!-- World frame -->
       <param name="world_frame_id" type="string" value="$(arg uav_name)/arena_origin" />
+      <!-- safety are frame - sorry Tomas -->
+      <param name="safety_area_frame" type="string" value="$(arg uav_name)/gps_origin" />
 
       <!-- Untilted frame for yaw -->
       <param name="untilted_frame_id" type="string" value="$(arg uav_name)/fcu_untilted" />

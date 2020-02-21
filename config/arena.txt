@@ -1,0 +1,10 @@
+[ INFO] [1582225638.759434654, 108.808000000]: [RvizPoseEstimate]: frame_id: uav1/arena_origin  x: -0.156144 y: 12.178682 z: 0.000000, yaw: -1.611458
+[ INFO] [1582225638.763527751, 108.816000000]: [RvizPoseEstimate]: frame_id: uav1/gps_origin    x: 11.463635 y: 12.434588 z: 0.000000, yaw: -1.901521
+[ INFO] [1582225638.765931723, 108.816000000]: [RvizPoseEstimate]: frame_id: uav1/utm_origin    x: 465722.222868 y: 5249477.909905 z: 0.000000, yaw: -1.901521
+[ INFO] [1582225638.767785359, 108.820000000]: [RvizPoseEstimate]: frame_id: uav1/latlon_origin latitude: 47.397855 longitude: 8.545745 z: -0.000000, yaw: -1.901521
+[ INFO] [1582225647.414853912, 116.680000000]: [RvizPoseEstimate]: New rviz 2D pose estimate:
+[ INFO] [1582225647.414971463, 116.680000000]: [RvizPoseEstimate]: frame_id: uav1/arena_origin  x: 0.301659 y: -16.236183 z: 0.000000, yaw: 1.439505
+[ INFO] [1582225647.420615258, 116.688000000]: [RvizPoseEstimate]: frame_id: uav1/gps_origin    x: 3.775304 y: -14.924209 z: 0.000000, yaw: 1.149442
+[ INFO] [1582225647.421776846, 116.688000000]: [RvizPoseEstimate]: frame_id: uav1/utm_origin    x: 465714.534537 y: 5249450.551109 z: 0.000000, yaw: 1.149442
+[ INFO] [1582225647.423882690, 116.692000000]: [RvizPoseEstimate]: frame_id: uav1/latlon_origin latitude: 47.397609 longitude: 8.545645 z: 0.000000, yaw: 1.149442
+^

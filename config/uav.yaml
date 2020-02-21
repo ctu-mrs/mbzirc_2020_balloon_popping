@@ -15,7 +15,7 @@ area:
   y_min: -5
   y_max: 5
   z_min: 0.5
-  z_max: 5.5
+  z_max: 5
   offset: 1.5
 # arena coords are like this [x_min,x_max,y_min, y_max, z_min,z_max, offset]
 # arena:
@@ -25,10 +25,61 @@ area:
 
 arena:
   [
-  -20,20,-10,10, 0.5,6,0.5,
-  0,20,-10,10, 0.5,6,0.5,
-  -20,0,-10,10, 0.5,6,0.5,
+  -45,0,-10,10, 0.5,6,0.5,
+  0,45,-10,10, 0.5,6,0.5,
+  -45,45,-10,10, 0.5,6,0.5,
   ]
+
+
+safe1: [
+11.934764, 12.617803,
+6.81, 13.73,
+7.43, 18.28,
+-27.33, 28.30,
+-29.02, 24.79,
+-33.31, 25.58,
+-39.79, 1.88,
+-38.11, 0.02,
+-38.08, -2.50,
+-3.64, -12.25,
+-1.55, -12.32,
+2.838657, -14.000979,
+]
+
+safe2: [
+2.838657, -14.000979,
+9.02, -16.39,
+47.15, -27.94,
+48.90, -27.03,
+56.24, -2.26,
+53.08, -0.97,
+54.58, 4.14,
+19.66, 16.03,
+17.04, 10.87,
+11.934764, 12.617803
+]
+
+safe_big: [
+-38.08, -2.50,
+-3.64, -12.25,
+-1.55, -12.32,
+9.02, -16.39,
+47.15, -27.94,
+48.90, -27.03,
+56.24, -2.26,
+53.08, -0.97,
+54.58, 4.14,
+19.66, 16.03,
+17.04, 10.87,
+6.81, 13.73,
+7.43, 18.28,
+-27.33, 28.30,
+-29.02, 24.79,
+-33.31, 25.58,
+-39.79, 1.88,
+-38.11, 0.02
+]
+
 
 constraints:
   sweeping: "sweeping"
@@ -37,14 +88,14 @@ constraints:
 # time thresholds for states - means, if dron stays in area for this amount a time, it'll go to fobidden
 time_thresholds:
   going_to: 30
-  destroy: 10
+  destroy: 20
   checking_balloon: 30
 # should the UAV land after destroying all balloons
 land_at_the_end: false
 #height offset when killing the balloon
-height_offset: 0.0
+height_offset: 0.3
 #height where drone will operate ( up to this height )
-elips_height: 5
+elips_height: 4.5
 #idle_time
 idle_time: 0
 #velocity for goTo's
@@ -60,7 +111,7 @@ dist_to_balloon: 5
 #distance to kill the balloon
 dist_to_overshoot: 4
 #overshoot offset
-overshoot_offset: 0.1
+overshoot_offset: 0.15
 #trajectory length for MPC
 traj_len: 40
 #traj time for MPC
