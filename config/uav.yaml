@@ -88,7 +88,7 @@ constraints:
 # time thresholds for states - means, if dron stays in area for this amount a time, it'll go to fobidden
 time_thresholds:
   going_to: 30
-  destroy: 10
+  destroy: 20
   checking_balloon: 30
 # should the UAV land after destroying all balloons
 land_at_the_end: false

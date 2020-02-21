@@ -1052,12 +1052,12 @@ void BalloonCircleDestroy::callbackTimerCheckStateMachine([[maybe_unused]] const
         changeState(IDLE);
       }
       break;
-      /* case DESTROYING: */
-      /*   if (cur_state_dur_ > time_to_destroy) { */
-      /*     ROS_INFO("[StateMachine]: too long destroy"); */
-      /*     addForbidden(balloon_closest_vector_, _forbidden_radius_); */
-      /*     changeState(IDLE); */
-      /*   } */
+      case DESTROYING:
+        if (cur_state_dur_ > time_to_destroy) {
+          ROS_INFO("[StateMachine]: too long destroy");
+          addForbidden(balloon_closest_vector_, _forbidden_radius_);
+          changeState(IDLE);
+        }
   }
   // if swapping of the arenas are enabled and the time is bigger from last swap, we swap the arenas 1->0, and 0->1;
 
