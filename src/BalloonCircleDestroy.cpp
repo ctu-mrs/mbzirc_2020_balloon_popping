@@ -59,7 +59,7 @@ void BalloonCircleDestroy::onInit() {
   param_loader.load_param("time_thresholds/checking_balloon", time_to_check_balloon);
 
   param_loader.load_param("world_frame_id", world_frame_id_);
-  param_loader.load_param("safety_area_frame",safety_area_frame_);
+  param_loader.load_param("safety_area_frame", safety_area_frame_);
   param_loader.load_param("untilted_frame_id", untilted_frame_id_);
   param_loader.load_param("reset_tries", _reset_tries_);
   param_loader.load_param("balloon_tries", _balloon_tries_);
@@ -254,7 +254,7 @@ void BalloonCircleDestroy::callbackTimerInitSafetyArea(const ros::TimerEvent& te
   }
 
   //}
-  
+
   ///* transform safety_2 //{ */
 
   {
@@ -298,12 +298,12 @@ void BalloonCircleDestroy::callbackTimerInitSafetyArea(const ros::TimerEvent& te
   }
 
   //}
-  
-   safety_polygon_ = std::make_shared<mrs_lib::Polygon>(safety_);
-   safety_polygon_1 = std::make_shared<mrs_lib::Polygon>(safety_1);
-   safety_polygon_2 = std::make_shared<mrs_lib::Polygon>(safety_2);
-   safety_area_init_timer_.stop();
-   is_initialized_ = true;
+
+  safety_polygon_  = std::make_shared<mrs_lib::Polygon>(safety_);
+  safety_polygon_1 = std::make_shared<mrs_lib::Polygon>(safety_1);
+  safety_polygon_2 = std::make_shared<mrs_lib::Polygon>(safety_2);
+  safety_area_init_timer_.stop();
+  is_initialized_ = true;
 }
 
 //}
@@ -504,7 +504,7 @@ void BalloonCircleDestroy::callbackTrackerDiag(const mrs_msgs::MpcTrackerDiagnos
 
 void BalloonCircleDestroy::callbackComradeTrackerDiag(const mrs_msgs::ControlManagerDiagnosticsConstPtr& msg) {
   {
-    if(!is_initialized_) {
+    if (!is_initialized_) {
       return;
     }
     if (revenge_mode) {
@@ -535,9 +535,9 @@ void BalloonCircleDestroy::callbackComradeTrackerDiag(const mrs_msgs::ControlMan
 /* callbackCameraInfo //{ */
 
 void BalloonCircleDestroy::callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg) {
-    if(!is_initialized_) {
-      return;
-    }
+  if (!is_initialized_) {
+    return;
+  }
 
   if (!got_realsense_) {
     ROS_INFO_THROTTLE(0.5, "[RealSense]: Got first realsense camera info msg");
@@ -578,9 +578,9 @@ void BalloonCircleDestroy::callbackConstraintsDiag(const mrs_msgs::ConstraintMan
 /* callbackTimerIdling //{ */
 
 void BalloonCircleDestroy::callbackTimerIdling([[maybe_unused]] const ros::TimerEvent& te) {
-    if(!is_initialized_) {
-      return;
-    }
+  if (!is_initialized_) {
+    return;
+  }
 
   ROS_INFO("[%s]: Idling stopped", ros::this_node::getName().c_str());
   is_idling_ = false;
@@ -594,9 +594,9 @@ void BalloonCircleDestroy::callbackTimerIdling([[maybe_unused]] const ros::Timer
 /* callbackTimeStateMachine //{ */
 
 void BalloonCircleDestroy::callbackTimerStateMachine([[maybe_unused]] const ros::TimerEvent& te) {
-    if(!is_initialized_) {
-      return;
-    }
+  if (!is_initialized_) {
+    return;
+  }
 
   if (!_is_state_machine_active_) {
     return;
@@ -1004,9 +1004,9 @@ void BalloonCircleDestroy::callbackTimerCheckBalloonPoints([[maybe_unused]] cons
 /* callbackTimerCheckForbidden //{ */
 
 void BalloonCircleDestroy::callbackTimerCheckForbidden([[maybe_unused]] const ros::TimerEvent& te) {
-    if(!is_initialized_) {
-      return;
-    }
+  if (!is_initialized_) {
+    return;
+  }
 
   if (!_is_state_machine_active_) {
     return;
@@ -1027,9 +1027,9 @@ void BalloonCircleDestroy::callbackTimerCheckForbidden([[maybe_unused]] const ro
 /* callbackTimerCheckStateMachine //{ */
 
 void BalloonCircleDestroy::callbackTimerCheckStateMachine([[maybe_unused]] const ros::TimerEvent& te) {
-    if(!is_initialized_) {
-      return;
-    }
+  if (!is_initialized_) {
+    return;
+  }
 
   if (!_is_state_machine_active_) {
     return;
@@ -1052,12 +1052,12 @@ void BalloonCircleDestroy::callbackTimerCheckStateMachine([[maybe_unused]] const
         changeState(IDLE);
       }
       break;
-      case DESTROYING:
-        if (cur_state_dur_ > time_to_destroy) {
-          ROS_INFO("[StateMachine]: too long destroy");
-          addForbidden(balloon_closest_vector_, _forbidden_radius_);
-          changeState(IDLE);
-        }
+    case DESTROYING:
+      if (cur_state_dur_ > time_to_destroy) {
+        ROS_INFO("[StateMachine]: too long destroy");
+        addForbidden(balloon_closest_vector_, _forbidden_radius_);
+        changeState(IDLE);
+      }
   }
   // if swapping of the arenas are enabled and the time is bigger from last swap, we swap the arenas 1->0, and 0->1;
 
@@ -1533,9 +1533,9 @@ void BalloonCircleDestroy::callbackTimerPublishRviz([[maybe_unused]] const ros::
 /* callbackArenaInfo //{ */
 
 void BalloonCircleDestroy::callbackArenaInfo(const mbzirc_msgs::MbzircArenaParametersConstPtr& msg) {
-    if(!is_initialized_) {
-      return;
-    }
+  if (!is_initialized_) {
+    return;
+  }
 
   {
     std::scoped_lock lock(mutex_arena_);
@@ -1879,9 +1879,9 @@ bool BalloonCircleDestroy::callbackResetZones([[maybe_unused]] std_srvs::Trigger
 /* getCloseToBalloon //{ */
 
 void BalloonCircleDestroy::getCloseToBalloon(eigen_vect dest_, double close_dist_, double speed_) {
-    if(!is_initialized_) {
-      return;
-    }
+  if (!is_initialized_) {
+    return;
+  }
 
   auto odom_uav = mrs_lib::get_mutexed(mutex_odom_uav_, odom_uav_);
 
@@ -1907,7 +1907,7 @@ void BalloonCircleDestroy::getCloseToBalloon(eigen_vect dest_, double close_dist
     if (getAngleBetween(angle_, odom_yaw_) > M_PI / 6) {
       ROS_INFO("[BalloonCircleDestroy]: Angle between drone and balloon is too big, abort");
       return;
-    }
+    }   
   }
 
   mrs_msgs::TrackerPoint p;
@@ -1982,9 +1982,12 @@ void BalloonCircleDestroy::getCloseToBalloon(eigen_vect dest_, double close_dist
       if (dist_ > _balloon_activation_dist_) {
         p.z = odom_vector_(2, 0);
       } else {
+
         p.z = dest_(2, 0);
       }
-
+      if (_state_ == DESTROYING) {
+        p.z += _height_offset_;
+      }
       ROS_INFO_THROTTLE(0.1, "[BallonCircleDestroy]: desired_height in traj: %.2f", p.z);
 
       p.yaw = angle_;
@@ -2700,9 +2703,9 @@ bool BalloonCircleDestroy::setArena(int i) {
   _y_min_ = _arenas_(i, 2);
   _y_max_ = _arenas_(i, 3);
 
-  _z_min_ = _arenas_(i, 4);
-  _z_max_ = _arenas_(i, 5);
-  _arena_offset_ = _arenas_(i,6);
+  _z_min_        = _arenas_(i, 4);
+  _z_max_        = _arenas_(i, 5);
+  _arena_offset_ = _arenas_(i, 6);
 
   switch (i) {
     case 0:
