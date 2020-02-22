@@ -167,6 +167,8 @@ private:
   double      _fov_step_;
   double      _arena_time_;
   bool        _do_swap_;
+  bool        _cheating_mode_;
+  double      _cheating_height_;
   std::string _sweep_constraints_;
   std::string _going_constraints_;
   std::string _attack_constraints_;
@@ -180,14 +182,14 @@ private:
   double                            safe_height_;
 
   std::shared_ptr<mrs_lib::Polygon> safety_polygon_1;
-  Eigen::MatrixXd safety_1;
-  double          safe_length_1;
-  double          safe_height_1;
+  Eigen::MatrixXd                   safety_1;
+  double                            safe_length_1;
+  double                            safe_height_1;
 
   std::shared_ptr<mrs_lib::Polygon> safety_polygon_2;
-  Eigen::MatrixXd safety_2;
-  double          safe_length_2;
-  double          safe_height_2;
+  Eigen::MatrixXd                   safety_2;
+  double                            safe_length_2;
+  double                            safe_height_2;
 
   int       _arena_type_ = -1;
   ros::Time current_arena_time_;
@@ -351,8 +353,8 @@ private:
 
   void callbackTimerIdling(const ros::TimerEvent& te);
 
-  void       callbackTimerInitSafetyArea(const ros::TimerEvent& te);
-  ros::Timer safety_area_init_timer_;
+  void        callbackTimerInitSafetyArea(const ros::TimerEvent& te);
+  ros::Timer  safety_area_init_timer_;
   std::string safety_area_frame_;
 
   void       callbackTimerCheckSubscribers(const ros::TimerEvent& te);

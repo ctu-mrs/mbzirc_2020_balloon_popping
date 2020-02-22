@@ -86,6 +86,8 @@ void BalloonCircleDestroy::onInit() {
   param_loader.load_param("constraints/going", _attack_constraints_);
   param_loader.load_param("arena_swap_time", _arena_time_);
   param_loader.load_param("is_arena_swap_enabled", _do_swap_);
+  param_loader.load_param("cheating_mode", _cheating_mode_);
+  param_loader.load_param("cheating_height", _cheating_height_);
 
   /* safety_polygon_ = std::make_shared<mrs_lib::Polygon>(safety_); */
 
@@ -1986,6 +1988,9 @@ void BalloonCircleDestroy::getCloseToBalloon(eigen_vect dest_, double close_dist
         p.z = dest_(2, 0);
       }
       if (_state_ == DESTROYING) {
+        if(_cheating_mode_) {
+          p.z = _cheating_height_;
+        }
         p.z += _height_offset_;
       }
       ROS_INFO_THROTTLE(0.1, "[BallonCircleDestroy]: desired_height in traj: %.2f", p.z);

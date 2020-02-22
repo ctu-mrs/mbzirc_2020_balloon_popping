@@ -151,4 +151,6 @@ arena_scan_step: 7
 is_arena_swap_enabled: false
 # time when arena swaps
 arena_swap_time: 500
+cheating_mode: false
+cheating_height: 4.4
 
