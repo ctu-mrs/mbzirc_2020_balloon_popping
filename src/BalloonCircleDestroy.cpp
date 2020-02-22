@@ -88,6 +88,7 @@ void BalloonCircleDestroy::onInit() {
   param_loader.load_param("is_arena_swap_enabled", _do_swap_);
   param_loader.load_param("cheating_mode", _cheating_mode_);
   param_loader.load_param("cheating_height", _cheating_height_);
+  param_loader.load_param("max_silence_time", _max_silence_time_);
 
   /* safety_polygon_ = std::make_shared<mrs_lib::Polygon>(safety_); */
 
@@ -522,6 +523,7 @@ void BalloonCircleDestroy::callbackComradeTrackerDiag(const mrs_msgs::ControlMan
         ROS_WARN_THROTTLE(0.5, "[]: Got first message from comrad, he is flying normally");
         ROS_WARN("[Comrade]: Paehali !");
       }
+      time_last_comrade_tracker_diagnostics_ = ros::Time::now();
     } else {
       if (got_comrade_tracker_diag_) {
         ROS_WARN_THROTTLE(1.0, "[]: Comrade is not flying, set arena to 2");
@@ -951,7 +953,17 @@ void BalloonCircleDestroy::callbackTimerCheckSubscribers([[maybe_unused]] const 
         abortEland();
       }
     }
+
+    if(got_comrade_tracker_diag_) {
+      if(ros::Time::now().toSec() - time_last_comrade_tracker_diagnostics_.toSec() > _max_silence_time_) {
+        ROS_WARN("[ComradeWatcher] Haven't seen comrade for more then %f, setting revenge mode ON!!!",_max_silence_time_ );
+        revenge_mode = true;
+        setArena(2);
+      
+      }
+    }
   }
+  
 }
 
 //}

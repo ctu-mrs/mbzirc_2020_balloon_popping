@@ -167,6 +167,7 @@ private:
   double      _fov_step_;
   double      _arena_time_;
   bool        _do_swap_;
+  double      _max_silence_time_;
   bool        _cheating_mode_;
   double      _cheating_height_;
   std::string _sweep_constraints_;
