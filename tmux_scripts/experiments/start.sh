@@ -35,7 +35,7 @@ input=(
 '
   'AutomaticStart' 'waitForRos; roslaunch mrs_general automatic_start_mbzirc.launch challenge:=balloons
 '
-  'Control' 'waitForRos; roslaunch mrs_general core.launch config_constraint_manager:=./custom_configs/constraint_manager.yaml config_uav_manager:=./custom_configs/uav_manager.yaml config_odometry:=./custom_configs/odometry.yaml
+  'Control' 'waitForRos; roslaunch mrs_general core.launch config_constraint_manager:=./custom_configs/constraint_manager.yaml config_uav_manager:=./custom_configs/uav_manager.yaml config_odometry:=./custom_configs/odometry.yaml config_control_manager:=./custom_configs/control_manager.yaml
 '
   'Vision' 'waitForRos; roslaunch balloon_filter localization_pipeline.launch
 '
