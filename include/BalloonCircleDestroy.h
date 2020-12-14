@@ -36,7 +36,7 @@
 #include <sensor_msgs/PointCloud.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/point_cloud2_iterator.h>
-
+#include <sensor_msgs/CameraInfo.h>
 
 /* for storing information about the state of the uav (position, twist) + covariances */
 #include <nav_msgs/Odometry.h>
@@ -51,12 +51,21 @@
 #include <mrs_msgs/SetInt.h>
 #include <mrs_msgs/String.h>
 #include <mrs_msgs/ConstraintManagerDiagnostics.h>
+#include <mrs_msgs/ControlManagerDiagnostics.h>
 
 #include <std_msgs/String.h>
 
 
 /* custom helper functions from our library */
 #include <mrs_lib/ParamLoader.h>
+#include <mrs_lib/mutex.h>
+#include <mrs_lib/transformer.h>
+#include <mrs_lib/SafetyZone/Polygon.h>
+
+
+/* mbzirc msgs  */
+#include <mbzirc_msgs/MbzircArenaParameters.h>
+#include <mbzirc_msgs/ArenaZoneSrv.h>
 
 /* for calling simple ros services */
 #include <std_srvs/Trigger.h>
@@ -107,6 +116,11 @@ public:
   /* onInit() is called when nodelet is launched (similar to main() in regular node) */
   virtual void onInit();
 
+  std::string _uav_name_;
+
+private:
+  mrs_lib::Transformer transformer_;
+
 private:
   /* flags */
   bool is_initialized_ = false;
@@ -114,47 +128,80 @@ private:
   bool       is_idling_ = false;
   ros::Timer timer_idling_;
   /* ros parameters */
-  double                                    _idle_time_;
-  bool                                      _simulation_;
-  float                                     _height_;
-  float                                     _min_height_;
-  float                                     _max_height_;
-  float                                     _height_tol_;
-  double                                    _vel_;
-  double                                    _vel_attack_;
-  double                                    _vel_arena_;
-  double                                    _dist_to_balloon_;
-  double                                    _dist_acc_;
-  double                                    _dist_to_overshoot_;
-  double                                    _dist_kf_activation_;
-  double                                    _traj_len_;
-  double                                    _traj_time_;
-  double                                    _dist_error_;
-  double                                    _wait_for_ball_;
-  int                                       _reset_tries_;
-  int                                       _balloon_tries_;
-  double                                    _forbidden_radius_;
-  double                                    _height_offset_;
-  double                                    _max_time_balloon_;
-  double                                    _x_min_;
-  double                                    _x_max_;
-  double                                    _y_min_;
-  double                                    _y_max_;
-  double                                    _z_min_;
-  double                                    _z_max_;
-  double                                    _arena_center_x_;
-  double                                    _arena_center_y_;
-  double                                    _jerk_;
-  double                                    _acceleration_;
-  double                                    _state_reset_time_;
-  double                                    _overshoot_offset_;
-  double                                    _dead_band_factor_;
-  double                                    _time_to_emulate_;
-  double                                    _balloon_activation_dist_;
-  double                                    _fov_step_;
-  std::string                               _sweep_constraints_;
-  std::string                               _attack_constraints_;
+  double      _idle_time_;
+  bool        _simulation_;
+  float       _height_;
+  float       _min_height_;
+  float       _max_height_;
+  float       _height_tol_;
+  double      _vel_;
+  double      _vel_attack_;
+  double      _vel_arena_;
+  double      _arena_corner_factor_;
+  double      _dist_to_balloon_;
+  double      _dist_acc_;
+  double      _dist_to_overshoot_;
+  double      _dist_kf_activation_;
+  double      _traj_len_;
+  double      _traj_time_;
+  double      _dist_error_;
+  double      _wait_for_ball_;
+  int         _reset_tries_;
+  int         _balloon_tries_;
+  double      _forbidden_radius_;
+  double      _height_offset_;
+  double      _max_time_balloon_;
+  double      _x_min_;
+  double      _x_max_;
+  double      _y_min_;
+  double      _y_max_;
+  double      _z_min_;
+  double      _z_max_;
+  double      _arena_center_x_;
+  double      _arena_center_y_;
+  double      _state_reset_time_;
+  double      _overshoot_offset_;
+  double      _dead_band_factor_;
+  double      _time_to_emulate_;
+  double      _balloon_activation_dist_;
+  double      _fov_step_;
+  double      _arena_time_;
+  bool        _do_swap_;
+  double      _max_silence_time_;
+  bool        _cheating_mode_;
+  double      _cheating_height_;
+  std::string _sweep_constraints_;
+  std::string _going_constraints_;
+  std::string _attack_constraints_;
+  // | -------------------- arena parameters -------------------- |
   Eigen::Matrix<double, N_ARENAS, N_POINTS> _arenas_;
+  std::shared_ptr<mrs_lib::Polygon>         cur_safety_;
+
+  std::shared_ptr<mrs_lib::Polygon> safety_polygon_;
+  Eigen::MatrixXd                   safety_;
+  double                            safe_length_;
+  double                            safe_height_;
+
+  std::shared_ptr<mrs_lib::Polygon> safety_polygon_1;
+  Eigen::MatrixXd                   safety_1;
+  double                            safe_length_1;
+  double                            safe_height_1;
+
+  std::shared_ptr<mrs_lib::Polygon> safety_polygon_2;
+  Eigen::MatrixXd                   safety_2;
+  double                            safe_length_2;
+  double                            safe_height_2;
+
+  int       _arena_type_ = -1;
+  ros::Time current_arena_time_;
+  // arena types
+  // -1 - isn't set
+  // 0 - the whole arena is covered by this drone
+  // 1 - the left part  ( the + side by x )
+  // 2 - the right part ( the - side by x )
+  // this param is set by the autoStart, and is changed when comrade
+  // gives signal of it's death
+
 
   // | ------------------------- state machine params ------------------------- |
   enum State
@@ -200,6 +247,8 @@ private:
   void                     changeState(State state);
   ros::Time                time_state_set_;
   double                   cur_state_dur_;
+  bool                     destroy_set = false;
+  ros::Time                time_traj_sent_;
 
 
   // | ----------------------- transforms ----------------------- |
@@ -220,14 +269,15 @@ private:
 
   // | ---------------------- msg callbacks --------------------- |
 
-  void               callbackOdomUav(const nav_msgs::OdometryConstPtr& msg);
-  ros::Subscriber    sub_odom_uav_;
-  nav_msgs::Odometry odom_uav_;
-  eigen_vect         odom_vector_;
-  double             odom_yaw_;
-  bool               got_odom_uav_ = false;
-  std::mutex         mutex_odom_uav_;
-  ros::Time          time_last_odom_uav_;
+  void                          callbackOdomUav(const nav_msgs::OdometryConstPtr& msg);
+  ros::Subscriber               sub_odom_uav_;
+  nav_msgs::Odometry            odom_uav_;
+  geometry_msgs::Vector3Stamped uav_velocity_arena_frame_;
+  eigen_vect                    odom_vector_;
+  double                        odom_yaw_;
+  bool                          got_odom_uav_ = false;
+  std::mutex                    mutex_odom_uav_;
+  ros::Time                     time_last_odom_uav_;
 
   void               callbackOdomGt(const nav_msgs::OdometryConstPtr& msg);
   ros::Subscriber    sub_odom_gt_;
@@ -236,11 +286,30 @@ private:
   std::mutex         mutex_odom_gt_;
   ros::Time          time_last_odom_gt_;
 
+  void            callbackCameraInfo(const sensor_msgs::CameraInfoConstPtr& msg);
+  ros::Subscriber sub_realsense;
+  std::mutex      mutex_realsense_;
+  ros::Time       time_last_realsense_;
+  bool            got_realsense_;
+
+  void                               callbackArenaInfo(const mbzirc_msgs::MbzircArenaParametersConstPtr& msg);
+  ros::Subscriber                    sub_arena_;
+  bool                               gotArena = false;
+  mbzirc_msgs::MbzircArenaParameters arena_params_;
+  bool                               configurateArena();
+  bool                               arenaConfigured = false;
+  eigen_vect                         middle_one_;
+  eigen_vect                         middle_two_;
+  bool                               _arena_set_ = false;
+  std::mutex                         mutex_arena_;
+
   void                                   callbackConstraintsDiag(const mrs_msgs::ConstraintManagerDiagnosticsConstPtr& msg);
   ros::Subscriber                        subscriber_constraints_diag_;
   bool                                   got_constraints_diag_ = false;
   std::string                            cur_constraints_;
   std::mutex                             mutex_constraints_;
+  double                                 acceleration_;
+  double                                 jerk_;
   mrs_msgs::ConstraintManagerDiagnostics constraints_msg_;
   ros::Time                              time_last_constraints_diagnostics_;
 
@@ -251,6 +320,15 @@ private:
   bool            is_tracking_      = false;
   std::mutex      mutex_is_tracking_;
   ros::Time       time_last_tracker_diagnostics_;
+
+  void                                callbackComradeTrackerDiag(const mrs_msgs::ControlManagerDiagnosticsConstPtr& msg);
+  ros::Subscriber                     sub_comrade_tracker_diag_;
+  mrs_msgs::ControlManagerDiagnostics comrade_diag_;
+  bool                                got_comrade_tracker_diag_ = false;
+  bool                                is_comrade_flying_        = false;
+  std::mutex                          is_comrade_tracking_;
+  bool                                revenge_mode = false;
+  ros::Time                           time_last_comrade_tracker_diagnostics_;
 
 
   void                                     callbackBalloonPoint(const geometry_msgs::PoseWithCovarianceStampedConstPtr& msg);
@@ -275,6 +353,10 @@ private:
   // | --------------------- timer callbacks -------------------- |
 
   void callbackTimerIdling(const ros::TimerEvent& te);
+
+  void        callbackTimerInitSafetyArea(const ros::TimerEvent& te);
+  ros::Timer  safety_area_init_timer_;
+  std::string safety_area_frame_;
 
   void       callbackTimerCheckSubscribers(const ros::TimerEvent& te);
   ros::Timer timer_check_subscribers_;
@@ -316,6 +398,8 @@ private:
   std::mutex     mutex_status_;
   int            _rate_time_publish_status_;
 
+  // | ----------------------- Publishers ----------------------- |
+
   // Publishing references from PCL and from planner
   ros::Publisher point_pub_;
   ros::Publisher balloon_pub_;
@@ -334,6 +418,9 @@ private:
 
   ros::ServiceClient srv_set_constriants_;
   void               setConstraints(std::string desired_constraints);
+
+  ros::ServiceClient srv_eland_;
+  void               abortEland();
 
   // | ------------------- Estimation services ------------------ |
 
@@ -427,6 +514,8 @@ private:
   eigen_vect  deadBand(eigen_vect target_, eigen_vect reference_);
   bool        setArena(int i);
   double      getAngleBetween(double a, double b);
+  bool        pointInSafety(float x, float y, float z);
+  bool        pointInSafety(eigen_vect p_);
   //}
 };
 //}

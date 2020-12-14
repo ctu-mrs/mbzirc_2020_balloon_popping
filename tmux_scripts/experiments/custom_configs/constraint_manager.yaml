@@ -2,7 +2,7 @@ constraint_management:
 
   # list of allowed gains per odometry mode
   allowed_constraints:
-    GPS: ["slow", "medium", "fast", "sweeping", "aggressive"]
+    GPS: ["slow", "medium", "fast", "sweeping", "aggressive", "attack"]
 
   # those gains will be used automatically when a localization mode switches
   # and the current gains are not in the allowed list (next paragraphs)
@@ -15,6 +15,7 @@ constraints: [
   "fast",
   "sweeping",
   "aggressive",
+  "attack"
 ]
 
 sweeping:
@@ -50,6 +51,34 @@ aggressive:
   horizontal:
     speed: 8.3
     acceleration: 3.0
+    jerk: 10.0
+    snap: 10.0
+
+  vertical:
+
+    ascending:
+      speed: 2.0
+      acceleration: 3.0
+      jerk: 10.0
+      snap: 10.0
+
+    descending:
+      speed: 2.0
+      acceleration: 3.0
+      jerk: 10.0
+      snap: 10.0
+
+  yaw:
+    speed: 3.14
+    acceleration: 5.0
+    jerk: 10.0
+    snap: 10.0
+
+attack:
+
+  horizontal:
+    speed: 8.3
+    acceleration: 1.5
     jerk: 10.0
     snap: 10.0
 

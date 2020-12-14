@@ -5,8 +5,8 @@
   <version>0.0.1</version>
   <description>balloon_circle_destroy</description>
 
-  <maintainer email="matej.petrlik@fel.cvut.cz">Matej Petrlik</maintainer>
-  <author email="matej.petrlik@fel.cvut.cz">Matej Petrlik</author>
+  <maintainer email="stasiyur@fel.cvut.cz">Stasinchuk Yurii</maintainer>
+  <author email="vrbamato@fel.cvut.cz">Matous Vrba</author>
 
   <license>TODO</license>
 
@@ -20,6 +20,7 @@
   <depend>mrs_msgs</depend>
   <depend>pcl_ros</depend>
   <depend>mrs_lib</depend>
+  <depend>mbzirc_msgs</depend>
   <depend>dynamic_reconfigure</depend>
   <depend>tf2_ros</depend>
   <depend>tf2_geometry_msgs</depend>

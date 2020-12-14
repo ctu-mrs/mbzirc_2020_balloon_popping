@@ -4,17 +4,23 @@ path="/home/\$(optenv USER mrs)/bag_files/latest/"
 
 exclude=(
 # bluefox
-'(.*)bluefox(.*)'
+# bluefox sky
+'/$(arg UAV_NAME)/bluefox_sky/image_raw'
+'/$(arg UAV_NAME)/bluefox_sky/image_raw/compressedDepth(.*)'
+'/$(arg UAV_NAME)/bluefox_sky/image_raw/theora(.*)'
+
 # h264
 '(.*)h264(.*)'
 # Realsense
 # object detect
 '(.*)object_detect(.*)debug_image'
+'(.*)object_detect(.*)debug_image/compressed'
 # every theora
 '(.*)theora(.*)'
 # every compressed
 '(.*)compressedDepth(.*)'
 '(.*)rs_d435(.*)depth_to_infra(.*)'
+'(.*)rs_d435(.*)depth(.*)'
 '(.*)rs_d435(.*)depth_to_color/image_raw'
 '(.*)rs_d435(.*)depth_to_color(.*)compressed'
 '(.*)rs_d435(.*)depth_to_color(.*)compressed/(.*)'

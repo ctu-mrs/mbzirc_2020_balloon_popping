@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(balloon_circle_destroy)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -std=c++17 -g -O0")
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -20,6 +21,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_sensor_msgs
   balloon_filter
   pcl_ros
+  mbzirc_msgs
 
   )
 
@@ -36,7 +38,7 @@ generate_dynamic_reconfigure_options(
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES BalloonCircleDestroy
-  CATKIN_DEPENDS roscpp mrs_lib mrs_msgs geometry_msgs nav_msgs
+  CATKIN_DEPENDS roscpp mrs_lib mrs_msgs geometry_msgs nav_msgs mbzirc_msgs
   DEPENDS Eigen
   )
 

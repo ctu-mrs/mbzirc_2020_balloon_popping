@@ -1,13 +1,15 @@
 #
-## DEFINITION OF THE BALL CHALLENGE ARENA
+## DEFINITION OF THE MBZIRC CHALLENGE ARENA
 #
+ 
+arena_id: "ball_adnec_after_reahearsal1"
  
 use_utm_origin: true
 utm_origin_units: 0 # 0 - UTM, 1 - Latitude Longitude
 utm_origin_lat: 0
 utm_origin_lon: 0
-utm_origin_x: 330604.34
-utm_origin_y: 2669877.38
+utm_origin_x: 239991.81
+utm_origin_y: 2702876.72
 
 use_local_origin: false
 local_origin_x: 0.0
@@ -41,39 +43,49 @@ safety_area:
   # convex polygon CCW
   # race track
   safety_area: [
-    -28.35, 9.20,
-    10.36, 16.49,
-    16.38, 9.77,
-    20.25, -6.89,
-    17.11, -14.60,
-    -16.53, -21.96,
-    -21.55, -17.47,
-    -30.48, 1.47]
+    -38.08, -2.50,
+    -3.64, -12.25,
+    -1.55, -12.32,
+    9.02, -16.39,
+    47.15, -27.94,
+    48.90, -27.03,
+    56.24, -2.26,
+    53.08, -0.97,
+    54.58, 4.14,
+    19.66, 16.03,
+    17.04, 10.87,
+    6.81, 13.73,
+    7.43, 18.28,
+    -27.33, 28.30,
+    -29.02, 24.79,
+    -33.31, 25.58,
+    -39.79, 1.88,
+    -38.11, 0.02]
 
-  max_height: 30.0
-  min_height: 1.0
+  max_height: 18.00
+  min_height: 0.50
 
 
-arena_ang_diff: 0.186194
-arena_center: [-3.22, -3.75]
+arena_ang_diff: -0.290063
+arena_center: [8.13, 0.72]
 arena_corners: [
-  -33.65, 8.20, # K
-  14.63, 17.30, # L
-  21.80, -13.58, # M
-  -19.17, -22.53] # N
+  -40.76, -1.70, # K
+  48.51, -28.34, # L
+  57.85, 3.18, # M
+  -32.17, 29.73] # N
 
-takeoff_center: [-10.00, 10.00]
+takeoff_center: [0.00, 0.00]
 takeoff_zone: [
-  -24.28, 4.77,
-  5.20, 10.32,
-  4.28, 15.23,
-  -25.20, 9.68]
+  -3.11, -1.68,
+  1.68, -3.11,
+  3.11, 1.68,
+  -1.68, 3.11]
 
 arena_type: 'ball_arena'
 
-dropoff_center: [-15.00, -10.00]
+dropoff_center: [10.00, 0.00]
 dropoff_zone: [
-  -16.99, -12.92,
-  -12.08, -11.99,
-  -13.01, -7.08,
-  -17.92, -8.01]
+  6.89, -1.68,
+  11.68, -3.11,
+  13.11, 1.68,
+  8.32, 3.11]

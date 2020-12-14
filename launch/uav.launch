@@ -2,7 +2,10 @@
 
   <!-- defines name of the namespace of the drone -->
   <arg name="uav_name" default="$(optenv UAV_NAME uav)" />
+  <arg name="NATO_NAME" default="$(env NATO_NAME)" />
 
+  <arg if="$(eval arg('NATO_NAME') == 'alfa')" name="uav_name2" default="uav61" />
+  <arg if="$(eval arg('NATO_NAME') == 'bravo')" name="uav_name2" default="uav60" />
 
   <!-- will it run using GNU debugger? -->
   <arg name="debug" default="false" />
@@ -23,6 +26,8 @@
     <!-- WaypointFlier nodelet -->
     <node pkg="nodelet" type="nodelet" name="balloon_circle_destroy" args="$(arg nodelet) balloon_circle_destroy/BalloonCircleDestroy $(arg nodelet_manager)" launch-prefix="$(arg launch_prefix_debug)" output="screen">
 
+      <param name="uav_name" type="string" value="$(arg uav_name)" />
+
       <!-- Parameters loaded from launch file -->
 
       <!-- ROS parameters config file -->
@@ -30,6 +35,8 @@
 
       <!-- World frame -->
       <param name="world_frame_id" type="string" value="$(arg uav_name)/arena_origin" />
+      <!-- safety are frame - sorry Tomas -->
+      <param name="safety_area_frame" type="string" value="$(arg uav_name)/gps_origin" />
 
       <!-- Untilted frame for yaw -->
       <param name="untilted_frame_id" type="string" value="$(arg uav_name)/fcu_untilted" />
@@ -40,6 +47,9 @@
       <remap from="~balloon_point_in" to="balloon_filter/balloon_chosen_out" />
       <remap from="~balloon_point_cloud_in" to="object_detect/detected_balls_pcl" />
       <remap from="~constraints_diagnostics_in" to="constraint_manager/diagnostics" />
+      <remap from="~realsense_camera_info" to="rs_d435/color/camera_info" />
+      <remap from="~comrade_diagnostics" to="/$(arg uav_name2)/control_manager/diagnostics" />
+      <remap from="~arena_info" to="arena_publisher/mbzirc_arena_parameters" />
 
       <!-- Publishers -->
       <remap from="~rviz_out" to="~rviz_out" />
@@ -57,6 +67,7 @@
       <!-- Service clients -->
       <remap from="~trajectory_srv" to="control_manager/mpc_tracker/set_trajectory" />
       <remap from="~land_out" to="uav_manager/land" />
+      <remap from="~eland" to="control_manager/eland" />
       <remap from="~drone_stop" to="control_manager/hover" />
       <remap from="~reset_estimation" to="balloon_filter/reset_estimation" />
       <remap from="~start_estimation" to="balloon_filter/start_estimation" />

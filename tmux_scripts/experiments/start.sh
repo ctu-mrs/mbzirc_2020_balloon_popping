@@ -13,7 +13,7 @@ fi
 
 source $HOME/.bashrc
 
-PROJECT_NAME=balloons_bag
+PROJECT_NAME=balloons
 
 MAIN_DIR=~/"bag_files"
 
@@ -23,7 +23,7 @@ pre_input="export ATHAME_ENABLED=0; mkdir -p $MAIN_DIR/$PROJECT_NAME; export WOR
 # define commands
 # 'name' 'command'
 input=(
-  'Rosbag' 'waitForRos; rosrun balloon_circle_destroy record_balloons.sh
+  'Rosbag' 'waitForOffboard; rosrun balloon_circle_destroy record_balloons.sh
 '
   'Sensors' 'waitForRos; roslaunch mrs_general sensors.launch
 '
@@ -35,7 +35,7 @@ input=(
 '
   'AutomaticStart' 'waitForRos; roslaunch mrs_general automatic_start_mbzirc.launch challenge:=balloons
 '
-  'Control' 'waitForRos; roslaunch mrs_general core.launch config_constraint_manager:=./custom_configs/constraint_manager.yaml config_uav_manager:=./custom_configs/uav_manager.yaml config_odometry:=./custom_configs/odometry.yaml
+  'Control' 'waitForRos; roslaunch mrs_general core.launch config_constraint_manager:=./custom_configs/constraint_manager.yaml config_uav_manager:=./custom_configs/uav_manager.yaml config_odometry:=./custom_configs/odometry.yaml config_control_manager:=./custom_configs/control_manager.yaml
 '
   'Vision' 'waitForRos; roslaunch balloon_filter localization_pipeline.launch
 '
@@ -72,6 +72,13 @@ init_window="Destroy"
 ###########################
 
 SESSION_NAME=mav
+
+FOUND=$( $TMUX_BIN ls | grep $SESSION_NAME )
+
+if [ $? == "0" ]; then
+  echo "The session already exists"
+  exit
+fi
 
 # Absolute path to this script. /home/user/bin/foo.sh
 SCRIPT=$(readlink -f $0)
@@ -127,23 +134,6 @@ do
   /usr/bin/tmux new-window -t $SESSION_NAME:$(($i+1)) -n "${names[$i]}"
 done
 
-# # add pane splitter for mrs_status
-# /usr/bin/tmux new-window -t $SESSION_NAME:$((${#names[*]}+1)) -n "mrs_status"
-
-# # clear mrs status file so that no clutter is displayed
-# truncate -s 0 /tmp/status.txt
-
-# split all panes
-# pes=""
-# for ((i=0; i < ((${#names[*]}+2)); i++));
-# do
-#   pes=$pes"/usr/bin/tmux split-window -d -t $SESSION_NAME:$(($i))"
-#   pes=$pes"/usr/bin/tmux send-keys -t $SESSION_NAME:$(($i)) 'tail -F /tmp/status.txt'"
-#   pes=$pes"/usr/bin/tmux select-pane -U -t $(($i))"
-# done
-
-# /usr/bin/tmux send-keys -t $SESSION_NAME:$((${#names[*]}+1)) "${pes}"
-
 sleep 3
 
 # start loggers
@@ -155,15 +145,7 @@ done
 # send commands
 for ((i=0; i < ${#cmds[*]}; i++));
 do
-  tmux send-keys -t $SESSION_NAME:$(($i+1)) "cd $SCRIPTPATH;${pre_input};${cmds[$i]}"
-done
-
-pes="sleep 1;"
-for ((i=0; i < ((${#names[*]}+2)); i++));
-do
-  pes=$pes"/usr/bin/tmux select-window -t $SESSION_NAME:$(($i))"
-  pes=$pes"/usr/bin/tmux resize-pane -U -t $(($i)) 150"
-  pes=$pes"/usr/bin/tmux resize-pane -D -t $(($i)) 7"
+  tmux send-keys -t $SESSION_NAME:$(($i+1)) "cd $SCRIPTPATH; ${pre_input}; ${cmds[$i]}"
 done
 
 # identify the index of the init window
@@ -176,10 +158,5 @@ do
 done
 
 /usr/bin/tmux select-window -t $SESSION_NAME:$init_index
-# pes=$pes"waitForRos; roslaunch mrs_status status.launch >> /tmp/status.txt"
 
-# /usr/bin/tmux send-keys -t $SESSION_NAME:$((${#names[*]}+1)) "${pes}"
-
-/usr/bin/tmux -2 attach-session -t $SESSION_NAME
-
-clear
+# /usr/bin/tmux -2 attach-session -t $SESSION_NAME
