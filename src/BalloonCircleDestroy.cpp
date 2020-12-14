@@ -1986,7 +1986,6 @@ void BalloonCircleDestroy::getCloseToBalloon(eigen_vect dest_, double close_dist
 
       if (diff_vector_.norm() >= dist_) {
         cur_pos_ = goal_;
-        /* ROS_INFO("[]: shit, dan"); */
         break;
       }
 
@@ -2470,8 +2469,6 @@ void BalloonCircleDestroy::scanArena() {
       ROS_INFO("[]: is outside from the left side x %f y %f z %f", cur_odom_(0, 0), cur_odom_(1, 0), cur_odom_(2, 0));
     } else if (cur_odom_(0, 0) > right && cur_odom_(0, 0) < left) {
       ROS_INFO("[]: is outside from the right side x %f y %f z %f", cur_odom_(0, 0), cur_odom_(1, 0), cur_odom_(2, 0));
-    } else {
-      ROS_WARN("[]: kurwa");
     }
   }
 
@@ -2535,8 +2532,6 @@ void BalloonCircleDestroy::scanArena() {
 /* goToPoint //{ */
 
 void BalloonCircleDestroy::goToPoint(eigen_vect p_, eigen_vect goal, double speed_, mrs_msgs::TrackerTrajectory& new_traj_, double yaw) {
-  ROS_INFO("[]: pizdec 0 x %f y %f z %f", p_(0, 0), p_(1, 0), p_(2, 0));
-  ROS_INFO("[]: pizdec goal 0 x %f y %f z %f", goal(0, 0), goal(1, 0), goal(2, 0));
   double     sample_dist_ = speed_ * (_traj_time_ / _traj_len_);
   eigen_vect dir_vector_  = goal - p_;
 
@@ -2571,14 +2566,12 @@ void BalloonCircleDestroy::goToPoint(eigen_vect p_, eigen_vect goal, double spee
 
       if ((int)diff_vector_.norm() <= 0) {
         /* ROS_INFO("[BalloonCircleDestroy]: goToPoint returned %d ", (int)new_traj_.points.size()); */
-        /* ROS_WARN("[]: pizdec cur_pos_ 0 x %f y %f z %f", cur_pos_(0, 0), cur_pos_(1, 0), cur_pos_(2, 0)); */
         cur_pos_ = goal;
         p.x      = cur_pos_(0, 0);
         p.y      = cur_pos_(1, 0);
         p.z      = cur_pos_(2, 0);
         p.yaw    = yaw;
         if (!isPointInArena(p)) {
-          ROS_INFO("[]: pizdeeec cur_pos_ 0 x %f y %f z %f", cur_pos_(0, 0), cur_pos_(1, 0), cur_pos_(2, 0));
           return;
         }
 
@@ -2593,7 +2586,6 @@ void BalloonCircleDestroy::goToPoint(eigen_vect p_, eigen_vect goal, double spee
       p.z   = cur_pos_(2, 0);
       p.yaw = yaw;
       if (!isPointInArena(p)) {
-        ROS_INFO("[]: pizdeeec cur_pos_ 0 x %f y %f z %f", cur_pos_(0, 0), cur_pos_(1, 0), cur_pos_(2, 0));
         return;
       }
 
